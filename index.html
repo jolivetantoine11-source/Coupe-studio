@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="fr" data-theme="neutre">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coupe Studio</title>
+<meta name="description" content="Montre la coupe avant de la faire.">
+<link rel="icon" href="data:,">
+<!-- Applique le thème mémorisé avant le premier affichage. -->
+<script>
+try {
+  var modeMemorise = JSON.parse(window.localStorage.getItem('coupe-studio:mode'));
+  if (modeMemorise === 'barber' || modeMemorise === 'salon') {
+    document.documentElement.setAttribute('data-theme', modeMemorise);
+  }
+} catch (e) { /* stockage vide ou bloqué : thème neutre */ }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500&family=Oswald:wght@600&family=Space+Grotesk:wght@600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Bandeau de rayures (thème barber seulement) : aplats, sans dégradé. -->
+  <svg class="rayures" aria-hidden="true" focusable="false">
+    <defs>
+      <pattern id="motif-rayures" width="48" height="16" patternUnits="userSpaceOnUse" patternTransform="skewX(-35)">
+        <rect class="rayure-1" width="16" height="16"/>
+        <rect class="rayure-2" x="16" width="16" height="16"/>
+        <rect class="rayure-3" x="32" width="16" height="16"/>
+      </pattern>
+    </defs>
+    <rect width="100%" height="16" fill="url(#motif-rayures)"/>
+  </svg>
+
+  <!-- ===== Écran 1 : Accueil ===== -->
+  <section class="ecran" id="ecran-accueil" aria-labelledby="titre-accueil">
+    <div class="defile">
+      <div class="colonne">
+        <header>
+          <h1 id="titre-accueil" tabindex="-1">Coupe Studio</h1>
+          <p class="sous-titre">Montre la coupe avant de la faire.</p>
+        </header>
+        <p class="alerte" id="message-accueil" role="alert" hidden></p>
+        <div>
+          <span class="etiquette" id="etiquette-mode">Tu travailles en</span>
+          <div class="rangee" role="group" aria-labelledby="etiquette-mode">
+            <button type="button" class="choix" data-mode="barber" aria-pressed="false">Barber</button>
+            <button type="button" class="choix" data-mode="salon" aria-pressed="false">Salon</button>
+          </div>
+        </div>
+        <div>
+          <h2>Mes recettes</h2>
+          <div class="pile" id="liste-recettes"></div>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="colonne">
+        <a class="btn" href="#catalogue">Choisir une coupe</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Écran 2 : Catalogue ===== -->
+  <section class="ecran" id="ecran-catalogue" aria-labelledby="titre-catalogue" hidden>
+    <div class="defile">
+      <div class="colonne">
+        <header>
+          <h1 id="titre-catalogue" tabindex="-1">Catalogue</h1>
+          <p class="sous-titre" id="sous-titre-catalogue"></p>
+        </header>
+        <div class="coupes" id="grille-coupes"></div>
+        <button type="button" class="btn-2" id="ouvrir-ajout" aria-expanded="false" aria-controls="form-ajout">Ajouter ma coupe</button>
+        <form class="carte blocs" id="form-ajout" novalidate hidden>
+          <h2>Ma coupe</h2>
+          <div>
+            <label class="etiquette" for="ajout-nom">Nom</label>
+            <input class="champ" id="ajout-nom" type="text" maxlength="40" autocomplete="off" enterkeyhint="next">
+          </div>
+          <div>
+            <label class="etiquette" for="ajout-ligne">Description</label>
+            <textarea class="champ" id="ajout-ligne" maxlength="140" rows="3" placeholder="Côtés, dessus, longueur, coiffage"></textarea>
+          </div>
+          <div>
+            <label class="etiquette" for="ajout-en">Description en anglais (facultatif)</label>
+            <textarea class="champ" id="ajout-en" maxlength="200" rows="3" lang="en"></textarea>
+            <p class="sous-titre">Sans anglais, la description française part telle quelle dans le prompt.</p>
+          </div>
+          <div id="ajout-type">
+            <span class="etiquette" id="etiquette-ajout-type">Réglages de la recette</span>
+            <div class="groupe" role="group" aria-labelledby="etiquette-ajout-type">
+              <button type="button" class="choix" data-type="barber" aria-pressed="false">Barber</button>
+              <button type="button" class="choix" data-type="salon" aria-pressed="false">Salon</button>
+            </div>
+          </div>
+          <p class="alerte" id="ajout-erreur" role="alert" hidden></p>
+          <div class="pile">
+            <button type="submit" class="btn">Enregistrer la coupe</button>
+            <button type="button" class="btn-2" id="annuler-ajout">Annuler</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Écran 3 : Recette ===== -->
+  <section class="ecran" id="ecran-recette" aria-labelledby="titre-recette" hidden>
+    <div class="defile">
+      <div class="colonne">
+        <header>
+          <h1 id="titre-recette" tabindex="-1">Recette</h1>
+          <p class="sous-titre" id="sous-titre-recette"></p>
+        </header>
+        <div class="blocs" id="reglages"></div>
+        <div class="pile" id="recette-secondaires">
+          <button type="button" class="btn-2" data-ouvrir-fond="recette"></button>
+          <button type="button" class="btn-2" id="supprimer-coupe" hidden>Supprimer cette coupe</button>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="colonne">
+        <p id="resume-recette" aria-live="polite"></p>
+        <a class="btn" id="action-recette" href="#client">Voir le profil client</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Écran 4 : Client ===== -->
+  <section class="ecran" id="ecran-client" aria-labelledby="titre-client" hidden>
+    <div class="defile">
+      <div class="colonne">
+        <header>
+          <h1 id="titre-client" tabindex="-1">Profil client</h1>
+          <p class="sous-titre">5 réponses, pas plus.</p>
+        </header>
+        <div class="blocs" id="questions"></div>
+        <div>
+          <h2>Coupes proposées</h2>
+          <div class="coupes coupes-compactes" id="propositions"></div>
+        </div>
+        <div class="pile" id="avertissements" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="colonne">
+        <a class="btn" id="action-client" href="#resultat">Générer les prompts</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Écran 5 : Fond (ouvert depuis Recette ou Résultat) ===== -->
+  <section class="ecran" id="ecran-fond" aria-labelledby="titre-fond" hidden>
+    <div class="defile">
+      <div class="colonne">
+        <header>
+          <h1 id="titre-fond" tabindex="-1">Fond</h1>
+          <p class="sous-titre">Le fond change, la coiffure reste identique.</p>
+        </header>
+        <div class="fonds" id="choix-fond" role="group" aria-labelledby="titre-fond"></div>
+        <div id="bloc-couleur-unie" hidden>
+          <span class="etiquette" id="etiquette-couleur-unie">Couleur unie</span>
+          <div class="groupe" id="pastilles" role="group" aria-labelledby="etiquette-couleur-unie"></div>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="colonne">
+        <button type="button" class="btn" id="appliquer-fond">Appliquer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Écran 6 : Résultat ===== -->
+  <section class="ecran" id="ecran-resultat" aria-labelledby="titre-resultat" hidden>
+    <div class="defile">
+      <div class="colonne">
+        <header>
+          <h1 id="titre-resultat" tabindex="-1">Résultat</h1>
+          <p class="sous-titre" id="sous-titre-resultat"></p>
+        </header>
+        <div class="blocs" id="etapes"></div>
+        <div id="bloc-reference">
+          <span class="etiquette" id="etiquette-reference">J’ai une photo de référence</span>
+          <div class="groupe" role="group" aria-labelledby="etiquette-reference">
+            <button type="button" class="choix" data-reference="non" aria-pressed="true">Non</button>
+            <button type="button" class="choix" data-reference="oui" aria-pressed="false">Oui</button>
+          </div>
+        </div>
+        <div class="pile" id="resultat-secondaires">
+          <button type="button" class="btn-2" data-ouvrir-fond="resultat"></button>
+          <div class="rangee">
+            <button type="button" class="btn-2" id="enregistrer">Enregistrer</button>
+            <button type="button" class="btn-2" id="partager">Partager</button>
+          </div>
+          <p class="alerte" id="message-resultat" role="alert" hidden></p>
+          <input class="champ" id="lien-partage" type="text" readonly aria-label="Lien de la recette" hidden>
+        </div>
+      </div>
+    </div>
+    <div class="actions" id="actions-resultat" hidden>
+      <div class="colonne">
+        <a class="btn" href="#catalogue">Choisir une coupe</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Barre d'onglets ===== -->
+  <nav class="onglets" aria-label="Navigation">
+    <div class="onglets-liste">
+      <a class="onglet" href="#accueil" data-onglet="accueil">
+        <svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 11L12 4L20 11V20H4Z"/></svg>
+        Accueil
+      </a>
+      <a class="onglet" href="#catalogue" data-onglet="catalogue">
+        <svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>
+        Catalogue
+      </a>
+      <a class="onglet" href="#recette" data-onglet="recette">
+        <svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 8H19M5 16H19"/><circle cx="9" cy="8" r="2"/><circle cx="15" cy="16" r="2"/></svg>
+        Recette
+      </a>
+      <a class="onglet" href="#client" data-onglet="client">
+        <svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4"/><path d="M4 20C4 15 20 15 20 20"/></svg>
+        Client
+      </a>
+      <a class="onglet" href="#resultat" data-onglet="resultat">
+        <svg class="icone" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12L10 17L19 7"/></svg>
+        Résultat
+      </a>
+    </div>
+  </nav>
+</div>
+
+<noscript><p>Coupe Studio a besoin de JavaScript : active-le dans ton navigateur, puis recharge la page.</p></noscript>
+
+<script src="catalogue.js"></script>
+<script src="prompts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

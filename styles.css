@@ -1,0 +1,546 @@
+/* Coupe Studio — styles.css
+   Règles : DESIGN.md. Toutes les couleurs vivent dans la section 1 (les 3 thèmes).
+   Partout ailleurs : uniquement des variables. Une classe par composant. */
+
+/* ===== 1. Thèmes : couleurs, police des titres, arrondi ===== */
+:root {
+  --fond: #F4F5F6;
+  --surface: #FFFFFF;
+  --texte: #14181B;
+  --principale: #0F5C6B;
+  --alerte: #B3261E;
+  --sur-principale: #F4F5F6;
+  --selection: var(--principale);
+  --sur-selection: var(--sur-principale);
+  --texte-2: rgb(20 24 27 / 0.7);
+  --bordure: rgb(20 24 27 / 0.15);
+  --rayon: 12px;
+  --police-titres: "Space Grotesk", system-ui, sans-serif;
+  --casse-titres: none;
+  --approche-titres: 0;
+  --police-texte: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --police-fixe: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root[data-theme="salon"] {
+  --fond: #FBF8F7;
+  --surface: #FFFFFF;
+  --texte: #2E2321;
+  --principale: #A35A66;
+  --alerte: #B3261E;
+  --sur-principale: #FBF8F7;
+  --texte-2: rgb(46 35 33 / 0.7);
+  --bordure: rgb(46 35 33 / 0.15);
+  --rayon: 16px;
+  --police-titres: Fraunces, Georgia, serif;
+}
+
+:root[data-theme="barber"] {
+  --fond: #F2F0EB;
+  --surface: #FFFFFF;
+  --texte: #111111;
+  --principale: #C8102E;
+  --alerte: #B36B00;
+  --sur-principale: #FFFFFF;
+  --selection: #2B59C3;
+  --sur-selection: #FFFFFF;
+  --texte-2: rgb(17 17 17 / 0.7);
+  --bordure: rgb(17 17 17 / 0.35);
+  --rayon: 4px;
+  --police-titres: Oswald, "Arial Narrow", sans-serif;
+  --casse-titres: uppercase;
+  --approche-titres: 0.04em;
+}
+
+/* ===== 2. Base ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font: 400 16px/1.5 var(--police-texte);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+button,
+input,
+textarea {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+h1 {
+  margin: 0;
+  font: 600 28px/1.2 var(--police-titres);
+  text-transform: var(--casse-titres);
+  letter-spacing: var(--approche-titres);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font: 600 20px/1.2 var(--police-titres);
+  text-transform: var(--casse-titres);
+  letter-spacing: var(--approche-titres);
+}
+
+p {
+  margin: 0;
+  max-width: 65ch;
+}
+
+:focus-visible {
+  outline: 2px solid var(--selection);
+  outline-offset: 2px;
+}
+
+h1:focus {
+  outline: none;
+}
+
+/* ===== 3. Mise en page : une colonne, bandeau en haut, actions et onglets fixes en bas ===== */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.rayures {
+  display: none;
+  flex: none;
+  width: 100%;
+  height: 16px;
+}
+
+:root[data-theme="barber"] .rayures {
+  display: block;
+}
+
+.rayure-1 { fill: var(--principale); }
+.rayure-2 { fill: var(--surface); }
+.rayure-3 { fill: var(--selection); }
+
+.ecran {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.defile {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.colonne {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 512px;
+  margin: 0 auto;
+  padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+}
+
+/* Barre d'actions : garde le bouton principal visible au-dessus des onglets. */
+.actions {
+  flex: none;
+  border-top: 1px solid var(--bordure);
+}
+
+.actions .colonne {
+  gap: 8px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.groupe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rangee {
+  display: flex;
+  gap: 8px;
+}
+
+.rangee > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.pile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Blocs empilés dans une carte (24 entre deux blocs). */
+.blocs {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.blocs > h2 {
+  margin: 0;
+}
+
+.etiquette {
+  display: block;
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+.sous-titre {
+  margin: 8px 0 0;
+  color: var(--texte-2);
+}
+
+.discret {
+  color: var(--texte-2);
+}
+
+.legende {
+  font-size: 12px;
+  color: var(--texte-2);
+}
+
+/* ===== 4. Composants (DESIGN.md, section 4) ===== */
+
+/* Bouton principal : un seul par écran. */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--rayon);
+  background: var(--principale);
+  color: var(--sur-principale);
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Bouton secondaire. */
+.btn-2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: transparent;
+  color: var(--texte);
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Bouton à bascule (choix rapide). */
+.choix {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 8px 16px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  color: var(--texte);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.choix[aria-pressed="true"] {
+  border-color: var(--selection);
+  background: var(--selection);
+  color: var(--sur-selection);
+}
+
+/* Pastille de couleur : un bouton à bascule qui montre une teinte de fond photo. */
+.pastille,
+.pastille[aria-pressed="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  padding: 0;
+  background: var(--teinte);
+  color: var(--texte);
+}
+
+.pastille[aria-pressed="true"] {
+  border: 2px solid var(--principale);
+}
+
+/* Champ de saisie. */
+.champ {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 16px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  color: var(--texte);
+}
+
+textarea.champ {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.champ::placeholder {
+  color: var(--texte-2);
+  opacity: 1;
+}
+
+/* Curseur. */
+.curseur {
+  display: block;
+  width: 100%;
+  height: 48px;
+  accent-color: var(--principale);
+}
+
+.graduations {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--texte-2);
+}
+
+/* Carte. */
+.carte {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  color: var(--texte);
+  text-align: left;
+}
+
+button.carte {
+  cursor: pointer;
+}
+
+.carte-titre {
+  display: block;
+  font-weight: 500;
+}
+
+/* Carte de coupe (catalogue) : silhouette, nom, une ligne. */
+.coupes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.coupe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coupe svg {
+  width: 100%;
+  height: 72px;
+  fill: none;
+  stroke: var(--texte);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.coupe-nom {
+  font: 600 16px/1.2 var(--police-titres);
+  text-transform: var(--casse-titres);
+  letter-spacing: var(--approche-titres);
+  overflow-wrap: break-word;
+}
+
+.coupe-ligne {
+  color: var(--texte-2);
+}
+
+.coupe[aria-pressed="true"] {
+  border-color: var(--principale);
+  outline: 1px solid var(--principale);
+  outline-offset: -2px;
+}
+
+.coupe[aria-pressed="true"]:focus-visible {
+  outline: 2px solid var(--selection);
+  outline-offset: 2px;
+}
+
+/* Cartes compactes (propositions de l'écran Client). */
+.coupes-compactes {
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.coupes-compactes .coupe {
+  padding: 8px;
+}
+
+.coupes-compactes .coupe svg {
+  height: 48px;
+}
+
+/* Avertissement : bordure gauche, jamais d'aplat. */
+.alerte {
+  padding: 8px 16px;
+  border-left: 4px solid var(--alerte);
+  border-radius: 0 var(--rayon) var(--rayon) 0;
+  background: var(--surface);
+}
+
+.alerte b {
+  display: block;
+  font-weight: 500;
+}
+
+/* Choix de fond : échantillon + libellé. */
+.fonds {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px 8px;
+}
+
+.fond-option {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texte);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.echantillon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--teinte, transparent);
+}
+
+.echantillon-origine {
+  border-style: dashed;
+}
+
+.fond-option[aria-pressed="true"] .echantillon {
+  border: 2px solid var(--principale);
+}
+
+/* Bloc de prompt (écran Résultat). */
+.etape {
+  font-size: 12px;
+  color: var(--texte-2);
+}
+
+.consigne {
+  margin-top: 8px;
+}
+
+.prompt {
+  max-height: 96px;
+  margin: 8px 0 16px;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--fond);
+  font: 400 12px/1.5 var(--police-fixe);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* Icônes : une famille, au trait, 2 px. */
+.icone {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Barre d'onglets du bas. */
+.onglets {
+  flex: none;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--bordure);
+  background: var(--surface);
+}
+
+.onglets-liste {
+  display: flex;
+  max-width: 512px;
+  margin: 0 auto;
+}
+
+.onglet {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--texte-2);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.onglet[aria-current="page"] {
+  color: var(--selection);
+}
+
+/* ===== 5. Transitions : 150 ms au plus ===== */
+@media (prefers-reduced-motion: no-preference) {
+  .btn,
+  .btn-2,
+  .choix,
+  .carte,
+  .onglet {
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+}

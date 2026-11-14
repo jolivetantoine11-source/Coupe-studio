@@ -1,8 +1,8 @@
 /* Coupe Studio — catalogue.js
-   Les 24 coupes (CLAUDE.md, section 5), leurs recettes par défaut, les réglages
-   de la recette (section 6) et les fonds (section 8).
+   Les 24 coupes (CLAUDE.md, section 5), leurs réglages par défaut et les réglages
+   possibles (section 6). Les fonds sont dans fonds.js, les caractéristiques dans caracteristiques.js.
 
-   Recette par défaut d'une coupe : on ne préremplit que ce que sa description
+   Réglages par défaut d'une coupe : on ne préremplit que ce que sa description
    anglaise (`desc`) affirme. Un réglage que la coupe ne précise pas reste vide
    (null). Ainsi l'écran ne montre jamais un choix que le prompt ne dit pas. */
 (function (racine) {
@@ -43,7 +43,13 @@
       '<path d="' + (CHEVEUX[cle] || CHEVEUX.perso) + '"/></svg>';
   }
 
-  /* ---------- Réglages de la recette ----------
+  /* Pictogramme au trait, dans le même cadre que les silhouettes.
+     `contenu` : des tracés SVG constants. `avecTete` : dessine aussi la tête. */
+  function picto(contenu, avecTete) {
+    return '<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">' + (avecTete ? TETE : '') + contenu + '</svg>';
+  }
+
+  /* ---------- Réglages d'une coupe ----------
      fr  = libellé du bouton        res = morceau du résumé français
      en  = fragment anglais ajouté à `desc` quand le réglage est modifié */
   var REGLAGES = {
@@ -64,11 +70,18 @@
       ] },
       { id: 'dessus', nom: 'Dessus', type: 'curseur', min: 1, max: 15, depart: 5,
         vide: 'longueur gardée', res: 'dessus X cm', en: 'about X cm on top' },
-      { id: 'coiffage', nom: 'Coiffage', type: 'choix', options: [
-        { v: 'avant', fr: 'Vers l’avant', res: 'coiffé vers l’avant', en: 'styled forward' },
-        { v: 'arriere', fr: 'En arrière', res: 'coiffé en arrière', en: 'styled back' },
-        { v: 'cote', fr: 'Sur le côté', res: 'coiffé sur le côté', en: 'styled to the side' },
-        { v: 'naturel', fr: 'Naturel', res: 'coiffage naturel', en: 'natural, unstyled' }
+      /* Coiffage par zone (décision d'Antoine du 14 novembre 2026). */
+      { id: 'devant', nom: 'Coiffage, devant et frange', type: 'choix', options: [
+        { v: 'avant', fr: 'Vers l’avant', res: 'devant vers l’avant', en: 'front styled forward' },
+        { v: 'releve', fr: 'Relevé', res: 'devant relevé', en: 'front lifted up' },
+        { v: 'cote', fr: 'Sur le côté', res: 'devant sur le côté', en: 'front swept to the side' },
+        { v: 'arriere', fr: 'En arrière', res: 'devant en arrière', en: 'front pushed back' }
+      ] },
+      { id: 'coiffage', nom: 'Coiffage, dessus', type: 'choix', options: [
+        { v: 'arriere', fr: 'En arrière', res: 'coiffé en arrière', en: 'top styled back' },
+        { v: 'cote', fr: 'Sur le côté', res: 'coiffé sur le côté', en: 'top styled to the side' },
+        { v: 'naturel', fr: 'Naturel', res: 'coiffage naturel', en: 'top left natural, unstyled' },
+        { v: 'decoiffe', fr: 'Décoiffé', res: 'décoiffé', en: 'messy, textured top' }
       ] },
       { id: 'contours', nom: 'Contours', type: 'choix', options: [
         { v: 'nets', fr: 'Nets', res: 'contours nets', en: 'sharp line-up' },
@@ -126,7 +139,7 @@
 
   /* Valeurs de départ communes à toutes les coupes d'un mode. */
   var BASE = {
-    barber: { cotes: null, sabot: null, dessus: null, coiffage: null, contours: null, barbe: 'inchangee', barbeSeule: false },
+    barber: { cotes: null, sabot: null, dessus: null, devant: null, coiffage: null, contours: null, barbe: 'inchangee', barbeSeule: false },
     salon: { longueur: null, forme: null, couches: null, frange: null, raie: 'naturelle', couleur: 'inchangee', couleurAutre: '' }
   };
 
@@ -148,7 +161,7 @@
       'crew', { cotes: 'taper', sabot: '2', dessus: 3 }),
     coupe('barber', 'crop-texture', 'Crop texturé', 'Frange courte, côtés nets',
       'textured French crop: faded sides, 3-5 cm textured top with a short straight fringe',
-      'crop', { cotes: 'degrade', dessus: 4, coiffage: 'avant' }),
+      'crop', { cotes: 'degrade', dessus: 4, devant: 'avant' }),
     coupe('barber', 'taper-bas', 'Taper bas', 'Fondu discret sur la nuque',
       'low taper fade at the temples and nape only, top length kept, clean natural neckline',
       'taper', { cotes: 'taper', contours: 'naturels' }),
@@ -160,10 +173,10 @@
       'raie', { cotes: 'taper', sabot: '2', dessus: 6, coiffage: 'cote' }),
     coupe('barber', 'quiff', 'Quiff', 'Dessus relevé vers l’avant',
       'quiff: short faded sides, 7-9 cm top styled up and back at the front with volume',
-      'quiff', { cotes: 'degrade', dessus: 8 }, { front: true }),
+      'quiff', { cotes: 'degrade', dessus: 8, devant: 'releve' }, { front: true }),
     coupe('barber', 'slick-back', 'Slick back', 'Peigné en arrière',
       'slick back: 8-10 cm top combed straight back with a light natural shine, tapered sides',
-      'slick', { cotes: 'taper', dessus: 9, coiffage: 'arriere' }, { front: true, lisse: true }),
+      'slick', { cotes: 'taper', dessus: 9, devant: 'arriere', coiffage: 'arriere' }, { front: true, lisse: true }),
     coupe('barber', 'degrade-boucle', 'Dégradé bouclé', 'Fondu, boucles sur le dessus',
       'curly top with a mid fade: sides faded from guard 0.5 to 2, natural defined curls on top 4-6 cm',
       'boucle', { cotes: 'degrade', sabot: '0.5', dessus: 5, coiffage: 'naturel' }),
@@ -228,31 +241,13 @@
       'taper-bas', 'wolf-cut', 'slick-back', 'frange-rideau', 'buzz-cut', 'long-couches']
   };
 
-  /* ---------- Fonds (section 8) ----------
-     `teinte` colore seulement l'échantillon affiché : c'est du contenu, pas une couleur du thème. */
-  var FONDS = [
-    { id: 'origine', fr: 'D’origine', en: null, teinte: null },
-    { id: 'gris', fr: 'Gris studio', en: 'a plain light grey photo studio backdrop', teinte: '#C9CDD1' },
-    { id: 'blanc', fr: 'Blanc uni', en: 'a plain off-white wall', teinte: '#FFFFFF' },
-    { id: 'couleur', fr: 'Couleur unie', en: 'a plain solid [couleur] backdrop', teinte: null },
-    { id: 'salon', fr: 'Salon flou', en: 'a softly blurred modern hair salon interior', teinte: '#D8C9BD' },
-    { id: 'dehors', fr: 'Dehors flou', en: 'a softly blurred outdoor street scene in daylight', teinte: '#9FB59A' }
-  ];
-  var COULEURS_UNIES = [
-    { id: 'bleu-gris', fr: 'Bleu gris', en: 'blue-grey', teinte: '#7C93A8' },
-    { id: 'beige', fr: 'Beige', en: 'warm beige', teinte: '#B8A28A' },
-    { id: 'sauge', fr: 'Vert sauge', en: 'sage green', teinte: '#8FA58F' },
-    { id: 'mauve', fr: 'Mauve', en: 'soft mauve', teinte: '#A08FA8' }
-  ];
-
   var CATALOGUE = {
     coupes: COUPES,
     ordre: ORDRE,
     reglages: REGLAGES,
     base: BASE,
-    fonds: FONDS,
-    couleursUnies: COULEURS_UNIES,
-    silhouette: silhouette
+    silhouette: silhouette,
+    picto: picto
   };
 
   racine.CATALOGUE = CATALOGUE;

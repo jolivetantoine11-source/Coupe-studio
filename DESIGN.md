@@ -10,6 +10,7 @@ Ces règles ont priorité sur toute idée de style. En cas de doute, ne pas inve
 - Appli mobile d'abord (largeur 390 px), utilisée debout en boutique, à une main.
 - Lisible en 2 secondes : un écran = une action principale.
 - Un seul style d'écran à l'autre. L'écran n°7 doit ressembler à l'écran n°1.
+- Un parcours page par page, comme une appli native : pas de barre d'onglets. Une flèche retour en haut à gauche (sauf sur l'Accueil). Revenir en arrière n'efface jamais un choix.
 - Sobre : pas de dégradés, pas d'ombres, pas d'emojis comme décor, sauf si ce fichier le dit.
 
 ## 2. Trois thèmes, une seule structure
@@ -67,24 +68,31 @@ Multiples de 8 uniquement : 8, 16, 24, 32, 48.
 
 ## 4. Composants
 
-- **Bouton principal** : fond `principale`, hauteur 56, pleine largeur, un seul par écran.
+- **Bouton principal** : fond `principale`, hauteur 56, pleine largeur, un seul par écran. Il vit dans une barre fixe en bas de la page : il reste visible même si la page défile.
 - **Bouton secondaire** : contour 1 px `texte` à 15 %, fond transparent, hauteur 48.
-- **Carte de coupe** (catalogue) : vignette silhouette dessinée (jamais de photo de vraie personne), nom, une ligne de description. Grille de 2 colonnes.
+- **Carte de coupe** (catalogue) : vignette silhouette dessinée (jamais de photo de vraie personne), nom, une ligne de description. Grille de 2 colonnes. Carte choisie : bordure `principale`.
+- **Carte de caractéristique** et **carte de retouche** (Catalogue personnalisé, Retouches IA) : la même carte que la carte de coupe, avec un pictogramme au trait et un nom. Sélection multiple.
+- **Badge** (« Conseillée ») : texte 12, graisse 500, couleur `principale` (bleu `selection` en thème barber). Pas de fond, pas de pilule.
+- **Avertissement court** (sur une carte de coupe) : bordure gauche 4 px `alerte`, texte 12, un ou deux mots (« Golfes », « Lissage nécessaire », « Pousse nécessaire »).
+- **Gros bouton de choix** (page « Que veux-tu faire ? ») : une carte entière touchable, titre 20 dans la police des titres, une ligne d'explication en texte secondaire.
 - **Champ / sélecteur** : fond `surface`, bordure 1 px, hauteur 48. Choix rapides en boutons à bascule plutôt qu'en listes déroulantes.
-- **Barre d'onglets du bas** : 5 entrées max (Accueil, Catalogue, Recette, Client, Résultat), icône + libellé, l'actif en `principale`.
+- **En-tête** : une bande en haut de chaque page sauf l'Accueil, avec la **flèche retour** à gauche (icône au trait, zone tactile 48 × 48, sans fond ni bordure). Il n'y a plus de barre d'onglets.
+- **Aperçu photo** (Retouches sans IA) : l'image du coiffeur, arrondi du thème, hauteur 320 au plus, reste visible en haut pendant qu'on règle. Aucun effet autour (ni ombre, ni cadre décoratif).
+- **Confirmation dans la page** (« Nouveau client ») : la question et deux boutons secondaires remplacent les boutons habituels. Jamais de fenêtre du navigateur.
 - **Bloc de prompt** (écran Résultat) : texte en police à chasse fixe, deux boutons : « Copier » puis « Ouvrir Gemini ». Après « Copier », le bouton affiche « Copié ».
 - **Avertissement** (pousse, lissage, golfes) : bordure gauche 4 px `alerte`, texte `texte`. Jamais de rouge en aplat.
 
 ## 5. Icônes et images
 
 - Icônes au trait, épaisseur 2 px, une seule famille.
-- Silhouettes de coupes : même cadrage, même trait, une couleur (`texte`).
-- Aucune photo de personne dans l'appli ni dans les démos sans consentement écrit.
+- Silhouettes de coupes et pictogrammes de caractéristiques : même cadrage, même trait, une couleur (`texte`).
+- Aucune photo de personne dans l'appli ni dans les démos sans consentement écrit. Seule exception : dans le Catalogue fond, le coiffeur charge sa propre photo. Elle est traitée dans son téléphone, jamais envoyée ni stockée, et n'influence jamais le thème.
 
 ## 6. Ton des textes
 
 - Français, tutoiement côté coiffeur. Phrases courtes.
 - Un bouton dit ce qu'il fait : « Copier », « Enregistrer », « Choisir cette coupe ».
+- Le mot « recette » n'est plus utilisé : on dit « coupe personnalisée ».
 - Une erreur dit ce qui ne va pas et quoi faire.
 - Vocabulaire du métier : sabot, dégradé, couches, frange, nuque. Pas de jargon IA affiché.
 
@@ -116,7 +124,7 @@ Les références sont des sites à observer pour la densité, l'espacement et la
 
 ## 10. Processus de travail (ordre obligatoire)
 
-1. **Maquette avant code.** Faire d'abord une page HTML statique des écrans (Accueil, Catalogue, Recette, Client, Fond, Résultat) dans les 3 thèmes. On la corrige jusqu'à validation, puis seulement on branche la logique.
+1. **Maquette avant code.** Faire d'abord une page HTML statique des écrans dans les 3 thèmes. On la corrige jusqu'à validation, puis seulement on branche la logique. `maquettes.html` reste la référence de style ; sa structure à onglets est dépassée depuis le 14 novembre 2026 (voir `CLAUDE.md`, section 4).
 2. **Un seul jeu de composants.** Chaque bouton, carte, champ et onglet vient d'une classe CSS unique (`.btn`, `.carte`, `.champ`, `.onglet`). Interdit de redéfinir un style sur un écran.
 3. **Un écran à la fois.** Terminer et valider un écran avant le suivant. Jamais de « améliore toute l'interface ».
 4. **Vérifier ce qui est construit.** Après chaque écran : capture à 390 px et à 1280 px, dans les 3 thèmes, comparée à la maquette. Corriger débordements et espacements.

@@ -12,60 +12,96 @@ const FORMATS = [
   { nom: '1280', largeur: 1280, hauteur: 800 }
 ];
 
-/* État de départ : une recette en cours et deux recettes enregistrées, selon le thème. */
+const PHOTO_TEST = path.join(__dirname, 'photo-test.png'); // image de synthèse (formes géométriques), aucune personne
+
+/* État de départ : un client en cours et deux coupes personnalisées enregistrées, selon le thème.
+   `local` va dans localStorage, `session` dans sessionStorage. */
 function graine(theme) {
   const jour = 24 * 3600 * 1000;
   const barber = {
-    v: 1, c: 'skin-fade',
-    r: { cotes: 'blanc', sabot: '0.5', dessus: 5, coiffage: null, contours: null, barbe: 'entretenue', barbeSeule: false },
-    p: { texture: 'ondules', visage: 'ovale', front: 'golfes-marques', longueur: 'moyenne', lunettes: 'oui' },
-    f: { type: 'gris', couleur: 'bleu-gris' }
+    v: 2, c: 'skin-fade',
+    r: { cotes: 'blanc', sabot: '0.5', dessus: 5, devant: null, coiffage: 'decoiffe', contours: null, barbe: 'entretenue', barbeSeule: false },
+    p: { texture: 'boucles', visage: 'ovale', front: 'golfes-marques', longueur: 'courte', lunettes: 'oui' },
+    k: ['meche-cote', 'contours-nets'], kl: ''
   };
   const salon = {
-    v: 1, c: 'carre-plongeant',
+    v: 2, c: 'carre-plongeant',
     r: { longueur: 24, forme: 'plongeante', couches: 'marquees', frange: null, raie: 'naturelle', couleur: 'balayage', couleurAutre: '' },
-    p: { texture: 'ondules', visage: 'ovale', front: 'fins', longueur: 'longue', lunettes: 'non' },
-    f: { type: 'gris', couleur: 'bleu-gris' }
+    p: { texture: 'boucles', visage: 'ovale', front: 'fins', longueur: 'courte', lunettes: 'non' },
+    k: ['frange-rideau', 'reflets-cuivres'], kl: ''
   };
-  const session = theme === 'salon' ? salon : barber;
+  const client = theme === 'salon' ? salon : barber;
   const autre = theme === 'salon'
-    ? { v: 1, c: 'frange-rideau', r: {}, p: {}, f: {} }
-    : { v: 1, c: 'quiff', r: { cotes: 'degrade', dessus: 9, barbe: 'inchangee' }, p: {}, f: {} };
+    ? { v: 2, c: null, r: null, k: ['frange-rideau', 'balayage', 'couches'], kl: '' }
+    : { v: 2, c: 'quiff', r: { cotes: 'degrade', dessus: 9, barbe: 'inchangee' }, k: [], kl: '' };
   return {
-    'coupe-studio:mode': theme === 'neutre' ? null : theme,
-    'coupe-studio:session': session,
-    'coupe-studio:recettes': [
-      Object.assign({ id: 2, date: Date.now() - jour }, session),
-      Object.assign({ id: 1, date: Date.now() - 9 * jour }, autre)
-    ],
-    'coupe-studio:coupes': []
+    local: {
+      'coupe-studio:mode': theme === 'neutre' ? null : theme,
+      'coupe-studio:recettes': [
+        Object.assign({ id: 2, date: Date.now() - jour }, client),
+        Object.assign({ id: 1, date: Date.now() - 9 * jour }, autre)
+      ],
+      'coupe-studio:coupes': []
+    },
+    session: {
+      'coupe-studio:session': Object.assign({}, client, {
+        b: true, rp: {}, ref: false, fi: 'barber',
+        t: { luminosite: 12, contraste: 8, chaleur: 6, nb: false, format: '4-5', montage: false },
+        ti: { choix: ['flou', 'lumiere'], couleur: 'bleu-gris' }
+      })
+    }
   };
 }
 
-/* Les états capturés et audités pour chaque écran. */
+/* Les états capturés et audités pour chaque page, dans l'ordre du parcours. */
 const VARIANTES = {
   accueil: [
     { nom: 'accueil' },
-    { nom: 'accueil-vide', graine: (g) => { g['coupe-studio:recettes'] = []; } }
-  ],
-  catalogue: [
-    { nom: 'catalogue' },
-    { nom: 'catalogue-ajout', action: async (page) => { await page.click('#ouvrir-ajout'); } }
-  ],
-  recette: [
-    { nom: 'recette' },
-    { nom: 'recette-vide', graine: (g) => { delete g['coupe-studio:session']; } }
+    { nom: 'accueil-vide', graine: (g) => { g.local['coupe-studio:recettes'] = []; g.session = {}; } },
+    { nom: 'accueil-confirmation', action: async (page) => { await page.click('#ecran-accueil [data-nouveau-client]'); } }
   ],
   client: [
     { nom: 'client' }
   ],
-  fond: [
-    { nom: 'fond' },
-    { nom: 'fond-couleur', action: async (page) => { await page.click('[data-fond="couleur"]'); } }
+  choix: [
+    { nom: 'choix' }
+  ],
+  catalogue: [
+    { nom: 'catalogue' },
+    { nom: 'catalogue-sans-profil', graine: (g) => { g.session['coupe-studio:session'].p = {}; } },
+    { nom: 'catalogue-ajout', action: async (page) => { await page.click('#ouvrir-ajout'); } }
+  ],
+  reglages: [
+    { nom: 'reglages' },
+    { nom: 'reglages-vide', graine: (g) => { g.session = {}; } }
+  ],
+  personnalise: [
+    { nom: 'personnalise' },
+    { nom: 'personnalise-contradiction', graine: (g) => {
+      const s = g.session['coupe-studio:session'];
+      s.b = false; s.k = ['frange-courte', 'frange-rideau', 'couleur-libre', 'lisse']; s.kl = 'copper red';
+    } }
   ],
   resultat: [
     { nom: 'resultat' },
-    { nom: 'resultat-reference', action: async (page) => { await page.click('[data-reference="oui"]'); } }
+    { nom: 'resultat-reference', action: async (page) => { await page.click('[data-reference="oui"]'); } },
+    { nom: 'resultat-confirmation', action: async (page) => { await page.click('#ecran-resultat [data-nouveau-client]'); } }
+  ],
+  fond: [
+    { nom: 'fond' }
+  ],
+  retouche: [
+    { nom: 'retouche' },
+    { nom: 'retouche-photo', action: async (page) => {
+      await page.setInputFiles('#fichier-photo', PHOTO_TEST);
+      await page.waitForSelector('#zone-apercu:not([hidden])');
+    } }
+  ],
+  'retouche-ia': [
+    { nom: 'retouche-ia' },
+    { nom: 'retouche-ia-couleur', graine: (g) => {
+      g.session['coupe-studio:session'].ti = { choix: ['studio-couleur', 'ranger'], couleur: 'sauge' };
+    } }
   ]
 };
 const ECRANS = Object.keys(VARIANTES);
@@ -79,7 +115,8 @@ async function ouvrir(navigateur, { theme, format, ecran, variante }) {
   if (variante && variante.graine) variante.graine(g, theme);
   await contexte.addInitScript((donnees) => {
     try {
-      for (const cle in donnees) window.localStorage.setItem(cle, JSON.stringify(donnees[cle]));
+      for (const cle in donnees.local) window.localStorage.setItem(cle, JSON.stringify(donnees.local[cle]));
+      for (const cle in donnees.session) window.sessionStorage.setItem(cle, JSON.stringify(donnees.session[cle]));
     } catch (e) { /* stockage bloqué */ }
   }, g);
   const page = await contexte.newPage();
@@ -87,7 +124,10 @@ async function ouvrir(navigateur, { theme, format, ecran, variante }) {
   page.on('pageerror', (e) => erreurs.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()); });
   await page.goto(ADRESSE + '#' + ecran);
-  if (variante && variante.action) await variante.action(page);
+  if (variante && variante.action) {
+    await variante.action(page);
+    await page.evaluate(() => { window.auditApresAction = true; }); // l'action a pu faire défiler la page : c'est voulu
+  }
   await page.waitForTimeout(250); // fin des transitions (150 ms)
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(100);
@@ -292,8 +332,25 @@ function auditDansLaPage() {
     const auCentre = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
     if (auCentre && !b.contains(auCentre)) signaler('bouton principal recouvert', b);
   });
-  const onglets = document.querySelector('.onglets');
-  if (onglets && onglets.getBoundingClientRect().bottom > hauteur + 0.5) signaler('onglets hors de l’écran', onglets);
+  /* La flèche retour est là sur toutes les pages sauf l'Accueil, visible et assez grande. */
+  const accueil = document.querySelector('#ecran-accueil');
+  const fleche = document.querySelector('#retour');
+  const flecheVisible = fleche && visible(fleche);
+  if (accueil && accueil.hidden && !flecheVisible) signaler('flèche retour absente', null);
+  if (accueil && !accueil.hidden && flecheVisible) signaler('flèche retour sur l\u2019accueil', fleche);
+  if (document.querySelector('.onglets, .onglet')) signaler('barre d\u2019onglets encore présente', null);
+  /* Aucun élément ne porte le nom d'une page : sinon le navigateur défile jusqu'à lui à l'ouverture. */
+  document.querySelectorAll('.ecran').forEach((e) => {
+    const nom = e.id.replace('ecran-', '');
+    if (document.getElementById(nom)) signaler('un élément porte le nom de la page « ' + nom + ' »', document.getElementById(nom));
+  });
+  /* À l'ouverture, le titre de la page est visible en haut. */
+  const titre = document.querySelector('.ecran:not([hidden]) h1');
+  const defile = document.querySelector('.ecran:not([hidden]) .defile');
+  if (titre && defile && defile.scrollTop === 0 && titre.getBoundingClientRect().top < 0) signaler('titre de la page hors de l\u2019écran', titre);
+  if (defile && defile.scrollTop !== 0 && !window.auditApresAction) signaler('la page ne s\u2019ouvre pas en haut', defile, 'défilement ' + defile.scrollTop);
+  /* Le mot « recette » ne doit plus apparaître. */
+  if (/recette/i.test(document.querySelector('.app').innerText)) signaler('le mot « recette » est affiché', null);
 
   return { problemes, contrasteMin, polices, theme: racine.getAttribute('data-theme') };
 }
@@ -302,4 +359,4 @@ async function auditer(page) {
   return page.evaluate(auditDansLaPage);
 }
 
-module.exports = { RACINE, ADRESSE, THEMES, FORMATS, ECRANS, VARIANTES, graine, ouvrir, auditer, chromium };
+module.exports = { RACINE, ADRESSE, THEMES, FORMATS, ECRANS, VARIANTES, PHOTO_TEST, graine, ouvrir, auditer, chromium };

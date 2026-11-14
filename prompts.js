@@ -1,6 +1,6 @@
 /* Coupe Studio — prompts.js
-   Les prompts validés, copiés MOT POUR MOT depuis PROMPTS.md (et, pour le fond, depuis
-   CLAUDE.md section 8), plus les fonctions qui remplacent [COUPE] et [FOND].
+   Les prompts validés, copiés MOT POUR MOT depuis PROMPTS.md (et, pour le fond et sa
+   règle ajoutée, depuis CLAUDE.md section 8), plus les fonctions qui remplacent [COUPE] et [FOND].
 
    NE PAS MODIFIER CE TEXTE À LA MAIN. Toute modification se propose d'abord à Antoine,
    se fait dans PROMPTS.md, puis se recopie ici. Le test tests/prompts.test.js compare
@@ -141,6 +141,10 @@
       "Do not retouch, smooth or cut the hair edges, and do not change the haircut in any way.",
       "Adapt the light on the person naturally to the new background without changing the skin tone.",
       "Photorealistic result, keep the original image quality and grain."
+    ].join('\n'),
+
+    regleRetouche: [
+      "The hair and the person must stay pixel-identical: same haircut, same hair edges, same color, same face, same body."
     ].join('\n')
   };
 
@@ -153,7 +157,9 @@
     reference: 'Joins 2 images : le selfie du client, puis la photo de référence.',
     ficheBarber: 'À envoyer avec le modèle 3.1 Pro, en joignant le selfie d’origine (image 1) puis l’image générée (image 2). Ne nomme pas la coupe dans ta demande : écris juste « image 2 ».',
     ficheSalon: 'À envoyer avec le modèle 3.1 Pro, en joignant le selfie d’origine (image 1) puis l’image générée (image 2). Ne nomme pas la coupe dans ta demande : écris juste « image 2 ».',
-    fond: 'À envoyer en dernier, en joignant l’image générée.'
+    retouche: 'À envoyer avec la photo à retoucher jointe.',
+    /* Affiché SOUS le prompt de retouche IA. */
+    apresRetouche: 'L’IA régénère l’image : vérifie toujours les cheveux avant de publier. Pour une retouche garantie sans changement, utilise les retouches sans IA.'
   };
 
   /* Remplace un marqueur sans interpréter le texte inséré (pas de motif `$&`). */
@@ -182,9 +188,10 @@
     return mode === 'salon' ? TEXTES.ficheSalon : TEXTES.ficheBarber;
   }
 
-  /* Étape 4 : [FOND] = description anglaise du fond. */
-  function fond(fondAnglais) {
-    return remplacer(TEXTES.fond, '[FOND]', fondAnglais);
+  /* Catalogue fond, retouches IA : [FOND] = la combinaison choisie, puis la règle
+     « pixel-identical » sur une nouvelle ligne (CLAUDE.md, section 8). */
+  function retouche(fondAnglais) {
+    return remplacer(TEXTES.fond, '[FOND]', fondAnglais) + '\n' + TEXTES.regleRetouche;
   }
 
   var PROMPTS = {
@@ -194,7 +201,7 @@
     image: image,
     reference: reference,
     fiche: fiche,
-    fond: fond
+    retouche: retouche
   };
 
   racine.PROMPTS = PROMPTS;

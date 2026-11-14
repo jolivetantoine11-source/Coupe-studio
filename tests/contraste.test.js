@@ -58,10 +58,10 @@ const PAIRES_TEXTE = [
   ['texte sur fond', '--texte', '--fond'],
   ['texte sur surface (cartes, champs, boutons à bascule)', '--texte', '--surface'],
   ['texte secondaire sur fond', '--texte-2', '--fond'],
-  ['texte secondaire sur surface (onglets, cartes, texte d’exemple)', '--texte-2', '--surface'],
+  ['texte secondaire sur surface (cartes, texte d’exemple)', '--texte-2', '--surface'],
   ['texte du bouton principal', '--sur-principale', '--principale'],
   ['texte du choix actif', '--sur-selection', '--selection'],
-  ['onglet actif sur surface', '--selection', '--surface']
+  ['badge « Conseillée » sur surface', '--selection', '--surface']
 ];
 /* Éléments non textuels (bordures, traits) : seuil WCAG de 3:1. */
 const PAIRES_TRAIT = [
@@ -99,7 +99,7 @@ for (const theme of THEMES) {
 }
 
 (async () => {
-  console.log('2. Textes réellement affichés (tous les écrans, 3 thèmes, 2 largeurs)');
+  console.log('2. Textes réellement affichés (toutes les pages, 3 thèmes, 2 largeurs)');
   const navigateur = await chromium.launch();
   const minimum = {};
   let mesures = 0;

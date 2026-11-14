@@ -76,7 +76,7 @@ for (const r of regles) {
 if (/@keyframes/.test(css)) echec('@keyframes : animation');
 
 /* Un seul jeu de composants : chaque classe de composant est définie une seule fois. */
-for (const composant of ['.btn', '.btn-2', '.choix', '.carte', '.champ', '.onglet', '.alerte', '.prompt', '.curseur']) {
+for (const composant of ['.btn', '.btn-2', '.choix', '.carte', '.champ', '.retour', '.badge', '.risque', '.alerte', '.prompt', '.curseur', '.apercu']) {
   const n = regles.filter((r) => r.contexte === '' && r.selecteur === composant).length;
   if (n !== 1) echec(composant + ' est défini ' + n + ' fois (attendu : 1)');
 }

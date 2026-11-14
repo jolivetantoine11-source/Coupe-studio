@@ -45,8 +45,10 @@ if (ref.length !== 6) { console.log('  ÉCHEC   PROMPTS.md doit contenir 6 blocs
 });
 
 console.log('2. Prompt de fond comparé à CLAUDE.md, section 8');
-if (refFond.length !== 1) { console.log('  ÉCHEC   CLAUDE.md doit contenir 1 bloc, trouvé ' + refFond.length); echecs++; }
+if (refFond.length !== 2) { console.log('  ÉCHEC   CLAUDE.md doit contenir 2 blocs (fond, règle ajoutée), trouvé ' + refFond.length); echecs++; }
 verifier('fond', PROMPTS.textes.fond, refFond[0]);
+verifier('règle ajoutée au prompt de retouche', PROMPTS.textes.regleRetouche, refFond[1]);
+verifier('règle demandée par Antoine', refFond[1], 'The hair and the person must stay pixel-identical: same haircut, same hair edges, same color, same face, same body.');
 
 console.log('3. Assemblage : seuls [COUPE] et [FOND] changent');
 const COUPE = 'Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue $& $1';
@@ -58,7 +60,7 @@ verifier('image + barbe seule', PROMPTS.image(DESC, true), ref[1].split('[COUPE]
 verifier('photo de référence', PROMPTS.reference(), ref[3]);
 verifier('fiche barber', PROMPTS.fiche('barber'), ref[4]);
 verifier('fiche salon', PROMPTS.fiche('salon'), ref[5]);
-verifier('fond assemblé', PROMPTS.fond(FOND), refFond[0].split('[FOND]').join(FOND));
+verifier('retouche assemblée : prompt de fond + règle', PROMPTS.retouche(FOND), refFond[0].split('[FOND]').join(FOND) + '\n' + refFond[1]);
 
 console.log('4. Marqueurs');
 [['diagnostic', '[COUPE]', 1], ['image', '[COUPE]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
@@ -67,7 +69,7 @@ console.log('4. Marqueurs');
   if (compte === n) console.log('  OK      ' + nom + ' contient ' + n + ' fois ' + marqueur);
   else { echecs++; console.log('  ÉCHEC   ' + nom + ' contient ' + compte + ' fois ' + marqueur + ', attendu ' + n); }
 });
-if (/\[COUPE\]|\[FOND\]/.test(PROMPTS.diagnostic('x') + PROMPTS.image('x', true) + PROMPTS.fond('x'))) {
+if (/\[COUPE\]|\[FOND\]/.test(PROMPTS.diagnostic('x') + PROMPTS.image('x', true) + PROMPTS.retouche('x'))) {
   echecs++; console.log('  ÉCHEC   un marqueur reste dans un prompt assemblé');
 } else console.log('  OK      aucun marqueur ne reste après assemblage');
 

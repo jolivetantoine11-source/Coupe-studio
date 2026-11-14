@@ -28,12 +28,12 @@ En local : double-clique sur `index.html`.
 | `styles.css` | Les 3 thèmes et les composants |
 | `app.js` | Navigation, état du client, réglages, profil, génération des prompts |
 | `prompts.js` | Les prompts, mot pour mot ceux de `PROMPTS.md` |
-| `catalogue.js` | Les 24 coupes et leurs réglages |
-| `caracteristiques.js` | Les caractéristiques du Catalogue personnalisé. **Pour en ajouter une : une ligne dans ce fichier.** |
+| `catalogue.js` | Les zones de [COUPE], les 24 coupes découpées par zone, leurs réglages |
+| `caracteristiques.js` | Les caractéristiques du Catalogue personnalisé et leurs groupes exclusifs. **Pour en ajouter une : une ligne dans ce fichier.** |
 | `fonds.js` | Les retouches du Catalogue fond. **Pour en ajouter une : une ligne dans ce fichier.** |
 | `retouche.js` | Le calcul des retouches sans IA (canvas) |
 | `tests/` | Tests et captures |
-| `CLAUDE.md`, `DESIGN.md`, `PROMPTS.md`, `maquettes.html` | Références. Les tableaux de fragments français → anglais sont dans `CLAUDE.md`, sections 6, 8 et 13. |
+| `CLAUDE.md`, `DESIGN.md`, `PROMPTS.md`, `maquettes.html` | Références. Les tableaux coupe → zones, réglages et caractéristiques sont dans `CLAUDE.md`, sections 5, 6 et 13 ; ils sont générés par `node tests/tableaux.js --ecrire`. |
 
 ## Tests
 
@@ -41,14 +41,16 @@ Les tests demandent Node et Playwright (une seule fois : `npm install` puis `npx
 
 | Commande | Ce qu'elle prouve |
 |---|---|
-| `node tests/prompts.test.js` | `prompts.js` est identique à `PROMPTS.md` et à `CLAUDE.md` section 8, caractère pour caractère |
+| `node tests/prompts.test.js` | `prompts.js` est identique à `PROMPTS.md` (dont le diagnostic salon) et à `CLAUDE.md` section 8, caractère pour caractère |
+| `node tests/tableaux.js` | Les tableaux de `CLAUDE.md` correspondent aux fichiers de données |
+| `node tests/contradictions.test.js` | Jamais deux consignes contraires dans une même zone : toutes les paires de chaque groupe, et chaque réglage face aux caractéristiques |
 | `node tests/retour.test.js` | Revenir en arrière (3 fois, puis en avant) ne perd aucun choix ; flèche, glissement, rechargement, « Nouveau client » |
 | `node tests/parcours.test.js` | Tout le parcours marche : profil, coupes conseillées, réglages, caractéristiques, prompts, retouches photo |
 | `node tests/contraste.test.js` | Chaque paire texte/fond des 3 thèmes atteint 4,5:1 |
 | `node tests/design.test.js` | Aucun écart à `DESIGN.md` (couleurs, espacements, tailles, ombres, dégradés) |
 | `node tests/captures.js` | Captures de chaque page à 390 et 1280 px, dans les 3 thèmes (`tests/captures/planches/`) |
 
-`npm test` lance les cinq premiers.
+`npm test` lance tout sauf les captures.
 
 ## Modifier un prompt
 

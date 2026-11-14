@@ -2,7 +2,9 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
-Version du 14 novembre 2026 : nouvelle structure après le premier test d'Antoine (parcours page par page, plus de barre d'onglets, profil client en premier, catalogue personnalisé, catalogue fond).
+Version du 15 novembre 2026, après la deuxième revue d'Antoine : description [COUPE] structurée par zone, groupes de caractéristiques exclusifs, catalogues en texte, éditeur photo à la manière d'Instagram, option « Barbe seule », sélection en bleu dans le thème barber, diagnostic salon.
+
+(Version du 14 novembre : parcours page par page, plus de barre d'onglets, profil client en premier, catalogue personnalisé, catalogue fond.)
 
 ## 1. Le projet en bref
 
@@ -33,11 +35,11 @@ Vocabulaire : le mot « recette » n'apparaît plus nulle part dans l'appli. On 
   - `styles.css` : variables des 3 thèmes et composants (une classe par composant)
   - `app.js` : navigation, état, logique des réglages et du profil, génération des prompts
   - `prompts.js` : les prompts (texte exact de `PROMPTS.md`) et les fonctions d'assemblage
-  - `catalogue.js` : les 24 coupes, leurs réglages par défaut, les pictogrammes
-  - `caracteristiques.js` : les caractéristiques du Catalogue personnalisé (section 13). Facile à compléter.
+  - `catalogue.js` : les zones de [COUPE], les 24 coupes découpées par zone, leurs réglages par défaut
+  - `caracteristiques.js` : les caractéristiques du Catalogue personnalisé et leurs groupes exclusifs (section 13). Facile à compléter.
   - `fonds.js` : les retouches du Catalogue fond (section 8). Facile à compléter.
   - `retouche.js` : les retouches sans IA, calculées sur un canvas
-  - `tests/` : tests Playwright (captures, contrastes, comparaison des prompts, parcours, retour arrière)
+  - `tests/` : tests Playwright (captures, contrastes, comparaison des prompts, parcours, retour arrière, contradictions) et `tests/tableaux.js`, qui écrit et vérifie les tableaux de ce fichier
 - Polices via Google Fonts (Space Grotesk, Fraunces, Oswald, Inter), avec polices de secours.
 - Stockage :
   - `sessionStorage` : l'état du client en cours (profil, coupe, réglages, caractéristiques, retouches).
@@ -85,24 +87,28 @@ Depuis Réglages, le lien « Ajouter des caractéristiques » ouvre le Catalogue
 Trois gros boutons : « Catalogue coupe », « Catalogue personnalisé », « Catalogue fond », chacun avec une ligne d'explication.
 
 ### 4.4 Catalogue coupe
-- Si le profil est rempli : en haut, « Conseillées pour ce client », 3 coupes avec le badge « Conseillée » (règles en section 7).
-- Grille de 2 colonnes, 12 coupes du mode actif (section 5). Thème neutre : 6 barber et 6 salon mêlées.
-- Carte : silhouette au trait (SVG inline, même cadrage pour toutes, jamais de photo de personne), nom, une ligne de description. Si le profil rend la coupe risquée, la carte porte un avertissement court : « Golfes », « Lissage nécessaire », « Pousse nécessaire ».
+- Cartes texte compactes, grille de 2 colonnes : nom (police des titres du thème), une ligne de description, badges. Plus de silhouettes : on voit plus de coupes sans défiler.
+- Si le profil est rempli : en haut, « Conseillées pour ce client », 3 coupes avec le badge « Conseillée » (règles en section 7). Puis « Autres coupes », SANS répéter les coupes conseillées.
+- 12 coupes du mode actif (section 5). Thème neutre : 6 barber et 6 salon mêlées.
+- Si le profil rend la coupe risquée, la carte porte un badge d'avertissement court : « Golfes », « Lissage nécessaire », « Pousse nécessaire ».
 - Toucher une carte ouvre directement Réglages. Si cette coupe a déjà été réglée pour ce client, ses réglages sont retrouvés.
 - Bouton secondaire « Ajouter ma coupe » : nom + description libre en français + description anglaise facultative. Enregistrée en localStorage, affichée en fin de grille.
 
 ### 4.5 Réglages (ex-« recette »)
 - Titre = nom de la coupe. Réglages en boutons à bascule et curseurs (section 6), préremplis par la coupe.
+- Groupe Barbe (barber) : les 4 styles, puis le choix « Barbe seule (ne pas toucher aux cheveux) ». Sur Oui, [COUPE] ne décrit que la barbe et la ligne de la variante barbe seule de PROMPTS.md est ajoutée à la fin du prompt image. Si aucune barbe n'est choisie, un message demande d'en choisir une.
+- Un réglage remplacé par une caractéristique (même emplacement, section 6) ne montre plus ses boutons mais la phrase « Côtés remplacés par : rasé sur un côté » et un bouton « Modifier » qui ouvre le Catalogue personnalisé.
 - Sous les réglages : les avertissements qui s'appliquent à ce client (section 7).
-- Un résumé en une ligne en bas, mis à jour en direct (ex. « Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue »).
+- Un résumé en une ligne en bas, mis à jour en direct, dans l'ordre des zones (ex. « Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue »).
 - Lien « Ajouter des caractéristiques » (secondaire) vers le Catalogue personnalisé, coupe gardée.
 - Bouton principal « Voir le résultat ».
 
 ### 4.6 Catalogue personnalisé
-Magazine de caractéristiques (section 13). Même présentation que le Catalogue coupe : grille de cartes, pictogrammes au trait, par catégorie. Sélection multiple.
+Magazine de caractéristiques (section 13), en cartes texte comme le Catalogue coupe (nom seul, plus de pictogrammes), par catégorie. Sélection multiple.
 - Deux usages : ajouter des caractéristiques à la coupe choisie, ou partir uniquement des caractéristiques (coupe 100 % personnalisée).
 - Si une coupe est choisie, un choix « Coupe de départ » (la coupe / Aucune) dit si elle sert de base. « Aucune » ne l'efface pas.
-- Les combinaisons contradictoires sont signalées par un message, sans bloquer.
+- **Groupes exclusifs** (section 13) : choisir une caractéristique d'un groupe déjà occupé ne l'ajoute pas tout de suite. Un message dans la page dit ce qui entre en conflit et propose « Garder X » / « Garder Y ». Jamais de `confirm()`.
+- **RÈGLE : le prompt final ne contient jamais deux consignes contradictoires pour une même zone.** Une caractéristique remplace la coupe et les réglages de son emplacement ; un test le vérifie sur toutes les paires de chaque groupe.
 - Bouton principal « Voir le résultat ».
 
 ### 4.7 Catalogue fond
@@ -110,9 +116,9 @@ Voir section 8. Une page d'entrée présente les deux familles, clairement sépa
 
 ### 4.8 Résultat
 Les étapes, dans l'ordre, chacune dans une carte :
-1. **Diagnostic** : consigne + bloc de prompt.
-2. **Image** : consigne + bloc. Si « Ne changer que la barbe » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin.
-3. **Fiche** : fiche barber ou fiche salon selon la coupe. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé.
+1. **Diagnostic** : consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
+2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin.
+3. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
 
@@ -124,73 +130,113 @@ Sous les cartes :
 - « Partager » : copie un lien qui contient la coupe personnalisée (paramètre `?r=` en JSON encodé base64url). Ouvrir ce lien la charge. Aucune donnée personnelle dans le lien : ni profil, ni photo.
 - « Nouveau client ».
 
-## 5. Catalogue (catalogue.js)
+## 5. Description [COUPE] structurée par zone
 
-`desc` = texte anglais qui remplace `[COUPE]` dans le prompt image. `fr` = nom affiché et utilisé dans le diagnostic.
+Avant le 15 novembre, les fragments des réglages s'ajoutaient à la fin de la description de la coupe et devenaient ambigus (« …textured top with a short straight fringe, starting at clipper guard 0.5 » : le sabot vise-t-il les côtés ou le dessus ?). Désormais [COUPE] s'écrit zone par zone :
 
-### Barber
-| fr | Ligne affichée | desc (anglais) |
-|---|---|---|
-| Buzz cut | Tondeuse sur toute la tête | even buzz cut with clipper guard 2 (6 mm) all over, natural hairline kept |
-| Crew cut | Court, dessus un peu plus long | crew cut: short tapered sides with guard 2, top 2-3 cm, slightly longer at the front |
-| Crop texturé | Frange courte, côtés nets | textured French crop: faded sides, 3-5 cm textured top with a short straight fringe |
-| Taper bas | Fondu discret sur la nuque | low taper fade at the temples and nape only, top length kept, clean natural neckline |
-| Skin fade | Fondu à blanc, dessus court | mid skin fade from 0 at the bottom to guard 2 at the top of the sides, 4-6 cm textured top |
-| Raie sur le côté | Classique, raie marquée | classic side part: tapered sides with guard 2-3, 5-7 cm top combed to the side with a defined part line |
-| Quiff | Dessus relevé vers l'avant | quiff: short faded sides, 7-9 cm top styled up and back at the front with volume |
-| Slick back | Peigné en arrière | slick back: 8-10 cm top combed straight back with a light natural shine, tapered sides |
-| Dégradé bouclé | Fondu, boucles sur le dessus | curly top with a mid fade: sides faded from guard 0.5 to 2, natural defined curls on top 4-6 cm |
-| Classique aux ciseaux | Sans tondeuse, net | classic scissor cut: short sides and back cut with scissors, no clipper fade, 4-5 cm top, neat natural finish |
-| Mi-long flow | Mi-long, rejeté en arrière | medium length flow: 10-14 cm hair swept back and falling behind the ears, natural movement |
-| Mulet moderne | Court devant, long derrière | modern mullet: short faded sides, textured top, longer back reaching the nape |
+```
+<nom anglais de la coupe>. Length: … Layers: … Sides: … Top: … Front: … Neckline: … Texture: … Color: … Beard: …
+```
 
-### Salon
-| fr | Ligne affichée | desc (anglais) |
-|---|---|---|
-| Pixie | Court, dégagé sur la nuque | pixie cut: very short layered cut, short at the nape and sides, slightly longer textured top with a side-swept fringe |
-| Carré droit | Une longueur, au menton | blunt chin-length bob, one length, straight cut ends |
-| Carré plongeant | Plus long devant | angled bob: shorter at the nape, longer at the front reaching the chin |
-| Carré flou | Mouvement, pointes effilées | soft textured bob between jaw and collarbone, piecey ends, effortless movement |
-| Carré bouclé | Arrondi sur boucles | curly bob at chin length, shaped to the natural curls, rounded silhouette |
-| Mi-long en couches | Aux épaules, encadrant | shoulder-length layered cut with face-framing layers |
-| Long en couches | Longueur gardée, mouvement | long layered cut below the shoulder blades with soft face-framing layers |
-| Long droit | Une longueur | long one-length cut below the shoulder blades, straight healthy ends |
-| Frange rideau | Ouverte au milieu | curtain bangs parted in the middle, falling at cheekbone level, length kept |
-| Shag | Couches marquées, volume | shag cut: choppy layers on the crown, wispy fringe, textured ends |
-| Wolf cut | Couches et longueurs mêlées | wolf cut: heavy layers on top, shaggy texture, longer wispy lengths at the back |
-| Butterfly cut | Long, couches courtes devant | butterfly cut: long length kept with short face-framing layers starting at the chin, voluminous blow-dry |
+- On n'écrit que les zones qui ont une valeur. Pas de point final : le prompt image en ajoute déjà un après [COUPE].
+- Chaque zone a des emplacements (ex. Sides = style, sabot, en plus). Dans un emplacement, la valeur la plus précise remplace les autres : **caractéristique choisie > réglage modifié > texte de la coupe**. Rien ne s'ajoute en vrac à la fin.
+- Length et Layers servent surtout au salon, Texture aux coupes bouclées et aux caractéristiques de texture. Elles complètent la liste d'Antoine (Sides, Top, Front, Neckline, Color, Beard) sans en changer l'ordre.
+- Coupe ajoutée (« Ajouter ma coupe ») : « <nom> : <description> », puis les zones des réglages et caractéristiques.
+- Coupe 100 % personnalisée : « Custom haircut », puis les zones.
+- Barbe seule : seulement « Beard: … ».
+- Le résumé français (diagnostic et barre du bas) suit le même ordre de zones.
+
+### Zones et emplacements
+
+<!-- tableau:zones -->
+| Ordre | Zone dans [COUPE] | Nom français | Emplacements |
+|---|---|---|---|
+| 1 | Length | Longueur | longueur, forme |
+| 2 | Layers | Couches | couches |
+| 3 | Sides | Côtés | style, sabot, en plus |
+| 4 | Top | Dessus | longueur, style, raie |
+| 5 | Front | Devant | style, en plus |
+| 6 | Neckline | Nuque et contours | forme, contours |
+| 7 | Texture | Texture | texture |
+| 8 | Color | Couleur | couleur |
+| 9 | Beard | Barbe | style, en plus |
+<!-- /tableau:zones -->
+
+### Coupe → zones (à relire par Antoine)
+
+`fr` = nom affiché et utilisé dans le diagnostic. Le texte de chaque zone est en anglais, tel qu'il part dans [COUPE].
+
+<!-- tableau:coupes -->
+#### Barber
+
+| fr | Ligne affichée | Nom anglais | Zones (texte anglais) |
+|---|---|---|---|
+| Buzz cut | Tondeuse sur toute la tête | Buzz cut | **Sides** : clipper guard 2 (6 mm)<br>**Top** : clipper guard 2 (6 mm), even all over<br>**Neckline** : natural hairline kept |
+| Crew cut | Court, dessus un peu plus long | Crew cut | **Sides** : short and tapered, clipper guard 2<br>**Top** : 2-3 cm<br>**Front** : slightly longer than the rest of the top |
+| Crop texturé | Frange courte, côtés nets | Textured French crop | **Sides** : faded<br>**Top** : 3-5 cm, textured<br>**Front** : a short straight fringe |
+| Taper bas | Fondu discret sur la nuque | Low taper fade | **Sides** : low taper fade at the temples and nape only<br>**Top** : length kept<br>**Neckline** : clean natural neckline |
+| Skin fade | Fondu à blanc, dessus court | Skin fade | **Sides** : mid skin fade, from guard 0 at the bottom to guard 2 at the top<br>**Top** : 4-6 cm, textured |
+| Raie sur le côté | Classique, raie marquée | Classic side part | **Sides** : tapered, clipper guard 2-3<br>**Top** : 5-7 cm, combed to the side, a defined part line |
+| Quiff | Dessus relevé vers l’avant | Quiff | **Sides** : short and faded<br>**Top** : 7-9 cm<br>**Front** : styled up and back with volume |
+| Slick back | Peigné en arrière | Slick back | **Sides** : tapered<br>**Top** : 8-10 cm, combed straight back with a light natural shine<br>**Front** : combed back |
+| Dégradé bouclé | Fondu, boucles sur le dessus | Curly top with a mid fade | **Sides** : mid fade, from guard 0.5 at the bottom to guard 2 at the top<br>**Top** : 4-6 cm, natural, unstyled<br>**Texture** : natural defined curls on top |
+| Classique aux ciseaux | Sans tondeuse, net | Classic scissor cut | **Sides** : short sides and back cut with scissors, no clipper fade<br>**Top** : 4-5 cm, neat natural finish |
+| Mi-long flow | Mi-long, rejeté en arrière | Medium length flow | **Sides** : falling behind the ears<br>**Top** : 10-14 cm, swept back with natural movement |
+| Mulet moderne | Court devant, long derrière | Modern mullet | **Sides** : short and faded<br>**Top** : textured<br>**Neckline** : longer back reaching the nape |
+
+#### Salon
+
+| fr | Ligne affichée | Nom anglais | Zones (texte anglais) |
+|---|---|---|---|
+| Pixie | Court, dégagé sur la nuque | Pixie cut | **Layers** : very short layers<br>**Sides** : short<br>**Top** : slightly longer and textured<br>**Front** : a side-swept fringe<br>**Neckline** : short |
+| Carré droit | Une longueur, au menton | Blunt bob | **Length** : chin length, one length, straight cut ends |
+| Carré plongeant | Plus long devant | Angled bob | **Length** : reaching the chin at the front, shorter at the nape, longer at the front |
+| Carré flou | Mouvement, pointes effilées | Soft textured bob | **Length** : between the jaw and the collarbone, piecey ends, effortless movement |
+| Carré bouclé | Arrondi sur boucles | Curly bob | **Length** : chin length, rounded silhouette shaped to the natural curls<br>**Texture** : natural curls |
+| Mi-long en couches | Aux épaules, encadrant | Shoulder-length layered cut | **Length** : shoulder length<br>**Layers** : face-framing layers |
+| Long en couches | Longueur gardée, mouvement | Long layered cut | **Length** : below the shoulder blades<br>**Layers** : soft face-framing layers |
+| Long droit | Une longueur | Long one-length cut | **Length** : below the shoulder blades, one length, straight healthy ends |
+| Frange rideau | Ouverte au milieu | Curtain bangs | **Length** : length kept<br>**Top** : middle part<br>**Front** : curtain bangs falling at cheekbone level |
+| Shag | Couches marquées, volume | Shag cut | **Length** : textured ends<br>**Layers** : choppy layers on the crown<br>**Front** : a wispy fringe |
+| Wolf cut | Couches et longueurs mêlées | Wolf cut | **Length** : longer wispy lengths at the back<br>**Layers** : heavy layers on top, shaggy texture |
+| Butterfly cut | Long, couches courtes devant | Butterfly cut | **Length** : long length kept<br>**Layers** : short face-framing layers starting at the chin<br>**Top** : voluminous blow-dry |
+<!-- /tableau:coupes -->
 
 ## 6. Réglages d'une coupe et leur traduction
 
-Chaque réglage modifié par l'utilisateur ajoute un fragment anglais à `desc`, séparé par une virgule. Un réglage laissé à la valeur de la coupe n'ajoute rien. Une coupe ne préremplit que ce que son `desc` affirme : un réglage qu'elle ne précise pas reste vide.
+Chaque réglage écrit dans UN emplacement. Laissé à la valeur de la coupe, il garde le texte de la coupe. Modifié, il remplace ce texte. Une coupe ne préremplit que ce que ses zones affirment : un réglage qu'elle ne précise pas reste vide. Une caractéristique choisie dans le même emplacement remplace le réglage (section 4.5).
 
-### Mode barber
-| Réglage | Options (fragment anglais) |
-|---|---|
-| Côtés | Dégradé à blanc (`skin fade on the sides`) · Dégradé (`fade on the sides`) · Taper (`low taper on the sides`) · Ciseaux (`sides cut with scissors, no fade`) |
-| Sabot du bas | 0 · 0,5 · 1 · 1,5 · 2 · 3 (`starting at clipper guard X`) |
-| Dessus | curseur 1-15 cm (`about X cm on top`) |
-| Coiffage, devant et frange | Vers l'avant (`front styled forward`) · Relevé (`front lifted up`) · Sur le côté (`front swept to the side`) · En arrière (`front pushed back`) |
-| Coiffage, dessus | En arrière (`top styled back`) · Sur le côté (`top styled to the side`) · Naturel (`top left natural, unstyled`) · Décoiffé (`messy, textured top`) |
-| Contours | Nets (`sharp line-up`) · Naturels (`natural soft hairline edges`) |
-| Barbe | Inchangée (rien) · Taillée courte (`beard trimmed short and neat`) · Entretenue (`well-groomed beard with clean cheek lines`) · Rasée (`clean-shaven`) |
-| Ne changer que la barbe | Non · Oui. Affiché dès que la barbe change. Sur Oui, `[COUPE]` ne contient que la barbe et la ligne de la variante barbe seule est ajoutée à la fin du prompt image. |
+<!-- tableau:reglages -->
+#### Mode barber
 
-Le coiffage se choisit par zone (décision d'Antoine du 14 novembre). Les fragments des deux zones sont à valider par Antoine. Le mode salon garde Frange et Raie, qui jouent ce rôle.
+| Réglage | Emplacement | Options (texte anglais) |
+|---|---|---|
+| Côtés | Sides / style | Dégradé à blanc (`skin fade`) · Dégradé (`fade`) · Taper (`low taper`) · Ciseaux (`cut with scissors, no clipper fade`) |
+| Sabot du bas | Sides / sabot | 0 (`starting at clipper guard 0 at the bottom`) · 0,5 (`starting at clipper guard 0.5 at the bottom`) · 1 (`starting at clipper guard 1 at the bottom`) · 1,5 (`starting at clipper guard 1.5 at the bottom`) · 2 (`starting at clipper guard 2 at the bottom`) · 3 (`starting at clipper guard 3 at the bottom`) |
+| Dessus | Top / longueur | curseur 1-15 cm (`about X cm`) |
+| Coiffage, devant et frange | Front / style | Vers l’avant (`styled forward`) · Relevé (`lifted up`) · Sur le côté (`swept to the side`) · En arrière (`pushed back`) |
+| Coiffage, dessus | Top / style | En arrière (`styled back`) · Sur le côté (`styled to the side`) · Naturel (`natural, unstyled`) · Décoiffé (`messy and textured`) |
+| Contours | Neckline / contours | Nets (`sharp line-up`) · Naturels (`natural soft hairline edges`) |
+| Barbe | Beard / style | Inchangée (rien) · Taillée courte (`trimmed short and neat`) · Entretenue (`well-groomed with clean cheek lines`) · Rasée (`clean-shaven`) |
 
-### Mode salon
-| Réglage | Options (fragment anglais) |
-|---|---|
-| Longueur | Menton · Épaules · Omoplates · Milieu du dos, avec curseur 10-60 cm (`length at the X, about Y cm`). Curseur et repères liés : menton jusqu'à 27 cm, épaules jusqu'à 39, omoplates jusqu'à 52, milieu du dos au-delà. |
-| Forme | Droite (`blunt one-length ends`) · Plongeante (`angled, longer at the front`) · Arrondie (`rounded shape`) |
-| Couches | Aucune (`no layers`, seulement si la coupe en avait) · Légères (`light layers`) · Marquées (`strong layers`) |
-| Frange | Sans (`no fringe`, seulement si la coupe en avait une) · Rideau (`curtain bangs`) · Droite (`straight blunt fringe`) · Effilée (`wispy fringe`) |
-| Raie | Milieu (`middle part`) · Côté (`side part`) · Naturelle (rien) |
-| Couleur | Inchangée (rien) · Balayage (`with a soft natural balayage`) · Autre (`hair color changed to` + texte libre en anglais) |
+#### Mode salon
 
-Règle : le prompt image garde la couleur d'origine, sauf si la coupe demande explicitement un changement. Une option de couleur autre que « Inchangée » doit donc écrire clairement le changement dans `desc`.
+| Réglage | Emplacement | Options (texte anglais) |
+|---|---|---|
+| Longueur | Length / longueur | Menton (`chin`) · Épaules (`shoulder`) · Omoplates (`shoulder-blade`) · Milieu du dos (`mid-back`), curseur 10-60 cm (`X length, about Y cm`) |
+| Forme | Length / forme | Droite (`blunt one-length ends`) · Plongeante (`angled, longer at the front`) · Arrondie (`rounded shape`) |
+| Couches | Layers / couches | Aucune (`no layers`) · Légères (`light layers`) · Marquées (`strong layers`) |
+| Frange | Front / style | Sans (`no fringe`) · Rideau (`curtain bangs`) · Droite (`straight blunt fringe`) · Effilée (`wispy fringe`) |
+| Raie | Top / raie | Milieu (`middle part`) · Côté (`side part`) · Naturelle (rien) |
+| Couleur | Color / couleur | Inchangée (rien) · Balayage (`change to a soft natural balayage`) · Autre (`change to X`) |
+<!-- /tableau:reglages -->
 
-Le diagnostic reçoit `[COUPE]` = nom français + résumé français (ex. « Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue »). Le résumé donne le nom, puis les mesures (sabot, dessus, longueur) toujours, puis les autres réglages seulement s'ils sont modifiés, puis les caractéristiques ajoutées.
+- Longueur (salon) : curseur 10-60 cm et repères liés (menton jusqu'à 27 cm, épaules jusqu'à 39, omoplates jusqu'à 52, milieu du dos au-delà). Texte : « chin length, about 22 cm ».
+- Barbe seule : choix à part dans le groupe Barbe (section 4.5).
+- Le coiffage se choisit par zone (décision d'Antoine du 14 novembre), en mode barber. Le mode salon garde Frange et Raie, qui jouent ce rôle.
+- Une couleur autre que « Inchangée » écrit clairement le changement (« change to … »), puisque le prompt image garde la couleur d'origine sinon.
+
+Le diagnostic reçoit `[COUPE]` = nom français + résumé français (ex. « Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue »). Le résumé donne le nom, puis, dans l'ordre des zones, les mesures (sabot, dessus, longueur) toujours, les autres réglages s'ils sont modifiés, et les caractéristiques. Un réglage remplacé n'y figure pas.
 
 ## 7. Profil client, coupes conseillées, avertissements
 
@@ -234,6 +280,8 @@ Luminosité · Contraste · Chaleur (chaud / froid) · Noir et blanc · Recadrag
 
 - La photo est choisie dans le téléphone, traitée localement, jamais envoyée ni stockée. C'est la seule exception à « pas de photo dans l'appli » : aucune photo n'est fournie avec l'appli, et celle du coiffeur ne quitte pas son téléphone.
 - Bouton « Enregistrer l'image ». L'image est aussi affichée en grand avec « appui long pour enregistrer », pour le cas où le téléchargement est bloqué.
+- Mise en page à la manière de l'éditeur d'Instagram (décision du 15 novembre) : la photo reste fixée en haut de l'écran (45 % de la hauteur au plus) pendant qu'on règle ; seuls les réglages défilent dessous. Un réglage à la fois, choisi par une rangée de boutons (Luminosité, Contraste, Chaleur, N&B, Recadrage, Avant/après) ; le contrôle du réglage actif s'affiche sous la photo.
+- Appui long sur la photo : l'original s'affiche tant qu'on appuie (même cadrage, sans lumière ni couleur retouchées), puis la photo retouchée revient.
 - Montage avant/après : la photo « avant » à gauche, la photo retouchée à droite (l'une au-dessus de l'autre en 9:16). Les réglages s'appliquent aux deux.
 
 ### b) Retouches IA (prompt à copier dans Gemini)
@@ -286,11 +334,13 @@ Ce prompt n'a toujours pas été testé : le signaler à Antoine. Les combinaiso
 3. Construire **une page à la fois**, dans l'ordre du parcours : Accueil, Profil client, Que veux-tu faire ?, Catalogue coupe, Réglages, Catalogue personnalisé, Résultat, Catalogue fond, Retouches sans IA, Retouches IA. Ne pas passer à la suivante avant que la page soit conforme.
 4. Après chaque page : captures Playwright à 390 px et 1280 px de large, dans les 3 thèmes. Corriger débordements, espacements, textes coupés.
 5. **Relecture adverse** : avant de déclarer une page finie, une seconde passe (ou un sous-agent) cherche les écarts à `DESIGN.md` : couleur hors liste, espacement hors multiples de 8, taille de texte hors échelle, ombre, dégradé, nouveau style de bouton.
-6. **Test des prompts** : un test compare le texte de `prompts.js` aux blocs de `PROMPTS.md` et de la section 8 (mot pour mot, hors `[COUPE]`/`[FOND]`). Il doit passer avant toute livraison.
+6. **Test des prompts** : un test compare le texte de `prompts.js` aux blocs de `PROMPTS.md` (dont le diagnostic salon, vérifié comme le diagnostic barber avec les 4 seuls remplacements validés) et de la section 8 (mot pour mot, hors `[COUPE]`/`[FOND]`). Il doit passer avant toute livraison.
 7. **Test de contraste** : un script vérifie que chaque paire texte/fond des 3 thèmes atteint 4,5:1.
-8. **Test du retour arrière** : un test remplit le profil, choisit une coupe, change des réglages, revient 3 fois en arrière puis revient en avant, et vérifie que tous les choix sont toujours là.
-9. Ne jamais dire « c'est corrigé » ou « ça marche » sans la preuve (capture, test qui passe).
-10. Ne jamais modifier le texte d'un prompt de son propre chef. Proposer la modification à Antoine.
+8. **Test des contradictions** : pour chaque paire d'un même groupe exclusif (et chaque réglage remplacé par une caractéristique), le prompt final ne contient qu'une seule des deux consignes.
+9. **Tableaux à jour** : `node tests/tableaux.js` vérifie que les tableaux de ce fichier correspondent aux fichiers de données (`--ecrire` les régénère).
+10. **Test du retour arrière** : un test remplit le profil, choisit une coupe, change des réglages, revient 3 fois en arrière puis revient en avant, et vérifie que tous les choix sont toujours là.
+11. Ne jamais dire « c'est corrigé » ou « ça marche » sans la preuve (capture, test qui passe).
+12. Ne jamais modifier le texte d'un prompt de son propre chef. Proposer la modification à Antoine.
 
 ## 10. Hors périmètre V1
 
@@ -298,12 +348,11 @@ Pas de compte, pas de serveur, pas de génération d'image dans l'appli, pas de 
 
 ## 11. Points ouverts à confirmer avec Antoine
 
-- Le prompt de diagnostic est rédigé pour un barbier (« Tu es un barbier expert… client »). En mode salon, il est utilisé tel quel en attendant une version salon validée.
 - Le nom définitif de l'appli.
 - Le prompt de fond (section 8) n'a jamais été testé. Trois retouches (« Lumière studio douce », « Corriger le contre-jour », « Retirer les cheveux coupés ») ne sont pas des changements de fond : elles tiennent mal dans la phrase « replace ONLY the background with [FOND] », et « Retirer les cheveux coupés » contredit « Keep the person 100% identical: … clothing ». À tester, et à réécrire si Gemini les ignore.
-- Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). Les réglages et caractéristiques de **barbe** et de **texture** (boucles, permanente, lissé, twists, vanilles) le contredisent. Le prompt n'a pas été modifié. À tester, et à ajuster si Gemini les ignore.
-- Les fragments anglais des caractéristiques (section 13), du coiffage par zone (section 6) et des retouches IA (section 8) sont à valider.
-- Le glissement depuis le bord gauche n'a pas pu être essayé sur un vrai iPhone.
+- Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). La zone Beard (hors barbe seule) et la zone Texture le contredisent. Le prompt n'a pas été modifié. À tester, et à ajuster si Gemini les ignore.
+- Le découpage coupe → zones (section 5), les textes des réglages (section 6) et des caractéristiques (section 13) sont à relire.
+- Le glissement depuis le bord gauche et l'appui long sur la photo n'ont pas été essayés sur un vrai iPhone.
 
 ## 12. Décisions prises
 
@@ -321,7 +370,23 @@ Décidé par Antoine (14 novembre, après test du site) :
 - Catalogue personnalisé : magazine de caractéristiques (section 13).
 - Catalogue fond : retouches sans IA et retouches IA (section 8), avec la règle « pixel-identical » ajoutée au prompt.
 
+Décidé par Antoine (15 novembre, deuxième revue) :
+- Groupes de caractéristiques exclusifs, message « Garder X » / « Garder Y », une caractéristique remplace le réglage de sa zone.
+- [COUPE] structurée par zone ; tableau coupe → zones à relire.
+- Catalogue coupe et Catalogue personnalisé en cartes texte, sans silhouettes. « Autres coupes » ne répète pas les conseillées. Les pictogrammes des retouches IA restent.
+- Retouches sans IA : photo fixée en haut, un réglage à la fois, appui long pour voir l'original.
+- « Barbe seule (ne pas toucher aux cheveux) » dans le groupe Barbe.
+- Thème barber : tout ce qui est sélectionné est en bleu `selection` ; le rouge est réservé au bouton principal.
+- Diagnostic salon (PROMPTS.md, 1b) : le diagnostic avec 4 remplacements seulement.
+
 Choix faits par Claude, à confirmer :
+- **Zones ajoutées** : Length, Layers et Texture, en plus de Sides, Top, Front, Neckline, Color, Beard. Ordre : Length, Layers, Sides, Top, Front, Neckline, Texture, Color, Beard.
+- **Réglage modifié** : il remplace le texte de la coupe dans son emplacement. Exemple : sur le skin fade, changer le sabot remplace « from guard 0 at the bottom to guard 2 at the top » par « starting at clipper guard 0.5 at the bottom ».
+- **Côtés** : une caractéristique de côtés (rasé sur un côté, undercut, dégradé à blanc) remplace aussi le sabot.
+- **Moustache, bouc** : ils remplacent la barbe « Rasée » des réglages, pas les autres barbes.
+- **Contours** : rangés dans la zone Neckline (« Neckline: squared, sharp line-up »).
+- **Messages souples supprimés** : « frange courte + dessus relevé » et « raie marquée + dessus décoiffé » ne sont plus signalés ; seuls les groupes d'Antoine comptent.
+- **Appui long** : l'original garde le cadrage choisi, pour que la photo ne saute pas.
 - **« Les plus demandées »** : c'est l'ordre du catalogue, lui-même repris de la maquette.
 - **Consignes affichées** : celles de PROMPTS.md sans « Remplace [COUPE]… », puisque l'appli le fait.
 - **Réglages gardés coupe par coupe** : si on change de coupe puis qu'on revient à la première, ses réglages sont retrouvés.
@@ -336,54 +401,84 @@ Choix faits par Claude, à confirmer :
 
 ## 13. Catalogue personnalisé : caractéristiques et fragments (à valider par Antoine)
 
-Chaque caractéristique choisie ajoute son fragment anglais à `[COUPE]`, après la coupe et ses réglages, séparé par une virgule. Sans coupe de départ, `[COUPE]` ne contient que les fragments. Dans le diagnostic, `[COUPE]` reçoit les noms français (« Coupe personnalisée : … » s'il n'y a pas de coupe de départ). La liste vit dans `caracteristiques.js`.
+Chaque caractéristique choisie écrit son texte anglais dans son emplacement de [COUPE] (section 5) et y remplace la coupe et les réglages. Plusieurs caractéristiques compatibles d'un même emplacement s'écrivent ensemble. Sans coupe de départ, [COUPE] commence par « Custom haircut ». Dans le diagnostic, `[COUPE]` reçoit les noms français (« Coupe personnalisée : … » s'il n'y a pas de coupe de départ). La liste vit dans `caracteristiques.js`.
 
-| Catégorie | Caractéristique | Fragment anglais |
-|---|---|---|
-| Côtés | Rasé sur un côté | `one side of the head shaved very short, the other side kept longer` |
-| Côtés | Undercut | `undercut: sides and back clipped short, disconnected from a longer top` |
-| Côtés | Dégradé à blanc | `skin fade on the sides` |
-| Côtés | Tempes dégagées | `clean tapered temples` |
-| Côtés | Trait rasé (motif) | `a thin shaved line design on one side` |
-| Devant et dessus | Mèche sur le côté | `a side-swept lock at the front` |
-| Devant et dessus | Mèche longue devant | `a long strand falling over the forehead` |
-| Devant et dessus | Frange courte droite | `a short straight fringe` |
-| Devant et dessus | Frange rideau | `curtain bangs parted in the middle` |
-| Devant et dessus | Dessus relevé | `top lifted up with volume` |
-| Devant et dessus | Dessus décoiffé | `messy, textured top` |
-| Devant et dessus | Raie marquée | `a defined hard part line` |
-| Devant et dessus | Couches | `visible layers` |
-| Couleur | Mèches blondes | `hair color change: blonde highlights` |
-| Couleur | Balayage | `hair color change: soft natural balayage` |
-| Couleur | Pointes décolorées | `hair color change: bleached tips` |
-| Couleur | Platine | `hair color change: full platinum blonde` |
-| Couleur | Reflets cuivrés | `hair color change: copper tones` |
-| Couleur | Poivre et sel gardé | `natural salt-and-pepper grey kept, no coloring` |
-| Couleur | Couleur libre (champ texte, en anglais) | `hair color change: ` + le texte saisi |
-| Texture | Boucles définies | `defined curls` |
-| Texture | Ondulations | `soft waves` |
-| Texture | Permanente | `permed curls` |
-| Texture | Lissé | `straightened, sleek hair` |
-| Texture | Twists | `short twists` |
-| Texture | Vanilles | `two-strand twists` |
-| Barbe | Taillée courte | `beard trimmed short and neat` |
-| Barbe | Dégradé dans la barbe | `beard faded into the sideburns` |
-| Barbe | Moustache | `a neat moustache` |
-| Barbe | Bouc | `a goatee` |
-| Barbe | Rasée | `clean-shaven` |
-| Nuque et contours | Nuque dégagée | `clean tapered nape` |
-| Nuque et contours | Nuque arrondie | `rounded neckline` |
-| Nuque et contours | Nuque carrée | `squared neckline` |
-| Nuque et contours | Contours nets | `sharp line-up` |
+<!-- tableau:caracteristiques -->
+| Catégorie | Caractéristique | Emplacement | Texte anglais | Groupe exclusif |
+|---|---|---|---|---|
+| Côtés | Rasé sur un côté | Sides / style (vide aussi Sides / sabot) | `one side shaved very short, the other side kept longer` | côtés |
+| Côtés | Undercut | Sides / style (vide aussi Sides / sabot) | `undercut, clipped short and disconnected from a longer top` | côtés |
+| Côtés | Dégradé à blanc | Sides / style (vide aussi Sides / sabot) | `skin fade` | côtés |
+| Côtés | Tempes dégagées | Sides / en plus | `clean tapered temples` | — |
+| Côtés | Trait rasé (motif) | Sides / en plus | `a thin shaved line design on one side` | — |
+| Devant et dessus | Mèche sur le côté | Front / style | `a side-swept lock` | — |
+| Devant et dessus | Mèche longue devant | Front / style | `a long strand falling over the forehead` | frange |
+| Devant et dessus | Frange courte droite | Front / style | `a short straight fringe` | frange |
+| Devant et dessus | Frange rideau | Front / style | `curtain bangs parted in the middle` | frange |
+| Devant et dessus | Dessus relevé | Top / style | `lifted up with volume` | — |
+| Devant et dessus | Dessus décoiffé | Top / style | `messy and textured` | — |
+| Devant et dessus | Raie marquée | Top / raie | `a defined hard part line` | — |
+| Devant et dessus | Couches | Layers / couches | `visible layers` | — |
+| Couleur | Mèches blondes | Color / couleur | `change to blonde highlights` | couleur |
+| Couleur | Balayage | Color / couleur | `change to a soft natural balayage` | couleur |
+| Couleur | Pointes décolorées | Color / couleur | `change to bleached tips` | couleur |
+| Couleur | Platine | Color / couleur | `change to full platinum blonde` | couleur |
+| Couleur | Reflets cuivrés | Color / couleur | `change to copper tones` | couleur |
+| Couleur | Poivre et sel gardé | Color / couleur | `natural salt-and-pepper grey kept, no coloring` | couleur |
+| Couleur | Couleur libre | Color / couleur | `change to ` + le texte saisi | couleur |
+| Texture | Boucles définies | Texture / texture | `defined curls` | texture |
+| Texture | Ondulations | Texture / texture | `soft waves` | texture |
+| Texture | Permanente | Texture / texture | `permed curls` | texture |
+| Texture | Lissé | Texture / texture | `straightened and sleek` | texture |
+| Texture | Twists | Texture / texture | `short twists` | texture |
+| Texture | Vanilles | Texture / texture | `two-strand twists` | texture |
+| Barbe | Taillée courte | Beard / style | `trimmed short and neat` | barbe |
+| Barbe | Dégradé dans la barbe | Beard / style | `faded into the sideburns` | barbe |
+| Barbe | Rasée | Beard / style | `clean-shaven` | barbe ; pas avec moustache, bouc |
+| Barbe | Moustache | Beard / en plus (remplace la barbe « Rasée » des réglages) | `a neat moustache` | pas avec barbe-rasee |
+| Barbe | Bouc | Beard / en plus (remplace la barbe « Rasée » des réglages) | `a goatee` | pas avec barbe-rasee |
+| Nuque et contours | Nuque dégagée | Neckline / forme | `clean tapered nape` | nuque |
+| Nuque et contours | Nuque arrondie | Neckline / forme | `rounded` | nuque |
+| Nuque et contours | Nuque carrée | Neckline / forme | `squared` | nuque |
+| Nuque et contours | Contours nets | Neckline / contours | `sharp line-up` | — |
+<!-- /tableau:caracteristiques -->
 
-Une caractéristique de couleur écrit clairement le changement (`hair color change: …`), puisque le prompt image garde la couleur d'origine sinon. « Poivre et sel gardé » n'est pas un changement.
+Une caractéristique de couleur écrit clairement le changement (« change to … »), puisque le prompt image garde la couleur d'origine sinon. « Poivre et sel gardé » n'est pas un changement.
 
-Combinaisons signalées comme contradictoires (message, sans bloquer) : deux formes de nuque ; barbe rasée avec une autre barbe ; lissé avec boucles, ondulations, permanente, twists ou vanilles ; twists avec vanilles ; platine avec mèches blondes, balayage, pointes décolorées ou reflets cuivrés ; poivre et sel gardé avec tout changement de couleur ; frange courte droite avec frange rideau, mèche longue devant ou dessus relevé ; raie marquée avec dessus décoiffé ; undercut avec dégradé à blanc ; « Ne changer que la barbe » sur Oui avec des caractéristiques.
+### Groupes exclusifs (décision d'Antoine du 15 novembre)
 
-## 14. V2 (plus tard, NE PAS faire maintenant)
+Une seule caractéristique par groupe. En choisir une deuxième ouvre un message « Garder X » / « Garder Y ».
+
+<!-- tableau:groupes -->
+| Groupe | Caractéristiques exclusives entre elles |
+|---|---|
+| côtés | rasé sur un côté / undercut / dégradé à blanc |
+| frange | frange courte droite / frange rideau / mèche longue devant |
+| couleur | platine / mèches blondes / balayage / pointes décolorées / reflets cuivrés / poivre et sel gardé / couleur libre |
+| texture | lissé / boucles définies / ondulations / permanente / twists / vanilles |
+| barbe | rasée / taillée courte / dégradé dans la barbe |
+| nuque | nuque dégagée / nuque arrondie / nuque carrée |
+| barbe (paire) | rasée / moustache |
+| barbe (paire) | rasée / bouc |
+<!-- /tableau:groupes -->
+
+« Barbe seule » sur Oui avec des caractéristiques hors barbe : un message dit qu'elles ne partent pas dans le prompt.
+
+## 14. V2 et V3 (plus tard, NE PAS faire maintenant)
 
 - Génération d'image directe dans l'appli via l'API Gemini, derrière un petit serveur qui garde la clé (hook `generateImage`).
 - Connexion et comptes.
 - Catalogue propre à chaque coiffeur.
+- Photos de vraies coupes du salon (anciens clients, avec leur consentement écrit) à la place des cartes texte du Catalogue coupe.
 - Pages RGPD et mentions légales.
 - Statistiques d'usage, bibliothèque de composants externe.
+
+### Vision : tout dans l'appli, sans copier-coller
+
+Après les réglages, l'appli ouvre l'appareil photo, on prend la ou les photos, elles partent directement à l'IA et le résultat (diagnostic, image, fiche) revient dans l'appli, sans copier-coller ni quitter l'appli.
+
+Ce que la V1 prépare déjà pour s'y brancher sans tout refaire :
+- `etapesResultat()` (app.js) renvoie les étapes sous forme de données : `{ id, titre, consigne, texte, joindre }`, où `id` vaut `diagnostic`, `image` ou `fiche`, `texte` est le prompt final et `joindre` dit quelles photos envoyer, dans l'ordre (`selfie`, `reference`, `image-generee`). La V2 n'a qu'à parcourir cette liste.
+- `generateImage(photo, prompt)` (app.js) est le point d'entrée prévu pour l'étape `image` ; le diagnostic et la fiche demanderont une fonction sœur (texte en sortie).
+- L'affichage du Résultat lit ces mêmes étapes : il suffira d'afficher la réponse de l'IA à la place du bouton « Copier ».
+- Les retouches IA du Catalogue fond suivent la même forme (un prompt + la photo à joindre).

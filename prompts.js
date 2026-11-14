@@ -34,6 +34,31 @@
       "- Si plus de 10 cm sont coupés, signale dans RAISON que le changement est radical et donne le temps de repousse, même si le verdict est ✅."
     ].join('\n'),
 
+    diagnosticSalon: [
+      "Tu es un coiffeur expert. Voici la photo d'une cliente ou d'un client et la coupe souhaitée : [COUPE].",
+      "Avant toute génération d'image, analyse la faisabilité à partir de ce que tu VOIS sur la photo :",
+      "- Longueur actuelle de chaque zone (devant, côtés, nuque, longueurs) : suffisante, limite ou insuffisante ? Les cheveux poussent d'environ 1 cm par mois.",
+      "- Ligne frontale et densité : golfes, zones clairsemées, calvitie.",
+      "- Texture : la coupe demande-t-elle un lissage, des boucles ou une texture que le client n'a pas ?",
+      "- Couleur : la coupe demande-t-elle une coloration ?",
+      "- Ampleur du changement : combien de centimètres seront coupés ?",
+      "Donne UN verdict parmi :",
+      "✅ FAISABLE MAINTENANT",
+      "⏳ FAISABLE APRÈS POUSSE (indique le nombre de mois)",
+      "⚠️ FAISABLE AVEC TECHNIQUE (lissage, coloration, coiffage spécifique : précise laquelle)",
+      "❌ NON FAISABLE (la densité ou la ligne frontale ne le permettent pas)",
+      "Format de réponse, 6 lignes maximum :",
+      "VERDICT : …",
+      "RAISON : une phrase, factuelle et bienveillante",
+      "ALTERNATIVE 1 : nom en français — puis la description en anglais entre guillemets, prête à coller dans le prompt image",
+      "ALTERNATIVE 2 : idem (optionnel)",
+      "Règles :",
+      "- Si le verdict est ✅, n'écris pas d'alternative.",
+      "- Si le verdict est ⏳, propose une coupe intermédiaire réalisable maintenant qui va dans la direction souhaitée.",
+      "- Les alternatives doivent être réalisables MAINTENANT sur cette personne et garder l'esprit de la coupe demandée.",
+      "- Si plus de 10 cm sont coupés, signale dans RAISON que le changement est radical et donne le temps de repousse, même si le verdict est ✅."
+    ].join('\n'),
+
     image: [
       "Edit this photo: change ONLY the haircut to: [COUPE].",
       "Strict rules:",
@@ -167,9 +192,10 @@
     return texte.split(marqueur).join(String(valeur));
   }
 
-  /* Étape 1 : [COUPE] = nom français + résumé français de la recette. */
-  function diagnostic(coupeFr) {
-    return remplacer(TEXTES.diagnostic, '[COUPE]', coupeFr);
+  /* Étape 1 : [COUPE] = nom français + résumé français.
+     Mode salon : le diagnostic salon (PROMPTS.md, 1b). */
+  function diagnostic(coupeFr, mode) {
+    return remplacer(mode === 'salon' ? TEXTES.diagnosticSalon : TEXTES.diagnostic, '[COUPE]', coupeFr);
   }
 
   /* Étape 2 : [COUPE] = description anglaise. `barbeSeule` ajoute la ligne de la variante à la fin. */

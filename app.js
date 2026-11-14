@@ -70,7 +70,7 @@
   }
 
   function retoucheVide() {
-    return { luminosite: 0, contraste: 0, chaleur: 0, nb: false, format: 'original', montage: false };
+    return { outil: 'luminosite', luminosite: 0, contraste: 0, chaleur: 0, nb: false, format: 'original', montage: false };
   }
 
   /* Le client en cours, vide. */
@@ -251,43 +251,22 @@
     return g.reperes[g.reperes.length - 1];
   }
 
-  /* Morceaux des réglages.
-     en : un fragment anglais par réglage MODIFIÉ (un réglage laissé à la valeur de la coupe n'ajoute rien).
-     fr : résumé français. Les mesures (sabot, dessus, longueur) y figurent toujours, le reste si modifié. */
-  function morceaux(coupe, r) {
-    var base = reglagesParDefaut(coupe);
-    var fr = [];
-    var en = [];
-    C.reglages[coupe.mode].forEach(function (g) {
-      var v = r[g.id];
-      if (v === null || v === undefined) return;
-      var modifie = v !== base[g.id];
-      if (g.type === 'choix') {
-        var o = option(g, v);
-        if (!o) return;
-        if (o.libre) {
-          if (!r.couleurAutre) return;
-          fr.push(inserer(o.res, 'X', r.couleurAutre));
-          en.push(inserer(o.en, 'X', r.couleurAutre));
-          return;
-        }
-        if (modifie && o.en) en.push(o.en);
-        if ((modifie || g.toujours) && o.res) fr.push(o.res);
-      } else if (g.type === 'curseur') {
-        if (modifie) en.push(inserer(g.en, 'X', v));
-        fr.push(inserer(g.res, 'X', v));
-      } else if (g.type === 'longueur') {
-        var rp = repere(g, v);
-        if (modifie) en.push(inserer(inserer(g.en, 'Y', v), 'X', rp.en));
-        fr.push(inserer(inserer(g.res, 'Y', v), 'X', rp.res));
-      }
-    });
-    return { fr: fr, en: en };
-  }
-
-  /* Vrai si seule la barbe change (« Ne changer que la barbe » sur Oui). */
-  function barbeSeule(coupe, r) {
-    return !!coupe && coupe.mode === 'barber' && r.barbeSeule === true && r.barbe !== 'inchangee';
+  /* Texte d'un réglage pour sa valeur actuelle : { en, fr }, ou null s'il est vide. */
+  function texteReglage(g, r) {
+    var v = r[g.id];
+    if (v === null || v === undefined) return null;
+    if (g.type === 'curseur') return { en: inserer(g.en, 'X', v), fr: inserer(g.res, 'X', v) };
+    if (g.type === 'longueur') {
+      var rp = repere(g, v);
+      return { en: inserer(inserer(g.en, 'Y', v), 'X', rp.en), fr: inserer(inserer(g.res, 'Y', v), 'X', rp.res) };
+    }
+    var o = option(g, v);
+    if (!o) return null;
+    if (o.libre) {
+      if (!r.couleurAutre) return { en: '', fr: '' };
+      return { en: inserer(o.en, 'X', r.couleurAutre), fr: inserer(o.res, 'X', r.couleurAutre) };
+    }
+    return { en: o.en, fr: o.res };
   }
 
   /* ===================================================================
@@ -301,35 +280,45 @@
     return null;
   }
 
+  /* Une seule caractéristique par groupe exclusif : la première rencontrée est gardée.
+     Protège aussi contre un lien partagé ou une mémoire qui en contiendrait deux. */
   function validerCaracteristiques(liste) {
     if (!Array.isArray(liste)) return [];
-    return sansDoublons(liste.filter(function (id) { return typeof id === 'string' && caracteristique(id); }));
+    var propre = [];
+    liste.forEach(function (id) {
+      if (typeof id !== 'string' || !caracteristique(id) || propre.indexOf(id) >= 0) return;
+      if (propre.some(function (autre) { return K.conflit(id, autre); })) return;
+      propre.push(id);
+    });
+    return propre;
   }
 
-  /* Fragments des caractéristiques choisies, dans l'ordre du catalogue. */
-  function morceauxCaracteristiques(x) {
-    var fr = [];
-    var en = [];
+  /* Les caractéristiques choisies qui comptent, dans l'ordre du catalogue.
+     « Couleur libre » sans texte ne compte pas. */
+  function caracteristiquesActives(x) {
+    var liste = [];
     K.categories.forEach(function (categorie) {
       categorie.liste.forEach(function (c) {
         if (x.caracteristiques.indexOf(c.id) < 0) return;
-        var nom = c.res || c.fr.toLowerCase();
-        if (c.libre) {
-          if (!x.couleurLibre) return;
-          fr.push(nom + ' ' + x.couleurLibre);
-          en.push(inserer(c.en, 'X', x.couleurLibre));
-          return;
-        }
-        fr.push(nom);
-        en.push(c.en);
+        if (c.libre && !x.couleurLibre) return;
+        liste.push(c);
       });
     });
-    return { fr: fr, en: en };
+    return liste;
+  }
+
+  function texteCaracteristique(c, x) {
+    if (c.libre) return { en: inserer(c.en, 'X', x.couleurLibre), fr: c.res + ' ' + x.couleurLibre };
+    return { en: c.en, fr: c.res || c.fr.toLowerCase() };
   }
 
   /* ===================================================================
-     7. La coupe personnalisée : coupe de départ + réglages + caractéristiques
+     7. La coupe personnalisée, emplacement par emplacement
      Une « création » = { coupe, reglages, caracteristiques, couleurLibre }.
+     Dans chaque emplacement (zone.part, voir catalogue.js), la valeur la plus précise
+     REMPLACE les autres :  caractéristique choisie > réglage modifié > texte de la coupe.
+     Rien ne s'ajoute en vrac à la fin : deux consignes contraires ne peuvent pas
+     cohabiter dans une même zone.
      =================================================================== */
   function creation() {
     var avec = etat.avecCoupe && !!etat.coupe;
@@ -341,30 +330,123 @@
     };
   }
 
+  /* Compose la coupe. Renvoie :
+       slots     : { 'sides.style': [{ en, fr }], … }  (fr null : texte de la coupe, absent du résumé)
+       remplaces : { idDuReglage: caractéristique qui le remplace } */
+  function composer(x) {
+    var slots = {};
+    var remplaces = {};
+    var actives = caracteristiquesActives(x);
+    var parSlot = {};
+    var effaces = {};
+    actives.forEach(function (c) {
+      (parSlot[c.slot] = parSlot[c.slot] || []).push(c);
+      (c.efface || []).forEach(function (slot) { if (!effaces[slot]) effaces[slot] = c; });
+    });
+
+    /* 1. Le texte de la coupe. */
+    if (x.coupe && x.coupe.zones) {
+      Object.keys(x.coupe.zones).forEach(function (slot) { slots[slot] = [{ en: x.coupe.zones[slot], fr: null }]; });
+    }
+
+    /* 2. Les réglages : un réglage modifié remplace le texte de la coupe dans son emplacement. */
+    if (x.coupe) {
+      var base = reglagesParDefaut(x.coupe);
+      C.reglages[x.coupe.mode].forEach(function (g) {
+        var remplacant = (parSlot[g.slot] && parSlot[g.slot][0]) || effaces[g.slot] || null;
+        if (!remplacant) {
+          actives.forEach(function (c) {
+            if (!remplacant && c.exclutReglage && (c.exclutReglage[g.id] || []).indexOf(x.reglages[g.id]) >= 0) remplacant = c;
+          });
+          if (remplacant) slots[g.slot] = [];
+        }
+        if (remplacant) { remplaces[g.id] = remplacant; return; }
+        var t = texteReglage(g, x.reglages);
+        if (!t) return;
+        var toujours = g.toujours || g.type !== 'choix'; // les mesures (sabot, dessus, longueur) figurent toujours dans le résumé
+        if (x.reglages[g.id] !== base[g.id]) {
+          slots[g.slot] = t.en || t.fr ? [{ en: t.en, fr: t.fr || null }] : [];
+        } else if (slots[g.slot] && slots[g.slot].length) {
+          if (toujours) slots[g.slot][0].fr = t.fr;
+        } else if (t.en) {
+          slots[g.slot] = [{ en: t.en, fr: toujours ? t.fr : null }];
+        }
+      });
+    }
+
+    /* 3. Les caractéristiques remplacent tout le reste dans leur emplacement. */
+    Object.keys(parSlot).forEach(function (slot) {
+      slots[slot] = parSlot[slot].map(function (c) { return texteCaracteristique(c, x); });
+    });
+    Object.keys(effaces).forEach(function (slot) { if (!parSlot[slot]) slots[slot] = []; });
+    return { slots: slots, remplaces: remplaces };
+  }
+
+  /* Les morceaux d'une zone, dans l'ordre de ses emplacements. */
+  function entreesZone(slots, zone) {
+    var entrees = [];
+    zone.parts.forEach(function (part) { (slots[zone.id + '.' + part] || []).forEach(function (e) { entrees.push(e); }); });
+    return entrees;
+  }
+
+  function zoneBarbe() {
+    for (var i = 0; i < C.zones.length; i++) { if (C.zones[i].id === 'beard') return C.zones[i]; }
+    return null;
+  }
+
+  /* « Barbe seule » : choisie dans le groupe Barbe, et une barbe est bien décrite. */
+  function barbeSeule(x) {
+    if (!x.coupe || x.coupe.mode !== 'barber' || !x.reglages || x.reglages.barbeSeule !== true) return false;
+    return entreesZone(composer(x).slots, zoneBarbe()).some(function (e) { return e.en; });
+  }
+
+  /* Vrai si rien n'est à générer. */
   function creationVide(x) {
-    return !x.coupe && morceauxCaracteristiques(x).en.length === 0;
+    if (x.coupe) return false;
+    var slots = composer(x).slots;
+    return !Object.keys(slots).some(function (k) { return slots[k].some(function (e) { return e.en; }); });
   }
 
-  /* Texte anglais qui remplace [COUPE] dans le prompt image.
-     Coupe ajoutée sans description anglaise : on envoie la description française. */
+  function sansPointFinal(texte) {
+    return String(texte).replace(/[\s.]+$/, '');
+  }
+
+  /* [COUPE] du prompt image :
+     « <nom anglais>. Length: … Sides: … Top: … Front: … Neckline: … Color: … Beard: … »
+     Seules les zones qui ont une valeur sont écrites. Pas de point final : le prompt en a un. */
   function descAnglaise(x) {
-    if (barbeSeule(x.coupe, x.reglages)) return option(reglage(x.coupe, 'barbe'), x.reglages.barbe).en;
-    var parties = x.coupe ? [x.coupe.desc || x.coupe.ligne].concat(morceaux(x.coupe, x.reglages).en) : [];
-    return sansDoublons(parties.concat(morceauxCaracteristiques(x).en)).join(', ');
+    var slots = composer(x).slots;
+    var ligne = function (zone) {
+      var en = entreesZone(slots, zone).map(function (e) { return e.en; }).filter(Boolean);
+      return en.length ? zone.en + ': ' + sansDoublons(en).join(', ') : null;
+    };
+    if (barbeSeule(x)) return ligne(zoneBarbe());
+    var tete = 'Custom haircut';
+    if (x.coupe) tete = x.coupe.perso ? x.coupe.fr + ': ' + sansPointFinal(x.coupe.desc || x.coupe.ligne) : x.coupe.en;
+    return [sansPointFinal(tete)].concat(C.zones.map(ligne).filter(Boolean)).join('. ');
   }
 
-  /* Résumé en une ligne, ex. « Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue ». */
+  /* Résumé français en une ligne, dans l'ordre des zones,
+     ex. « Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue ». */
   function resume(x, nomDeLaCoupe) {
-    if (barbeSeule(x.coupe, x.reglages)) return 'Barbe seule : ' + option(reglage(x.coupe, 'barbe'), x.reglages.barbe).res + ', cheveux inchangés';
-    var k = morceauxCaracteristiques(x).fr;
-    if (!x.coupe) return k.length ? 'Coupe personnalisée : ' + k.join(', ') : '';
-    return [nomDeLaCoupe || x.coupe.fr].concat(morceaux(x.coupe, x.reglages).fr, k).join(', ');
+    var slots = composer(x).slots;
+    var fr = function (zones) {
+      var morceaux = [];
+      zones.forEach(function (zone) {
+        entreesZone(slots, zone).forEach(function (e) { if (e.fr) morceaux.push(e.fr); });
+      });
+      return sansDoublons(morceaux);
+    };
+    if (barbeSeule(x)) return 'Barbe seule : ' + fr([zoneBarbe()]).join(', ') + ', cheveux inchangés';
+    var morceaux = fr(C.zones);
+    if (!x.coupe) return morceaux.length ? 'Coupe personnalisée : ' + morceaux.join(', ') : '';
+    return [nomDeLaCoupe || x.coupe.fr].concat(morceaux).join(', ');
   }
 
   /* Texte français qui remplace [COUPE] dans le diagnostic.
      Une coupe ajoutée n'est pas connue de Gemini : on joint sa description. */
   function coupePourDiagnostic(x) {
-    if (x.coupe && x.coupe.perso && !barbeSeule(x.coupe, x.reglages)) return resume(x, x.coupe.fr + ' (' + x.coupe.ligne + ')');
+    if (x.coupe && x.coupe.perso && !barbeSeule(x)) return resume(x, x.coupe.fr + ' (' + x.coupe.ligne + ')');
     return resume(x);
   }
 
@@ -393,7 +475,7 @@
         propre[g.id] = Math.min(g.max, Math.max(g.min, Math.round(v)));
       }
     });
-    if (coupe.mode === 'barber') propre.barbeSeule = r.barbeSeule === true && propre.barbe !== 'inchangee';
+    if (coupe.mode === 'barber') propre.barbeSeule = r.barbeSeule === true;
     if (coupe.mode === 'salon') propre.couleurAutre = texteCourt(r.couleurAutre, 80);
     return propre;
   }
@@ -416,6 +498,7 @@
     propre.nb = t.nb === true;
     propre.montage = t.montage === true;
     F.formats.forEach(function (f) { if (t.format === f.id) propre.format = f.id; });
+    F.sansIa.forEach(function (o) { if (t.outil === o.id) propre.outil = o.id; });
     return propre;
   }
 
@@ -872,7 +955,8 @@
   /* Avertissements complets pour une coupe réglée (page Réglages). `court` sert aux cartes du catalogue. */
   function avertissements(coupe, r, profil) {
     var liste = [];
-    if (!coupe || barbeSeule(coupe, r)) return liste; // barbe seule : les cheveux ne changent pas
+    /* Barbe seule : les cheveux ne changent pas. */
+    if (!coupe || barbeSeule({ coupe: coupe, reglages: r, caracteristiques: etat.caracteristiques, couleurLibre: etat.couleurLibre })) return liste;
     var demandee = longueurDemandee(coupe, r);
     var boucles = profil.texture === 'boucles' || profil.texture === 'crepus';
     if (demandee && profil.longueur && RANG_LONGUEUR[demandee] > RANG_LONGUEUR[profil.longueur]) {
@@ -940,19 +1024,19 @@
   /* ===================================================================
      12. Catalogue coupe
      =================================================================== */
-  /* Carte de coupe : silhouette, nom, une ligne. Options : compacte, badge, risques. */
+  /* Carte de coupe, en texte : nom, une ligne, badges (« Conseillée », risques). */
   function carteCoupe(c, o) {
     o = o || {};
     var carte = el('button', {
       type: 'button',
       'class': 'carte coupe',
       'data-coupe': c.id,
-      'aria-pressed': o.compacte ? null : String(!!etat.coupe && etat.coupe.id === c.id)
-    });
-    carte.innerHTML = C.silhouette(c.sil); // tracé constant de catalogue.js
-    if (o.badge) carte.appendChild(el('span', { 'class': 'badge', texte: 'Conseillée' }));
-    carte.appendChild(el('span', { 'class': 'coupe-nom', texte: c.fr }));
-    if (!o.compacte) carte.appendChild(el('span', { 'class': 'coupe-ligne', texte: c.ligne }));
+      'aria-pressed': String(!!etat.coupe && etat.avecCoupe && etat.coupe.id === c.id)
+    }, [
+      o.badge ? el('span', { 'class': 'badge', texte: 'Conseillée' }) : null,
+      el('span', { 'class': 'coupe-nom', texte: c.fr }),
+      el('span', { 'class': 'coupe-ligne', texte: c.ligne })
+    ]);
     (o.risques || []).forEach(function (r) { carte.appendChild(el('span', { 'class': 'risque', texte: r })); });
     return carte;
   }
@@ -981,17 +1065,16 @@
     var conseillees = avecProfil ? propositions(etat.profil) : [];
     var zone = $('#conseillees');
     vider(zone);
-    conseillees.forEach(function (c) { zone.appendChild(carteCoupe(c, { compacte: true, badge: true })); });
+    conseillees.forEach(function (c) { zone.appendChild(carteCoupe(c, { badge: true, risques: risques(c, etat.profil) })); });
     $('#bloc-conseillees').hidden = !avecProfil;
     $('#titre-toutes').hidden = !avecProfil;
 
+    /* « Autres coupes » : sans répéter les conseillées. */
     var grille = $('#grille-coupes');
     vider(grille);
     liste.forEach(function (c) {
-      grille.appendChild(carteCoupe(c, {
-        badge: conseillees.indexOf(c) >= 0,
-        risques: avecProfil ? risques(c, etat.profil) : []
-      }));
+      if (conseillees.indexOf(c) >= 0) return;
+      grille.appendChild(carteCoupe(c, { risques: avecProfil ? risques(c, etat.profil) : [] }));
     });
     $('#ajout-type').hidden = !!etat.mode;
     fermerAjout();
@@ -1067,44 +1150,65 @@
     ]);
   }
 
+  /* Chaque réglage vit dans une enveloppe : ses contrôles, ou la phrase « Côtés remplacés par : … »
+     quand une caractéristique du même emplacement le remplace. */
   function construireReglages() {
     var zone = $('#zone-reglages');
     vider(zone);
     C.reglages[etat.coupe.mode].forEach(function (g) {
-      if (g.type === 'curseur') { zone.appendChild(blocCurseur(g)); return; }
-      if (g.type === 'longueur') {
-        zone.appendChild(blocChoix(g.id, g.nom, g.reperes.map(function (rp) {
-          return boutonChoix(rp.fr, { 'data-repere': rp.v });
-        })));
-        zone.appendChild(blocCurseur(g));
-        return;
+      var controles;
+      if (g.type === 'curseur') {
+        controles = [blocCurseur(g)];
+      } else if (g.type === 'longueur') {
+        controles = [
+          blocChoix(g.id, g.nom, g.reperes.map(function (rp) { return boutonChoix(rp.fr, { 'data-repere': rp.v }); })),
+          blocCurseur(g)
+        ];
+      } else {
+        controles = [blocChoix(g.id, g.nom, g.options.map(function (o) {
+          return boutonChoix(o.fr, { 'data-reglage': g.id, 'data-valeur': o.v });
+        }))];
+        if (g.id === 'couleur') {
+          controles.push(el('div', { id: 'bloc-couleur-autre' }, [
+            el('label', { 'class': 'etiquette', 'for': 'couleur-autre', texte: 'Couleur voulue, en anglais' }),
+            el('input', { 'class': 'champ', type: 'text', id: 'couleur-autre', maxlength: '80', lang: 'en', autocomplete: 'off', placeholder: 'copper red' })
+          ]));
+        }
       }
-      zone.appendChild(blocChoix(g.id, g.nom, g.options.map(function (o) {
-        return boutonChoix(o.fr, { 'data-reglage': g.id, 'data-valeur': o.v });
-      })));
+      var enveloppe = el('div', { 'class': 'pile', id: 'reglage-' + g.id }, [
+        el('div', { 'class': 'blocs', 'data-controles': g.id }, controles),
+        el('div', { 'class': 'pile', 'data-remplace': g.id, hidden: true }, [
+          el('p', { 'class': 'discret', id: 'texte-remplace-' + g.id }),
+          el('a', { 'class': 'btn-2', href: '#personnalise', texte: 'Modifier' })
+        ])
+      ]);
+      /* « Barbe seule » : dans le groupe Barbe, sous les styles. */
       if (g.id === 'barbe') {
-        zone.appendChild(blocChoix('barbe-seule', 'Ne changer que la barbe', [
-          boutonChoix('Non', { 'data-barbe-seule': 'non' }),
-          boutonChoix('Oui', { 'data-barbe-seule': 'oui' })
+        enveloppe.appendChild(el('div', { 'class': 'groupe', role: 'group', 'aria-label': 'Barbe seule' }, [
+          boutonChoix('Barbe seule (ne pas toucher aux cheveux)', { 'data-barbe-seule': 'oui' })
         ]));
+        enveloppe.appendChild(el('p', { 'class': 'alerte', id: 'message-barbe-seule', hidden: true,
+          texte: 'Barbe seule : choisis aussi la barbe voulue (au-dessus ou dans le Catalogue personnalisé).' }));
       }
-      if (g.id === 'couleur') {
-        zone.appendChild(el('div', { id: 'bloc-couleur-autre' }, [
-          el('label', { 'class': 'etiquette', 'for': 'couleur-autre', texte: 'Couleur voulue, en anglais' }),
-          el('input', { 'class': 'champ', type: 'text', id: 'couleur-autre', maxlength: '80', lang: 'en', autocomplete: 'off', placeholder: 'copper red' })
-        ]));
-      }
+      zone.appendChild(enveloppe);
     });
   }
 
-  /* Met la page en accord avec les réglages : boutons actifs, curseurs, blocs conditionnels, avertissements, résumé. */
+  /* Met la page en accord avec les réglages : boutons actifs, curseurs, réglages remplacés,
+     blocs conditionnels, avertissements, résumé. */
   function synchroniserReglages() {
     var r = etat.reglages;
     var coupe = etat.coupe;
+    var x = { coupe: coupe, reglages: r, caracteristiques: etat.caracteristiques, couleurLibre: etat.couleurLibre };
+    var remplaces = composer(x).remplaces;
     tous('#zone-reglages [data-reglage]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(r[b.getAttribute('data-reglage')] === b.getAttribute('data-valeur')));
     });
     C.reglages[coupe.mode].forEach(function (g) {
+      var remplacant = remplaces[g.id];
+      $('[data-controles="' + g.id + '"]').hidden = !!remplacant;
+      $('[data-remplace="' + g.id + '"]').hidden = !remplacant;
+      if (remplacant) $('#texte-remplace-' + g.id).textContent = g.nom + ' ' + g.accord + ' par : ' + remplacant.fr.toLowerCase();
       if (g.type === 'choix') return;
       var v = r[g.id];
       var curseur = $('#curseur-' + g.id);
@@ -1123,10 +1227,8 @@
       }
     });
     if (coupe.mode === 'barber') {
-      $('#bloc-barbe-seule').hidden = r.barbe === 'inchangee';
-      tous('#zone-reglages [data-barbe-seule]').forEach(function (b) {
-        b.setAttribute('aria-pressed', String((b.getAttribute('data-barbe-seule') === 'oui') === r.barbeSeule));
-      });
+      $('#zone-reglages [data-barbe-seule]').setAttribute('aria-pressed', String(r.barbeSeule === true));
+      $('#message-barbe-seule').hidden = !(r.barbeSeule === true && !barbeSeule(x));
     }
     if (coupe.mode === 'salon') {
       var champ = $('#couleur-autre');
@@ -1138,7 +1240,7 @@
     avertissements(coupe, r, etat.profil).forEach(function (a) { zone.appendChild(alerte(a.titre, a.texte)); });
     zone.hidden = !zone.firstChild;
     /* Le résumé de cette page décrit toujours la coupe affichée. */
-    $('#resume-reglages').textContent = resume({ coupe: coupe, reglages: r, caracteristiques: etat.caracteristiques, couleurLibre: etat.couleurLibre });
+    $('#resume-reglages').textContent = resume(x);
     memoriser();
   }
 
@@ -1187,7 +1289,6 @@
       if (r[id] !== valeur) r[id] = valeur;
       /* Retoucher un choix actif le retire, mais seulement si la coupe ne l'imposait pas. */
       else if (reglagesParDefaut(etat.coupe)[id] === null) r[id] = null;
-      if (id === 'barbe' && r.barbe === 'inchangee') r.barbeSeule = false;
       if (id === 'cotes' && r.cotes === 'ciseaux') r.sabot = null; // pas de sabot aux ciseaux
     } else if (b.hasAttribute('data-repere')) {
       var g = reglage(etat.coupe, 'longueur');
@@ -1196,7 +1297,7 @@
       if (!actif) g.reperes.forEach(function (rp) { if (rp.v === cible) r.longueur = rp.cm; });
       else if (reglagesParDefaut(etat.coupe).longueur === null) r.longueur = null;
     } else if (b.hasAttribute('data-barbe-seule')) {
-      r.barbeSeule = b.getAttribute('data-barbe-seule') === 'oui';
+      r.barbeSeule = r.barbeSeule !== true;
     } else {
       return;
     }
@@ -1238,20 +1339,21 @@
   /* ===================================================================
      14. Catalogue personnalisé : magazine de caractéristiques
      =================================================================== */
-  /* Messages des combinaisons contradictoires. On signale, on ne bloque pas. */
-  function contradictions() {
-    var choisies = etat.caracteristiques;
+  /* Conflit en attente : la caractéristique touchée et celles qu'elle contredit.
+     En mémoire seulement : ce n'est pas encore un choix. */
+  var conflit = null;
+
+  function nomCarac(id) {
+    return caracteristique(id).fr;
+  }
+
+  /* Messages qui ne bloquent rien. */
+  function messagesPersonnalise() {
     var liste = [];
-    K.contradictions.forEach(function (regle) {
-      if (choisies.indexOf(regle[0]) < 0) return;
-      regle[1].forEach(function (autre) {
-        if (choisies.indexOf(autre) < 0) return;
-        liste.push('« ' + caracteristique(regle[0]).fr + ' » et « ' + caracteristique(autre).fr + ' » se contredisent. Garde un seul des deux, sauf si c’est voulu.');
-      });
-    });
     var x = creation();
-    if (choisies.length && barbeSeule(x.coupe, x.reglages)) {
-      liste.push('« Ne changer que la barbe » est sur Oui dans les réglages : les caractéristiques ne partent pas dans le prompt.');
+    var horsBarbe = caracteristiquesActives(x).filter(function (c) { return c.slot.split('.')[0] !== 'beard'; });
+    if (horsBarbe.length && barbeSeule(x)) {
+      liste.push('« Barbe seule » est choisi dans les réglages : seules les caractéristiques de barbe partent dans le prompt.');
     }
     return liste;
   }
@@ -1273,24 +1375,35 @@
       });
     }
 
+    /* Conflit en attente : « Garder X » / « Garder Y ». */
+    var zoneConflit = $('#conflit');
+    zoneConflit.hidden = !conflit;
+    if (conflit) {
+      var existantes = conflit.existantes.map(nomCarac);
+      $('#texte-conflit').textContent = '« ' + nomCarac(conflit.nouvelle) + ' » et « ' + existantes.join(' » et « ') +
+        ' » se contredisent (' + conflit.groupe + '). Laquelle garder ?';
+      $('#garder-existantes').textContent = 'Garder ' + existantes.join(' et ');
+      $('#garder-nouvelle').textContent = 'Garder ' + nomCarac(conflit.nouvelle);
+    }
+
     var zone = $('#contradictions');
     vider(zone);
-    contradictions().forEach(function (texte) { zone.appendChild(alerte('', texte)); });
+    messagesPersonnalise().forEach(function (texte) { zone.appendChild(alerte('', texte)); });
     zone.hidden = !zone.firstChild;
     $('#resume-personnalise').textContent = resume(creation()) || 'Aucune caractéristique choisie.';
     memoriser();
   }
 
   RENDUS.personnalise = function () {
+    conflit = null;
     var zone = $('#categories');
     vider(zone);
     K.categories.forEach(function (categorie) {
       var grille = el('div', { 'class': 'coupes' });
       categorie.liste.forEach(function (c) {
-        var carte = el('button', { type: 'button', 'class': 'carte coupe', 'data-caracteristique': c.id, 'aria-pressed': 'false' });
-        carte.innerHTML = C.picto(c.trace, c.tete === true); // tracé constant de caracteristiques.js
-        carte.appendChild(el('span', { 'class': 'coupe-nom', texte: c.fr }));
-        grille.appendChild(carte);
+        grille.appendChild(el('button', { type: 'button', 'class': 'carte coupe', 'data-caracteristique': c.id, 'aria-pressed': 'false' }, [
+          el('span', { 'class': 'coupe-nom', texte: c.fr })
+        ]));
       });
       zone.appendChild(el('div', {}, [el('h2', { texte: categorie.nom }), grille]));
       if (categorie.liste.some(function (c) { return c.libre; })) {
@@ -1303,20 +1416,44 @@
     synchroniserPersonnalise();
   };
 
+  /* Toucher une carte : l'ajoute, la retire, ou ouvre un conflit si son groupe est déjà occupé. */
+  function toucherCaracteristique(id) {
+    var i = etat.caracteristiques.indexOf(id);
+    if (i >= 0) { etat.caracteristiques.splice(i, 1); conflit = null; return; }
+    var groupe = null;
+    var existantes = etat.caracteristiques.filter(function (autre) {
+      var g = K.conflit(id, autre);
+      if (g && !groupe) groupe = g;
+      return !!g;
+    });
+    if (existantes.length) { conflit = { nouvelle: id, existantes: existantes, groupe: groupe }; return; }
+    conflit = null;
+    etat.caracteristiques.push(id);
+  }
+
   $('#ecran-personnalise').addEventListener('click', function (evenement) {
     var b = evenement.target.closest('button');
     if (!b) return;
     if (b.hasAttribute('data-caracteristique')) {
-      var id = b.getAttribute('data-caracteristique');
-      var i = etat.caracteristiques.indexOf(id);
-      if (i >= 0) etat.caracteristiques.splice(i, 1);
-      else etat.caracteristiques.push(id);
+      toucherCaracteristique(b.getAttribute('data-caracteristique'));
     } else if (b.hasAttribute('data-base')) {
       etat.avecCoupe = b.getAttribute('data-base') === 'oui'; // « Aucune » n'efface pas la coupe
+    } else if ((b.id === 'garder-nouvelle' || b.id === 'garder-existantes') && conflit) {
+      var c = conflit;
+      var gardee = b.id === 'garder-nouvelle' ? c.nouvelle : c.existantes[0];
+      if (b.id === 'garder-nouvelle') {
+        etat.caracteristiques = etat.caracteristiques.filter(function (id) { return c.existantes.indexOf(id) < 0; });
+        etat.caracteristiques.push(c.nouvelle);
+      }
+      conflit = null;
+      synchroniserPersonnalise();
+      $('#categories [data-caracteristique="' + gardee + '"]').focus();
+      return;
     } else {
       return;
     }
     synchroniserPersonnalise();
+    if (conflit) $('#garder-existantes').focus();
   });
 
   $('#ecran-personnalise').addEventListener('input', function (evenement) {
@@ -1330,28 +1467,40 @@
      =================================================================== */
   var ADRESSE_GEMINI = 'https://gemini.google.com/app';
 
-  /* Fiche barber ou salon : la coupe le dit, sinon le mode, sinon le choix fait sur la page. */
-  function modeFiche(x) {
+  /* Barber ou salon, pour le diagnostic et la fiche : la coupe le dit, sinon le mode de l'accueil,
+     sinon le choix fait sur la page Résultat. */
+  function modePrompts(x) {
     if (x.coupe) return x.coupe.mode;
     return etat.mode || etat.fiche;
   }
 
-  /* Les étapes, dans l'ordre : Diagnostic, Image, Fiche. */
+  /* Les étapes, dans l'ordre : Diagnostic, Image, Fiche.
+     Chaque étape est une donnée complète, prête pour la V2 (CLAUDE.md, section 14) :
+       id      : 'diagnostic' | 'image' | 'fiche'
+       texte   : le prompt final, sans marqueur
+       joindre : les photos à envoyer avec, dans l'ordre ('selfie', 'reference', 'image-generee')
+     En V1, l'écran les affiche ; en V2, l'appli les enverra elle-même (generateImage). */
   function etapesResultat() {
     var x = creation();
-    var seule = barbeSeule(x.coupe, x.reglages);
-    var etapes = [{ titre: 'Diagnostic', consigne: P.consignes.diagnostic, texte: P.diagnostic(coupePourDiagnostic(x)) }];
+    var seule = barbeSeule(x);
+    var mode = modePrompts(x);
+    var etapes = [{
+      id: 'diagnostic', titre: 'Diagnostic', consigne: P.consignes.diagnostic,
+      texte: P.diagnostic(coupePourDiagnostic(x), mode), joindre: ['selfie']
+    }];
     if (etat.reference) {
-      etapes.push({ titre: 'Image', consigne: P.consignes.reference, texte: P.reference() });
+      etapes.push({ id: 'image', titre: 'Image', consigne: P.consignes.reference, texte: P.reference(), joindre: ['selfie', 'reference'] });
     } else {
       etapes.push({
-        titre: 'Image',
+        id: 'image', titre: 'Image',
         consigne: P.consignes.image + (seule ? ' ' + P.consignes.barbeSeule : ''),
-        texte: P.image(descAnglaise(x), seule)
+        texte: P.image(descAnglaise(x), seule), joindre: ['selfie']
       });
     }
-    var mode = modeFiche(x);
-    etapes.push({ titre: 'Fiche', consigne: mode === 'salon' ? P.consignes.ficheSalon : P.consignes.ficheBarber, texte: P.fiche(mode) });
+    etapes.push({
+      id: 'fiche', titre: 'Fiche', consigne: mode === 'salon' ? P.consignes.ficheSalon : P.consignes.ficheBarber,
+      texte: P.fiche(mode), joindre: ['selfie', 'image-generee']
+    });
     return etapes;
   }
 
@@ -1492,14 +1641,20 @@
     m.hidden = !texte;
   }
 
+  /* Appui long sur la photo : l'original s'affiche tant qu'on appuie. */
+  var voirOriginal = false;
+
   function dessinerApercu() {
     if (dessinDemande || !photos.apres) return;
     dessinDemande = true;
     window.requestAnimationFrame(function () {
       dessinDemande = false;
       if (!photos.apres) return;
+      var r = reglagesRetouche();
+      /* L'original garde le cadrage choisi, pour que la photo ne saute pas. */
+      if (voirOriginal) { r.luminosite = 0; r.contraste = 0; r.chaleur = 0; r.nb = false; }
       try {
-        R.dessiner($('#apercu'), photos.apres, photos.avant, reglagesRetouche(), COTE_APERCU);
+        R.dessiner($('#apercu'), photos.apres, photos.avant, r, COTE_APERCU);
       } catch (e) {
         messageRetouche('Cette photo ne peut pas être affichée. Essaie avec une autre photo.');
       }
@@ -1510,21 +1665,18 @@
     return n > 0 ? '+' + n : String(n);
   }
 
-  function titreOutil(outil, pour) {
-    return el(pour ? 'label' : 'span', { 'class': 'outil-titre', 'for': pour || null, id: 'titre-outil-' + outil.id }, [
-      el('span', { 'class': 'picto', svg: C.picto(outil.trace, false) }),
-      el('span', { texte: outil.fr })
-    ]);
-  }
-
+  /* Un panneau par outil ; seul celui de l'outil actif est visible, sous la photo. */
   function construireOutils() {
-    var zone = $('#outils-retouche');
+    var barre = $('#barre-outils');
+    var zone = $('#panneaux-outils');
+    vider(barre);
     vider(zone);
     F.sansIa.forEach(function (outil) {
+      barre.appendChild(boutonChoix(outil.court, { 'data-outil': outil.id, 'aria-controls': 'panneau-' + outil.id }));
       var contenu;
       if (outil.type === 'curseur') {
         contenu = [
-          titreOutil(outil, 'retouche-' + outil.id),
+          el('label', { 'class': 'etiquette', 'for': 'retouche-' + outil.id, texte: outil.fr }),
           el('input', { 'class': 'curseur', type: 'range', id: 'retouche-' + outil.id, 'data-retouche': outil.id, min: String(outil.min), max: String(outil.max), step: '1' }),
           el('div', { 'class': 'graduations' }, [
             el('span', { texte: outil.gauche }),
@@ -1534,7 +1686,7 @@
         ];
       } else if (outil.type === 'bascule') {
         contenu = [
-          titreOutil(outil),
+          el('span', { 'class': 'etiquette', id: 'titre-outil-' + outil.id, texte: outil.fr }),
           el('div', { 'class': 'groupe', role: 'group', 'aria-labelledby': 'titre-outil-' + outil.id }, [
             boutonChoix('Non', { 'data-bascule': outil.id, 'data-valeur': 'non' }),
             boutonChoix('Oui', { 'data-bascule': outil.id, 'data-valeur': 'oui' })
@@ -1542,28 +1694,34 @@
         ];
       } else if (outil.type === 'format') {
         contenu = [
-          titreOutil(outil),
+          el('span', { 'class': 'etiquette', id: 'titre-outil-' + outil.id, texte: outil.fr }),
           el('div', { 'class': 'groupe', role: 'group', 'aria-labelledby': 'titre-outil-' + outil.id }, F.formats.map(function (f) {
             return boutonChoix(f.fr, { 'data-format': f.id });
           }))
         ];
       } else {
         contenu = [
-          titreOutil(outil),
-          el('p', { 'class': 'discret', texte: 'La photo d’avant à gauche, la photo retouchée à droite.' }),
-          el('button', { type: 'button', 'class': 'btn-2', id: 'choisir-avant', texte: 'Choisir la photo d’avant' }),
-          el('div', { 'class': 'groupe', id: 'groupe-montage', role: 'group', 'aria-labelledby': 'titre-outil-' + outil.id }, [
-            boutonChoix('Sans montage', { 'data-montage': 'non' }),
-            boutonChoix('Avec montage', { 'data-montage': 'oui' })
+          el('span', { 'class': 'etiquette', id: 'titre-outil-' + outil.id, texte: outil.fr }),
+          el('div', { 'class': 'pile' }, [
+            el('p', { 'class': 'discret', texte: 'La photo d’avant à gauche, la photo retouchée à droite.' }),
+            el('button', { type: 'button', 'class': 'btn-2', id: 'choisir-avant', texte: 'Choisir la photo d’avant' }),
+            el('div', { 'class': 'groupe', id: 'groupe-montage', role: 'group', 'aria-labelledby': 'titre-outil-' + outil.id }, [
+              boutonChoix('Sans montage', { 'data-montage': 'non' }),
+              boutonChoix('Avec montage', { 'data-montage': 'oui' })
+            ])
           ])
         ];
       }
-      zone.appendChild(el('div', { 'class': 'carte pile' }, contenu));
+      zone.appendChild(el('div', { id: 'panneau-' + outil.id, 'data-panneau': outil.id }, contenu));
     });
   }
 
   function synchroniserRetouche() {
     var t = etat.retouche;
+    tous('#barre-outils [data-outil]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-outil') === t.outil));
+    });
+    tous('#panneaux-outils [data-panneau]').forEach(function (p) { p.hidden = p.getAttribute('data-panneau') !== t.outil; });
     F.sansIa.forEach(function (outil) {
       if (outil.type === 'curseur') {
         var curseur = $('#retouche-' + outil.id);
@@ -1571,17 +1729,17 @@
         curseur.setAttribute('aria-valuetext', signe(t[outil.id]));
         $('#valeur-retouche-' + outil.id).textContent = signe(t[outil.id]);
       } else if (outil.type === 'bascule') {
-        tous('#outils-retouche [data-bascule="' + outil.id + '"]').forEach(function (b) {
+        tous('#panneaux-outils [data-bascule="' + outil.id + '"]').forEach(function (b) {
           b.setAttribute('aria-pressed', String((b.getAttribute('data-valeur') === 'oui') === t[outil.id]));
         });
       }
     });
-    tous('#outils-retouche [data-format]').forEach(function (b) {
+    tous('#panneaux-outils [data-format]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-format') === t.format));
     });
     $('#groupe-montage').hidden = !photos.avant;
     $('#choisir-avant').textContent = photos.avant ? 'Changer la photo d’avant' : 'Choisir la photo d’avant';
-    tous('#outils-retouche [data-montage]').forEach(function (b) {
+    tous('#panneaux-outils [data-montage]').forEach(function (b) {
       b.setAttribute('aria-pressed', String((b.getAttribute('data-montage') === 'oui') === t.montage));
     });
     $('#image-enregistree').hidden = true; // l'image enregistrée ne correspond plus aux réglages
@@ -1591,13 +1749,38 @@
 
   RENDUS.retouche = function () {
     var aPhoto = !!photos.apres;
+    voirOriginal = false;
     $('#zone-apercu').hidden = !aPhoto;
-    $('#outils-retouche').hidden = !aPhoto;
+    $('#legende-apercu').hidden = !aPhoto;
+    $('#legende-apercu').textContent = 'Appui long sur la photo : voir l’original.';
+    $('#intro-retouche').hidden = aPhoto;
+    $('#barre-outils').hidden = !aPhoto;
+    $('#panneaux-outils').hidden = !aPhoto;
     $('#retouche-secondaires').hidden = !aPhoto;
     $('#action-retouche').textContent = aPhoto ? 'Enregistrer l’image' : 'Choisir une photo';
-    if (!$('#outils-retouche').firstChild) construireOutils();
+    if (!$('#barre-outils').firstChild) construireOutils();
     synchroniserRetouche();
   };
+
+  /* Appui long sur la photo (doigt, souris ou stylet). */
+  var minuterieOriginal = null;
+
+  function montrerOriginal(oui) {
+    window.clearTimeout(minuterieOriginal);
+    if (voirOriginal === oui) return;
+    voirOriginal = oui;
+    $('#legende-apercu').textContent = oui ? 'Original : relâche pour revoir la retouche.' : 'Appui long sur la photo : voir l’original.';
+    dessinerApercu();
+  }
+
+  $('#apercu').addEventListener('pointerdown', function () {
+    window.clearTimeout(minuterieOriginal);
+    minuterieOriginal = window.setTimeout(function () { montrerOriginal(true); }, 250);
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (type) {
+    $('#apercu').addEventListener(type, function () { montrerOriginal(false); });
+  });
+  $('#apercu').addEventListener('contextmenu', function (evenement) { evenement.preventDefault(); });
 
   /* Ouvre une photo du téléphone. Elle reste en mémoire : ni envoi, ni stockage. */
   function ouvrirPhoto(fichier, cle) {
@@ -1677,7 +1860,11 @@
     }
     if (b.id === 'changer-photo') { $('#fichier-photo').click(); return; }
     if (b.id === 'choisir-avant') { $('#fichier-avant').click(); return; }
-    if (b.id === 'remettre-retouches') { etat.retouche = retoucheVide(); etat.retouche.montage = !!photos.avant && t.montage; }
+    if (b.id === 'remettre-retouches') {
+      etat.retouche = retoucheVide();
+      etat.retouche.outil = t.outil;
+      etat.retouche.montage = !!photos.avant && t.montage;
+    } else if (b.hasAttribute('data-outil')) t.outil = b.getAttribute('data-outil');
     else if (b.hasAttribute('data-bascule')) t[b.getAttribute('data-bascule')] = b.getAttribute('data-valeur') === 'oui';
     else if (b.hasAttribute('data-format')) t.format = b.getAttribute('data-format');
     else if (b.hasAttribute('data-montage')) t.montage = b.getAttribute('data-montage') === 'oui';
@@ -1807,6 +1994,8 @@
     photos: photos,
     generateImage: generateImage,
     creation: creation,
+    composer: composer,
+    validerCaracteristiques: validerCaracteristiques,
     resume: resume,
     descAnglaise: descAnglaise,
     coupePourDiagnostic: coupePourDiagnostic,

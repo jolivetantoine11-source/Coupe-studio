@@ -36,7 +36,8 @@ Le thème change avec le mode choisi à l'accueil. Seuls changent : couleurs, po
 Thème `barber` : style rétro de salon de barbier, fond blanc cassé et texte noir avec les couleurs de l'enseigne (rouge, blanc, bleu) ; bordures plus marquées (35 %). Il a une 6e couleur nommée `selection` (#2B59C3, bleu) pour les choix actifs (boutons à bascule), avec texte blanc ; onglet actif de la barre en bleu #2B59C3. Le rouge sert aux boutons principaux, l'ambre aux avertissements (le rouge ne signale jamais une alerte dans ce thème). Un bandeau de rayures en biais rouge / blanc / bleu (aplats, sans dégradé) orne le haut de chaque écran.
 
 Règles de couleur :
-- `principale` sert aux boutons et à l'élément actif, jamais au texte courant.
+- `principale` est réservée au **bouton principal**, jamais au texte courant.
+- **Sélection uniforme** (décision du 15 novembre 2026) : tout ce qui est sélectionné ou actif (bouton à bascule, carte choisie, pastille, curseur, badge, contour de focus) utilise `selection`. En `neutre` et `salon`, `selection` = `principale` ; en `barber`, c'est le bleu #2B59C3. Le rouge du thème `barber` n'apparaît donc que sur le bouton principal (et dans le bandeau de rayures).
 - Texte secondaire = `texte` à 70 % d'opacité. Bordures = `texte` à 15 %. Pas d'autre gris.
 - Contrastes mesurés (WCAG, minimum 4,5:1) : texte/fond 16,4 · 14,4 · 16,6 ; bouton 7,0 · 4,7 · 5,9 ; bleu sur fond 5,5 (neutre · salon · barber). Toute nouvelle couleur doit être mesurée avant d'être ajoutée.
 - Contraste texte/fond minimum 4,5:1. Le thème `barber` reste lisible en plein jour : texte noir sur blanc cassé, jamais de gris moyen.
@@ -70,14 +71,17 @@ Multiples de 8 uniquement : 8, 16, 24, 32, 48.
 
 - **Bouton principal** : fond `principale`, hauteur 56, pleine largeur, un seul par écran. Il vit dans une barre fixe en bas de la page : il reste visible même si la page défile.
 - **Bouton secondaire** : contour 1 px `texte` à 15 %, fond transparent, hauteur 48.
-- **Carte de coupe** (catalogue) : vignette silhouette dessinée (jamais de photo de vraie personne), nom, une ligne de description. Grille de 2 colonnes. Carte choisie : bordure `principale`.
-- **Carte de caractéristique** et **carte de retouche** (Catalogue personnalisé, Retouches IA) : la même carte que la carte de coupe, avec un pictogramme au trait et un nom. Sélection multiple.
-- **Badge** (« Conseillée ») : texte 12, graisse 500, couleur `principale` (bleu `selection` en thème barber). Pas de fond, pas de pilule.
-- **Avertissement court** (sur une carte de coupe) : bordure gauche 4 px `alerte`, texte 12, un ou deux mots (« Golfes », « Lissage nécessaire », « Pousse nécessaire »).
+- **Carte de coupe** (Catalogue coupe) : carte texte compacte, sans image : nom (16, police des titres du thème), une ligne de description en texte secondaire, badges. Grille de 2 colonnes. Carte choisie : bordure `selection`. (Les silhouettes ont été retirées le 15 novembre 2026 : plus de coupes visibles sans défiler. En V2/V3, de vraies photos du salon, avec consentement écrit.)
+- **Carte de caractéristique** (Catalogue personnalisé) : la même carte texte, nom seul. Sélection multiple.
+- **Carte de retouche** (Retouches IA) : la même carte, avec un pictogramme au trait au-dessus du nom. Seul catalogue qui garde des pictogrammes.
+- **Badge** (« Conseillée ») : texte 12, graisse 500, couleur `selection`. Pas de fond, pas de pilule.
+- **Avertissement court** (badge d'avertissement sur une carte de coupe) : bordure gauche 4 px `alerte`, texte 12, un ou deux mots (« Golfes », « Lissage nécessaire », « Pousse nécessaire »).
+- **Message de conflit** (Catalogue personnalisé) : un avertissement (bordure gauche `alerte`) qui dit ce qui entre en conflit, suivi de deux boutons secondaires « Garder X » / « Garder Y ». Jamais de fenêtre du navigateur.
+- **Réglage remplacé** (Réglages) : à la place des boutons du réglage, la phrase « Côtés remplacés par : rasé sur un côté » en texte secondaire et un bouton secondaire « Modifier ».
 - **Gros bouton de choix** (page « Que veux-tu faire ? ») : une carte entière touchable, titre 20 dans la police des titres, une ligne d'explication en texte secondaire.
 - **Champ / sélecteur** : fond `surface`, bordure 1 px, hauteur 48. Choix rapides en boutons à bascule plutôt qu'en listes déroulantes.
 - **En-tête** : une bande en haut de chaque page sauf l'Accueil, avec la **flèche retour** à gauche (icône au trait, zone tactile 48 × 48, sans fond ni bordure). Il n'y a plus de barre d'onglets.
-- **Aperçu photo** (Retouches sans IA) : l'image du coiffeur, arrondi du thème, hauteur 320 au plus, reste visible en haut pendant qu'on règle. Aucun effet autour (ni ombre, ni cadre décoratif).
+- **Éditeur photo** (Retouches sans IA), à la manière de l'éditeur d'Instagram : la photo est fixée en haut de la page, 45 % de la hauteur de l'écran au plus, arrondi du thème, aucun effet autour (ni ombre, ni cadre décoratif). Dessous, une rangée de boutons à bascule choisit l'outil (un seul actif), puis le contrôle de cet outil. Seule la partie sous la photo défile. Appui long sur la photo : l'original s'affiche tant qu'on appuie ; une légende 12 le rappelle.
 - **Confirmation dans la page** (« Nouveau client ») : la question et deux boutons secondaires remplacent les boutons habituels. Jamais de fenêtre du navigateur.
 - **Bloc de prompt** (écran Résultat) : texte en police à chasse fixe, deux boutons : « Copier » puis « Ouvrir Gemini ». Après « Copier », le bouton affiche « Copié ».
 - **Avertissement** (pousse, lissage, golfes) : bordure gauche 4 px `alerte`, texte `texte`. Jamais de rouge en aplat.
@@ -85,7 +89,7 @@ Multiples de 8 uniquement : 8, 16, 24, 32, 48.
 ## 5. Icônes et images
 
 - Icônes au trait, épaisseur 2 px, une seule famille.
-- Silhouettes de coupes et pictogrammes de caractéristiques : même cadrage, même trait, une couleur (`texte`).
+- Pictogrammes des retouches IA et des outils photo : même cadrage, même trait, une couleur (`texte`). Plus de silhouettes de coupes ni de pictogrammes de caractéristiques depuis le 15 novembre 2026 : les catalogues sont en texte.
 - Aucune photo de personne dans l'appli ni dans les démos sans consentement écrit. Seule exception : dans le Catalogue fond, le coiffeur charge sa propre photo. Elle est traitée dans son téléphone, jamais envoyée ni stockée, et n'influence jamais le thème.
 
 ## 6. Ton des textes

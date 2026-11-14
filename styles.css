@@ -163,7 +163,8 @@ h1:focus {
   cursor: pointer;
 }
 
-.entete:not([hidden]) ~ .ecran > .defile > .colonne {
+.entete:not([hidden]) ~ .ecran > .defile > .colonne,
+.entete:not([hidden]) ~ .ecran > .editeur-haut > .colonne {
   padding-top: 8px;
 }
 
@@ -332,7 +333,7 @@ h1:focus {
 }
 
 .pastille[aria-pressed="true"] {
-  border: 2px solid var(--principale);
+  border: 2px solid var(--selection);
 }
 
 /* Champ de saisie. */
@@ -362,7 +363,7 @@ textarea.champ {
   display: block;
   width: 100%;
   height: 48px;
-  accent-color: var(--principale);
+  accent-color: var(--selection);
 }
 
 .graduations {
@@ -402,7 +403,8 @@ button.carte {
   font-weight: 500;
 }
 
-/* Carte de coupe (catalogue) : silhouette, nom, une ligne. */
+/* Carte de coupe et de caractéristique : texte seul (nom, une ligne, badges).
+   La carte de retouche IA ajoute un pictogramme au-dessus du nom. */
 .coupes {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -415,6 +417,7 @@ button.carte {
   gap: 8px;
 }
 
+/* Pictogramme d'une carte de retouche IA. */
 .coupe svg {
   width: 100%;
   height: 72px;
@@ -437,8 +440,8 @@ button.carte {
 }
 
 .coupe[aria-pressed="true"] {
-  border-color: var(--principale);
-  outline: 1px solid var(--principale);
+  border-color: var(--selection);
+  outline: 1px solid var(--selection);
   outline-offset: -2px;
 }
 
@@ -461,67 +464,38 @@ button.carte {
   font-size: 12px;
 }
 
-/* Pictogramme au trait hors d'une carte de coupe (outils de retouche). */
-.picto {
+/* Éditeur photo (Retouches sans IA), à la manière d'Instagram : le titre et la photo
+   restent fixés en haut ; seuls les réglages défilent dessous. */
+.editeur-haut {
   flex: none;
-  width: 48px;
-  height: 48px;
 }
 
-.picto svg {
-  display: block;
-  width: 48px;
-  height: 48px;
-  fill: none;
-  stroke: var(--texte);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.outil-titre {
-  display: flex;
-  align-items: center;
+.editeur-haut .colonne {
   gap: 8px;
-  font-weight: 500;
+  padding-bottom: 8px;
 }
 
-/* Aperçu photo (Retouches sans IA) : reste visible en haut pendant qu'on règle. */
 .apercu-zone {
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
   justify-content: center;
-  padding: 8px 0;
-  background: var(--fond);
 }
 
 .apercu {
   display: block;
   max-width: 100%;
-  max-height: 320px;
+  max-height: 45vh;
+  max-height: 45dvh;
   border-radius: var(--rayon);
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .image-finale {
   display: block;
   width: 100%;
   border-radius: var(--rayon);
-}
-
-/* Cartes compactes (coupes conseillées). */
-.coupes-compactes {
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-
-.coupes-compactes .coupe {
-  padding: 8px;
-}
-
-.coupes-compactes .coupe svg {
-  height: 48px;
 }
 
 /* Avertissement : bordure gauche, jamais d'aplat. */

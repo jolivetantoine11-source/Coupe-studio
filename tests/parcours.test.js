@@ -17,7 +17,7 @@ function blocs(fichier) {
   }
   return sortie;
 }
-const [DIAGNOSTIC, IMAGE, BARBE_SEULE, REFERENCE, FICHE_BARBER, FICHE_SALON] = blocs('PROMPTS.md');
+const [DIAGNOSTIC, DIAGNOSTIC_SALON, IMAGE, BARBE_SEULE, REFERENCE, FICHE_BARBER, FICHE_SALON] = blocs('PROMPTS.md');
 const [FOND, REGLE] = blocs('CLAUDE.md');
 const avec = (bloc, marqueur, valeur) => bloc.split(marqueur).join(valeur);
 
@@ -113,14 +113,16 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-question="lunettes"][data-valeur="oui"]');
   await page.click('#ecran-client .btn');
   await page.click('#ecran-choix a[href="#catalogue"]');
-  liste = await ids(page, '#grille-coupes [data-coupe]', 'data-coupe');
+  liste = await ids(page, '#ecran-catalogue [data-coupe]', 'data-coupe');
   modes = await modesDe(page, liste);
-  verifier('mode barber : 12 coupes barber', modes.filter((m) => m === 'barber').length, 12);
+  verifier('mode barber : 12 coupes barber en tout', modes.filter((m) => m === 'barber').length + ' / ' + liste.length, '12 / 12');
+  verifier('« Autres coupes » ne répète pas les conseillées', (await ids(page, '#grille-coupes [data-coupe]', 'data-coupe')).filter((id) => ['buzz-cut', 'crop-texture', 'crew-cut'].includes(id)).length + ' / ' + (await texte(page, '#titre-toutes')), '0 / Autres coupes');
+  verifier('cartes en texte : aucune silhouette', (await page.$$('#ecran-catalogue .coupe svg, #ecran-catalogue img')).length, 0);
+  verifier('carte : nom, une ligne, badges', await page.$eval('#conseillees .coupe', (c) => Array.from(c.children).map((x) => x.className).join(' ')), 'badge coupe-nom coupe-ligne');
   verifier('« Conseillées pour ce client » en haut', await texte(page, '#bloc-conseillees h2'), 'Conseillées pour ce client');
   verifier('3 coupes conseillées : bouclés + golfes marqués', (await ids(page, '#conseillees [data-coupe]', 'data-coupe')).join(), 'buzz-cut,crop-texture,crew-cut');
   verifier('badge « Conseillée » sur les 3', (await page.$$eval('#conseillees .badge', (b) => b.map((x) => x.textContent))).join(), 'Conseillée,Conseillée,Conseillée');
-  verifier('le badge est repris dans la grille', (await page.$$eval('#grille-coupes .coupe', (c) => c.filter((x) => x.querySelector('.badge')).map((x) => x.getAttribute('data-coupe')))).join(), 'crop-texture,buzz-cut,crew-cut');
-  const risquesDe = (id) => page.$$eval('#grille-coupes [data-coupe="' + id + '"] .risque', (r) => r.map((x) => x.textContent).join(' + '));
+  const risquesDe = (id) => page.$$eval('#ecran-catalogue [data-coupe="' + id + '"] .risque', (r) => r.map((x) => x.textContent).join(' + '));
   verifier('slick back : pousse, lissage, golfes', await risquesDe('slick-back'), 'Pousse nécessaire + Lissage nécessaire + Golfes');
   verifier('quiff : pousse, golfes', await risquesDe('quiff'), 'Pousse nécessaire + Golfes');
   verifier('skin fade : aucun risque', await risquesDe('skin-fade'), '');
@@ -136,40 +138,60 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('visage allongé : crop et crew cut, pas de quiff', regles.allonge.startsWith('crop-texture,crew-cut') && !regles.allonge.includes('quiff'));
 
   /* ============ C. Réglages ============ */
-  console.log('C. Réglages d’une coupe : résumé, coiffage par zone, description anglaise');
-  await page.click('#grille-coupes [data-coupe="skin-fade"]');
+  console.log('C. Réglages d’une coupe : [COUPE] structurée par zone, coiffage par zone, barbe seule');
+  await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   verifier('toucher une coupe ouvre directement Réglages', await ecran(page), 'reglages');
   verifier('titre = nom de la coupe', await texte(page, '#titre-reglages'), 'Skin fade');
   verifier('résumé de départ', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0, dessus 5 cm');
-  const descSkin = await page.evaluate(() => window.CoupeStudio.coupeDuCatalogue('skin-fade').desc);
-  verifier('aucun réglage modifié : rien n’est ajouté à desc', await desc(page), descSkin);
+  verifier('[COUPE] structurée par zone, nom anglais en tête', await desc(page),
+    'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured');
   verifier('réglages barber, coiffage par zone', (await page.$$eval('#zone-reglages .etiquette', (e) => e.map((x) => x.textContent))).join(' | '),
-    'Côtés | Sabot du bas | Dessus | Coiffage, devant et frange | Coiffage, dessus | Contours | Barbe | Ne changer que la barbe');
+    'Côtés | Sabot du bas | Dessus | Coiffage, devant et frange | Coiffage, dessus | Contours | Barbe');
   verifier('zone devant : 4 choix', (await page.$$eval('[data-reglage="devant"]', (b) => b.map((x) => x.textContent))).join(' · '), 'Vers l’avant · Relevé · Sur le côté · En arrière');
   verifier('zone dessus : 4 choix', (await page.$$eval('[data-reglage="coiffage"]', (b) => b.map((x) => x.textContent))).join(' · '), 'En arrière · Sur le côté · Naturel · Décoiffé');
   await page.click('[data-reglage="sabot"][data-valeur="0.5"]');
   await page.click('[data-reglage="barbe"][data-valeur="entretenue"]');
   verifier('résumé = exemple de CLAUDE.md', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue');
-  verifier('fragments anglais des réglages modifiés', await desc(page), descSkin + ', starting at clipper guard 0.5, well-groomed beard with clean cheek lines');
+  const BASE = 'Skin fade. Sides: mid skin fade, starting at clipper guard 0.5 at the bottom. Top: 4-6 cm, textured. Beard: well-groomed with clean cheek lines';
+  verifier('le sabot remplace le texte de la coupe dans Sides (plus d’ambiguïté)', await desc(page), BASE);
   await page.click('[data-reglage="devant"][data-valeur="releve"]');
   await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
-  verifier('chaque zone produit son fragment', await desc(page), descSkin + ', starting at clipper guard 0.5, front lifted up, messy, textured top, well-groomed beard with clean cheek lines');
-  verifier('résumé avec les deux zones', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0,5, dessus 5 cm, devant relevé, décoiffé, barbe entretenue');
-  const zones = await page.evaluate(() => {
+  verifier('chaque réglage écrit dans sa zone', await desc(page),
+    'Skin fade. Sides: mid skin fade, starting at clipper guard 0.5 at the bottom. Top: 4-6 cm, messy and textured. Front: lifted up. Beard: well-groomed with clean cheek lines');
+  verifier('résumé dans l’ordre des zones', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0,5, dessus 5 cm, décoiffé, devant relevé, barbe entretenue');
+  /* Chaque option de chaque réglage s'écrit dans la zone de son emplacement, et une seule fois. */
+  const options = await page.evaluate(() => {
     const A = window.CoupeStudio;
-    const en = (id, reglages) => { const c = A.coupeDuCatalogue(id); return A.descAnglaise({ coupe: c, reglages: Object.assign(A.reglagesParDefaut(c), reglages), caracteristiques: [], couleurLibre: '' }).slice(c.desc.length); };
-    return [en('skin-fade', { devant: 'avant' }), en('skin-fade', { devant: 'cote' }), en('skin-fade', { devant: 'arriere' }),
-      en('skin-fade', { coiffage: 'arriere' }), en('skin-fade', { coiffage: 'cote' }), en('skin-fade', { coiffage: 'naturel' }),
-      en('slick-back', {}), en('quiff', {})].join(' | ');
+    const C = window.CATALOGUE;
+    const fautes = [];
+    let n = 0;
+    ['skin-fade', 'carre-plongeant'].forEach((id) => {
+      const c = A.coupeDuCatalogue(id);
+      C.reglages[c.mode].forEach((g) => {
+        const zone = C.zones.find((z) => z.id === g.slot.split('.')[0]);
+        const valeurs = g.type === 'choix' ? g.options.filter((o) => o.en && !o.libre).map((o) => [o.v, o.en]) : [[g.min + 1, null]];
+        valeurs.forEach(([v, en]) => {
+          if (A.reglagesParDefaut(c)[g.id] === v) return; // valeur de la coupe : son texte reste
+          const reglages = Object.assign(A.reglagesParDefaut(c), { [g.id]: v });
+          const d = A.descAnglaise({ coupe: c, reglages, caracteristiques: [], couleurLibre: '' });
+          const phrase = d.split('. ').find((p) => p.startsWith(zone.en + ': ')) || '';
+          n++;
+          if (en && !phrase.includes(en)) fautes.push(g.id + '=' + v + ' absent de « ' + zone.en + ' » : ' + d);
+          if (en && phrase.split(en).length !== 2) fautes.push(g.id + '=' + v + ' écrit ' + (phrase.split(en).length - 1) + ' fois dans « ' + phrase + ' »');
+          if (!en && !phrase) fautes.push(g.id + '=' + v + ' : zone ' + zone.en + ' vide');
+        });
+      });
+    });
+    return n + ' options ; ' + fautes.join(' | ');
   });
-  verifier('tous les fragments de coiffage', zones, ', front styled forward | , front swept to the side | , front pushed back | , top styled back | , top styled to the side | , top left natural, unstyled |  | ');
+  verifier('chaque option de réglage s’écrit une fois, dans sa zone', options.replace(/^\d+ options ; /, ''), '');
   await page.click('[data-reglage="devant"][data-valeur="releve"]');
   await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
   verifier('retoucher un coiffage (vide au départ) le retire', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue');
   await page.click('[data-reglage="cotes"][data-valeur="blanc"]');
   verifier('Côtés (imposé par la coupe) : retoucher ne le retire pas', await presse(page, '[data-reglage="cotes"][data-valeur="blanc"]'), 'true');
   await regler(page, 'curseur-dessus', 7);
-  verifier('curseur Dessus', (await texte(page, '#valeur-dessus')) + ' / ' + (await desc(page)).includes(', about 7 cm on top'), '7 cm / true');
+  verifier('curseur Dessus', (await texte(page, '#valeur-dessus')) + ' / ' + (await desc(page)).includes('Top: about 7 cm, textured'), '7 cm / true');
   verifier('avertissements sur la page Réglages (pousse, lunettes)', (await page.$$eval('#avertissements .alerte b', (b) => b.map((x) => x.textContent))).join(), 'Pousse,Lunettes');
   await regler(page, 'curseur-dessus', 5);
   verifier('dessus revenu à 5 cm : plus d’avertissement de pousse', (await page.$$eval('#avertissements .alerte b', (b) => b.map((x) => x.textContent))).join(), 'Lunettes');
@@ -199,69 +221,83 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('Lunettes', cas.lunettes, 'Lunettes : Vérifie le contour d’oreille avec les lunettes remises.');
   verifier('aucun avertissement quand rien ne s’applique', cas.rien, '');
   verifier('barbe seule : pas d’avertissement sur les cheveux', cas.barbeSeule, '');
+  verifier('« Barbe seule » est dans le groupe Barbe, toujours visible', (await texte(page, '#reglage-barbe [data-barbe-seule]')) + ' / ' + (await page.isVisible('#reglage-barbe [data-barbe-seule]')), 'Barbe seule (ne pas toucher aux cheveux) / true');
   await page.click('[data-barbe-seule="oui"]');
-  verifier('barbe seule : résumé et [COUPE]', (await texte(page, '#resume-reglages')) + ' / ' + (await desc(page)), 'Barbe seule : barbe entretenue, cheveux inchangés / well-groomed beard with clean cheek lines');
+  verifier('barbe seule : résumé et [COUPE]', (await texte(page, '#resume-reglages')) + ' / ' + (await desc(page)), 'Barbe seule : barbe entretenue, cheveux inchangés / Beard: well-groomed with clean cheek lines');
   await page.click('#action-reglages');
   verifier('« Voir le résultat » ouvre Résultat', await ecran(page), 'resultat');
   verifier('barbe seule : ligne de la variante ajoutée à la fin du prompt image', await page.textContent('#prompt-2'),
-    avec(IMAGE, '[COUPE]', 'well-groomed beard with clean cheek lines') + '\n' + BARBE_SEULE);
+    avec(IMAGE, '[COUPE]', 'Beard: well-groomed with clean cheek lines') + '\n' + BARBE_SEULE);
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'reglages');
-  await page.click('[data-barbe-seule="non"]');
+  await page.click('[data-reglage="barbe"][data-valeur="inchangee"]');
+  verifier('barbe seule sans barbe choisie : message, et le prompt garde les cheveux', (await page.isVisible('#message-barbe-seule')) + ' / ' + (await desc(page)).startsWith('Skin fade. Sides:'), 'true / true');
+  await page.click('[data-reglage="barbe"][data-valeur="entretenue"]');
+  await page.click('[data-barbe-seule="oui"]');
+  verifier('retoucher « Barbe seule » la retire', await presse(page, '[data-barbe-seule="oui"]'), 'false');
 
   /* ============ D. Catalogue personnalisé ============ */
-  console.log('D. Catalogue personnalisé : caractéristiques');
+  console.log('D. Catalogue personnalisé : caractéristiques, groupes exclusifs, remplacement des réglages');
   await page.click('#vers-caracteristiques');
   verifier('« Ajouter des caractéristiques » ouvre le Catalogue personnalisé', await ecran(page), 'personnalise');
   verifier('6 catégories', (await page.$$eval('#categories h2', (h) => h.map((x) => x.textContent))).join(' | '), 'Côtés | Devant et dessus | Couleur | Texture | Barbe | Nuque et contours');
-  verifier('35 caractéristiques, chacune avec un pictogramme au trait', await page.$$eval('#categories [data-caracteristique]', (c) => c.length + ' / ' + c.filter((x) => x.querySelector('svg path')).length), '35 / 35');
+  verifier('35 caractéristiques, en texte, sans pictogramme', await page.$$eval('#categories [data-caracteristique]', (c) => c.length + ' / ' + c.filter((x) => x.querySelector('svg')).length), '35 / 0');
   verifier('coupe gardée comme coupe de départ', (await texte(page, '#bloc-base [data-base="oui"]')) + ' ' + (await presse(page, '#bloc-base [data-base="oui"]')), 'Skin fade true');
-  const base = descSkin + ', starting at clipper guard 0.5, well-groomed beard with clean cheek lines';
   await page.click('[data-caracteristique="meche-cote"]');
   await page.click('[data-caracteristique="undercut"]');
   verifier('sélection multiple', (await presse(page, '[data-caracteristique="meche-cote"]')) + (await presse(page, '[data-caracteristique="undercut"]')), 'truetrue');
-  verifier('fragments ajoutés à [COUPE], après la coupe', await desc(page), base + ', undercut: sides and back clipped short, disconnected from a longer top, a side-swept lock at the front');
-  verifier('résumé mis à jour', await texte(page, '#resume-personnalise'), 'Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue, undercut, mèche sur le côté');
-  verifier('pas de message sans contradiction', await page.isHidden('#contradictions'));
+  const AVEC_UNDERCUT = 'Skin fade. Sides: undercut, clipped short and disconnected from a longer top. Top: 4-6 cm, textured. Front: a side-swept lock. Beard: well-groomed with clean cheek lines';
+  verifier('la caractéristique remplace la coupe et les réglages de sa zone (sabot compris)', await desc(page), AVEC_UNDERCUT);
+  verifier('résumé dans l’ordre des zones', await texte(page, '#resume-personnalise'), 'Skin fade, undercut, dessus 5 cm, mèche sur le côté, barbe entretenue');
+  verifier('pas de message sans conflit', (await page.isHidden('#conflit')) && (await page.isHidden('#contradictions')));
   await page.click('[data-caracteristique="degrade-blanc"]');
-  verifier('contradiction signalée par un message', await texte(page, '#contradictions .alerte'), '« Undercut » et « Dégradé à blanc » se contredisent. Garde un seul des deux, sauf si c’est voulu.');
-  verifier('sans bloquer : les deux restent choisies', (await presse(page, '[data-caracteristique="undercut"]')) + (await presse(page, '[data-caracteristique="degrade-blanc"]')), 'truetrue');
-  await page.click('[data-caracteristique="degrade-blanc"]');
+  verifier('groupe occupé : message dans la page', await texte(page, '#texte-conflit'), '« Dégradé à blanc » et « Undercut » se contredisent (côtés). Laquelle garder ?');
+  verifier('« Garder X » / « Garder Y »', (await texte(page, '#garder-existantes')) + ' / ' + (await texte(page, '#garder-nouvelle')), 'Garder Undercut / Garder Dégradé à blanc');
+  verifier('tant qu’on n’a pas choisi : rien ne change dans le prompt', (await presse(page, '[data-caracteristique="degrade-blanc"]')) + ' / ' + ((await desc(page)) === AVEC_UNDERCUT), 'false / true');
+  await page.click('#garder-nouvelle');
+  verifier('« Garder Dégradé à blanc » : l’undercut est retiré', (await presse(page, '[data-caracteristique="undercut"]')) + (await presse(page, '[data-caracteristique="degrade-blanc"]')) + ' / ' + (await page.isHidden('#conflit')), 'falsetrue / true');
+  verifier('une seule consigne pour les côtés', (await desc(page)).split('. ').find((p) => p.startsWith('Sides:')), 'Sides: skin fade');
   await page.click('[data-caracteristique="undercut"]');
-  verifier('retoucher une carte la retire', await desc(page), base + ', a side-swept lock at the front');
+  await page.click('#garder-existantes');
+  verifier('« Garder Dégradé à blanc » (déjà là) : rien ne change', (await presse(page, '[data-caracteristique="undercut"]')) + (await presse(page, '[data-caracteristique="degrade-blanc"]')), 'falsetrue');
+  await page.click('[data-caracteristique="degrade-blanc"]');
+  verifier('retoucher une carte la retire : le sabot revient', (await desc(page)).split('. ').find((p) => p.startsWith('Sides:')), 'Sides: mid skin fade, starting at clipper guard 0.5 at the bottom');
   verifier('champ « Couleur libre » caché tant qu’elle n’est pas choisie', await page.isHidden('#couleur-libre'));
   await page.click('[data-caracteristique="couleur-libre"]');
-  verifier('« Couleur libre » sans texte : rien n’est ajouté', await desc(page), base + ', a side-swept lock at the front');
+  verifier('« Couleur libre » sans texte : rien n’est ajouté', (await desc(page)).includes('Color:'), false);
   await page.fill('#couleur-libre', 'copper red');
-  verifier('couleur libre : le changement est écrit clairement', await desc(page), base + ', a side-swept lock at the front, hair color change: copper red');
-  await page.click('[data-caracteristique="couleur-libre"]');
+  verifier('couleur libre : le changement est écrit clairement', (await desc(page)).endsWith('Color: change to copper red. Beard: well-groomed with clean cheek lines'));
   await page.click('[data-caracteristique="platine"]');
-  verifier('une couleur écrit « hair color change »', (await desc(page)).endsWith(', hair color change: full platinum blonde'));
+  await page.click('#garder-nouvelle');
+  verifier('une seule couleur à la fois', (await desc(page)).split('. ').filter((p) => p.startsWith('Color:')).join(), 'Color: change to full platinum blonde');
   await page.click('[data-caracteristique="platine"]');
-  const tableau = await page.evaluate(() => window.CARACTERISTIQUES.categories.map((c) => c.liste.map((x) => c.nom + ' | ' + x.fr + ' | ' + x.en).join('\n')).join('\n'));
-  const doc = fs.readFileSync(path.join(RACINE, 'CLAUDE.md'), 'utf8');
-  const manquantes = tableau.split('\n').filter((ligne) => {
-    const [categorie, fr, en] = ligne.split(' | ');
-    const fragment = en.endsWith(' X') ? en.slice(0, -1) : en;
-    return !doc.split('\n').some((l) => l.startsWith('| ' + categorie + ' | ' + fr) && l.includes('`' + fragment));
-  });
-  verifier('le tableau FR → EN de CLAUDE.md contient les 35 fragments', manquantes.join(' ; '), '');
+  await page.click('[data-caracteristique="moustache"]');
+  await page.click('[data-caracteristique="bouc"]');
+  verifier('moustache et bouc vont ensemble', (await desc(page)).split('. ').find((p) => p.startsWith('Beard:')), 'Beard: well-groomed with clean cheek lines, a neat moustache, a goatee');
+  await page.click('[data-caracteristique="barbe-rasee"]');
+  verifier('barbe rasée contre moustache et bouc', (await texte(page, '#texte-conflit')) + ' / ' + (await texte(page, '#garder-existantes')),
+    '« Rasée » et « Moustache » et « Bouc » se contredisent (barbe). Laquelle garder ? / Garder Moustache et Bouc');
+  await page.click('#garder-existantes');
+  await page.click('[data-caracteristique="moustache"]');
+  await page.click('[data-caracteristique="bouc"]');
   await page.click('[data-caracteristique="dessus-decoiffe"]');
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'reglages');
   verifier('retour aux réglages : le lien indique les caractéristiques', await texte(page, '#vers-caracteristiques'), '2 caractéristiques ajoutées : modifier');
-  await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
-  verifier('un fragment identique n’est écrit qu’une fois', ((await desc(page)).match(/messy, textured top/g) || []).length, 1);
-  await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
-  await page.click('#vers-caracteristiques');
+  verifier('réglage remplacé : la page le dit', await texte(page, '#texte-remplace-devant'), 'Coiffage, devant et frange remplacé par : mèche sur le côté');
+  verifier('réglage remplacé : ses boutons sont cachés', await page.isHidden('[data-controles="devant"]'));
+  verifier('« Coiffage, dessus » remplacé par « Dessus décoiffé »', await texte(page, '#texte-remplace-coiffage'), 'Coiffage, dessus remplacé par : dessus décoiffé');
+  verifier('« messy and textured » n’est écrit qu’une fois', ((await desc(page)).match(/messy and textured/g) || []).length, 1);
+  await page.click('#reglage-devant [data-remplace] a');
+  verifier('« Modifier » ouvre le Catalogue personnalisé', await ecran(page), 'personnalise');
   await page.click('[data-caracteristique="dessus-decoiffe"]');
   await page.click('[data-base="non"]');
-  verifier('« Aucune » : coupe 100 % personnalisée', await desc(page), 'a side-swept lock at the front');
+  verifier('« Aucune » : coupe 100 % personnalisée', await desc(page), 'Custom haircut. Front: a side-swept lock');
   verifier('résumé sans coupe de départ', await texte(page, '#resume-personnalise'), 'Coupe personnalisée : mèche sur le côté');
   verifier('« Aucune » n’efface pas la coupe', await page.evaluate(() => window.CoupeStudio.etat.coupe.id + ' / ' + window.CoupeStudio.etat.reglages.sabot), 'skin-fade / 0.5');
   await page.click('#ecran-personnalise .btn');
   verifier('100 % personnalisée : diagnostic', await page.textContent('#prompt-1'), avec(DIAGNOSTIC, '[COUPE]', 'Coupe personnalisée : mèche sur le côté'));
-  verifier('100 % personnalisée : prompt image', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'a side-swept lock at the front'));
+  verifier('100 % personnalisée : prompt image', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'Custom haircut. Front: a side-swept lock'));
   verifier('100 % personnalisée en mode barber : fiche barber', await page.textContent('#prompt-3'), FICHE_BARBER);
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'personnalise');
@@ -270,12 +306,14 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
 
   /* ============ E. Résultat ============ */
   console.log('E. Résultat : prompts, copie, Gemini, photo de référence');
-  const coupeFr = 'Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue, mèche sur le côté';
-  const coupeEn = base + ', a side-swept lock at the front';
+  const coupeFr = 'Skin fade, sabot 0,5, dessus 5 cm, mèche sur le côté, barbe entretenue';
+  const coupeEn = 'Skin fade. Sides: mid skin fade, starting at clipper guard 0.5 at the bottom. Top: 4-6 cm, textured. Front: a side-swept lock. Beard: well-groomed with clean cheek lines';
   verifier('3 étapes, plus d’étape Fond', (await page.$$eval('#etapes .etape', (e) => e.map((x) => x.textContent))).join(' | '), 'Étape 1 · Diagnostic | Étape 2 · Image | Étape 3 · Fiche');
   verifier('étape 1 = prompt diagnostic, [COUPE] en français', await page.textContent('#prompt-1'), avec(DIAGNOSTIC, '[COUPE]', coupeFr));
   verifier('étape 2 = prompt image, [COUPE] en anglais', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', coupeEn));
   verifier('étape 3 = fiche barber', await page.textContent('#prompt-3'), FICHE_BARBER);
+  verifier('les étapes disent quelles photos joindre (prêt pour la V2)', await page.evaluate(() => window.CoupeStudio.etapesResultat().map((e) => e.id + ':' + e.joindre.join('+')).join(' | ')),
+    'diagnostic:selfie | image:selfie | fiche:selfie+image-generee');
   verifier('chaque carte affiche sa consigne', await page.$$eval('#etapes .consigne:not([hidden])', (c) => c.filter((x) => x.textContent.trim()).length), 3);
   const liens = await page.$$eval('#etapes a', (a) => a.map((x) => [x.textContent, x.href, x.target, x.rel].join('|')));
   verifier('« Ouvrir Gemini » : bon lien, nouvel onglet', [...new Set(liens)].join(), 'Ouvrir Gemini|https://gemini.google.com/app|_blank|noopener');
@@ -319,7 +357,11 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await contexte.close();
   const piege = Buffer.from(JSON.stringify({ v: 2, c: 'skin-fade', r: { cotes: '<img src=x onerror=alert(1)>', dessus: 999, barbe: 'inconnue' }, k: ['inconnue', 'undercut', 'undercut'], kl: 5 })).toString('base64url');
   ({ contexte, page } = await nouvelle(navigateur, { adresse: ADRESSE + '?r=' + piege }));
-  verifier('lien trafiqué : valeurs inconnues ignorées, curseur borné', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0, dessus 15 cm, undercut');
+  verifier('lien trafiqué : valeurs inconnues ignorées, curseur borné', await texte(page, '#resume-reglages'), 'Skin fade, undercut, dessus 15 cm');
+  await contexte.close();
+  const deuxCotes = Buffer.from(JSON.stringify({ v: 2, c: 'skin-fade', r: {}, k: ['undercut', 'rase-cote', 'platine', 'balayage'], kl: '' })).toString('base64url');
+  ({ contexte, page } = await nouvelle(navigateur, { adresse: ADRESSE + '?r=' + deuxCotes }));
+  verifier('lien avec deux caractéristiques d’un même groupe : une seule est gardée', await page.evaluate(() => window.CoupeStudio.etat.caracteristiques.join()), 'undercut,platine');
   await contexte.close();
   const ancien = Buffer.from(JSON.stringify({ v: 1, c: 'quiff', r: { cotes: 'degrade', dessus: 9, coiffage: 'avant' }, f: { type: 'gris' } })).toString('base64url');
   ({ contexte, page } = await nouvelle(navigateur, { adresse: ADRESSE + '?r=' + ancien }));
@@ -337,30 +379,31 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-question="visage"][data-valeur="carre"]');
   await page.click('#ecran-client .btn');
   await page.click('#ecran-choix a[href="#catalogue"]');
-  liste = await ids(page, '#grille-coupes [data-coupe]', 'data-coupe');
+  liste = await ids(page, '#ecran-catalogue [data-coupe]', 'data-coupe');
   modes = await modesDe(page, liste);
   verifier('mode salon : 12 coupes salon', modes.filter((m) => m === 'salon').length, 12);
   verifier('visage carré en salon : carré flou et frange rideau conseillés', (await ids(page, '#conseillees [data-coupe]', 'data-coupe')).slice(0, 2).sort().join(), 'carre-flou,frange-rideau');
-  await page.click('#grille-coupes [data-coupe="carre-plongeant"]');
-  const descCarre = await page.evaluate(() => window.CoupeStudio.coupeDuCatalogue('carre-plongeant').desc);
+  await page.click('#ecran-catalogue [data-coupe="carre-plongeant"]');
   verifier('résumé de départ', await texte(page, '#resume-reglages'), 'Carré plongeant, longueur au menton, 22 cm');
+  verifier('[COUPE] salon : zone Length', await desc(page), 'Angled bob. Length: reaching the chin at the front, shorter at the nape, longer at the front');
   verifier('réglages salon', (await page.$$eval('#zone-reglages .etiquette', (e) => e.map((x) => x.textContent))).join(' | '),
     'Longueur | Longueur en centimètres | Forme | Couches | Frange | Raie | Couleur | Couleur voulue, en anglais');
   await page.click('[data-repere="epaules"]');
-  verifier('repère Épaules : fragment de longueur', await desc(page), descCarre + ', length at the shoulders, about 32 cm');
+  verifier('repère Épaules : la longueur remplace celle de la coupe', await desc(page), 'Angled bob. Length: shoulder length, about 32 cm, shorter at the nape, longer at the front');
   await regler(page, 'curseur-longueur', 50);
   verifier('curseur à 50 cm : le repère suit', (await presse(page, '[data-repere="omoplates"]')) + ' / ' + (await texte(page, '#valeur-longueur')), 'true / 50 cm, aux omoplates');
   await regler(page, 'curseur-longueur', 22);
   await page.click('[data-reglage="couleur"][data-valeur="autre"]');
   await page.fill('#couleur-autre', 'copper red');
-  verifier('couleur « Autre » écrite dans desc', await desc(page), descCarre + ', hair color changed to copper red');
+  verifier('couleur « Autre » : zone Color', (await desc(page)).endsWith('. Color: change to copper red'));
   await page.click('[data-reglage="couleur"][data-valeur="inchangee"]');
   await page.click('[data-reglage="couches"][data-valeur="marquees"]');
   verifier('cheveux fins + couches marquées : avertissement', (await page.$$eval('#avertissements .alerte b', (b) => b.map((x) => x.textContent))).join(), 'Cheveux fins');
   await page.click('#action-reglages');
   verifier('étape 3 = fiche salon', await page.textContent('#prompt-3'), FICHE_SALON);
-  verifier('étape 1 = diagnostic tel quel (pas de version salon validée)', await page.textContent('#prompt-1'),
-    avec(DIAGNOSTIC, '[COUPE]', 'Carré plongeant, longueur au menton, 22 cm, couches marquées'));
+  verifier('étape 1 = diagnostic salon (PROMPTS.md, 1b)', await page.textContent('#prompt-1'),
+    avec(DIAGNOSTIC_SALON, '[COUPE]', 'Carré plongeant, longueur au menton, 22 cm, couches marquées'));
+  verifier('le diagnostic salon commence par « Tu es un coiffeur expert. »', (await page.textContent('#prompt-1')).startsWith('Tu es un coiffeur expert. Voici la photo d\'une cliente ou d\'un client et la coupe souhaitée : '));
   await contexte.close();
 
   /* ============ H. Coupe 100 % personnalisée en thème neutre, coupe ajoutée ============ */
@@ -378,11 +421,11 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-caracteristique="frange-rideau"]');
   await page.click('[data-caracteristique="balayage"]');
   await page.click('#ecran-personnalise .btn');
-  verifier('prompt image fait des seules caractéristiques', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'curtain bangs parted in the middle, hair color change: soft natural balayage'));
+  verifier('prompt image fait des seules caractéristiques', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'Custom haircut. Front: curtain bangs parted in the middle. Color: change to a soft natural balayage'));
   verifier('thème neutre sans coupe : choix de la fiche proposé', await page.isVisible('#bloc-fiche'));
-  verifier('fiche barber par défaut', await page.textContent('#prompt-3'), FICHE_BARBER);
+  verifier('diagnostic et fiche barber par défaut', ((await page.textContent('#prompt-3')) === FICHE_BARBER) + ' / ' + (await page.textContent('#prompt-1')).startsWith('Tu es un barbier expert.'), 'true / true');
   await page.click('[data-fiche="salon"]');
-  verifier('fiche salon sur demande', await page.textContent('#prompt-3'), FICHE_SALON);
+  verifier('salon sur demande : fiche salon et diagnostic salon', ((await page.textContent('#prompt-3')) === FICHE_SALON) + ' / ' + (await page.textContent('#prompt-1')).startsWith('Tu es un coiffeur expert.'), 'true / true');
   await page.goto(ADRESSE);
   await jusquAuCatalogue(page);
   await page.click('#ouvrir-ajout');
@@ -395,10 +438,10 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('#ajout-type [data-type="salon"]');
   await page.click('#form-ajout .btn');
   verifier('la coupe ajoutée s’ouvre dans Réglages', await texte(page, '#titre-reglages'), 'Coupe <b>Léa</b>');
-  verifier('sans anglais : la description française part dans le prompt', await desc(page), 'Carré court effilé, nuque dégagée, curtain bangs parted in the middle, hair color change: soft natural balayage');
+  verifier('sans anglais : la description française part dans le prompt', await desc(page), 'Coupe <b>Léa</b>: Carré court effilé, nuque dégagée. Front: curtain bangs parted in the middle. Color: change to a soft natural balayage');
   await page.click('#action-reglages');
   verifier('coupe ajoutée : diagnostic avec nom et description', await page.textContent('#prompt-1'),
-    avec(DIAGNOSTIC, '[COUPE]', 'Coupe <b>Léa</b> (Carré court effilé, nuque dégagée), frange rideau, balayage'));
+    avec(DIAGNOSTIC_SALON, '[COUPE]', 'Coupe <b>Léa</b> (Carré court effilé, nuque dégagée), frange rideau, balayage'));
   await page.click('#retour');
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'catalogue');
@@ -428,7 +471,19 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.waitForSelector('#zone-apercu:not([hidden])');
   await page.waitForTimeout(150);
   verifier('photo chargée : aperçu affiché', await tailleApercu(page), '540 × 720');
-  verifier('6 retouches sans IA', (await page.$$eval('#outils-retouche .outil-titre', (t) => t.map((x) => x.textContent))).join(' | '), 'Luminosité | Contraste | Chaleur | Noir et blanc | Recadrage | Montage avant/après');
+  verifier('rangée d’outils, comme l’éditeur d’Instagram', (await page.$$eval('#barre-outils [data-outil]', (t) => t.map((x) => x.textContent))).join(' | '), 'Luminosité | Contraste | Chaleur | N&B | Recadrage | Avant/après');
+  verifier('un seul outil à la fois : Luminosité au départ', (await page.$$eval('#panneaux-outils [data-panneau]', (p) => p.filter((x) => !x.hidden).map((x) => x.getAttribute('data-panneau')))).join(), 'luminosite');
+  const placePhoto = () => page.evaluate(() => {
+    const r = document.querySelector('#apercu').getBoundingClientRect();
+    return Math.round(r.top) + ' / ' + (r.height <= window.innerHeight * 0.45 + 1);
+  });
+  const avantDefilement = await placePhoto();
+  verifier('la photo tient dans 45 % de la hauteur de l’écran', avantDefilement.endsWith(' / true'));
+  await page.evaluate(() => { const d = document.querySelector('#ecran-retouche .defile'); d.scrollTop = d.scrollHeight; });
+  verifier('la photo reste fixée en haut quand les réglages défilent', await placePhoto(), avantDefilement);
+  await page.click('[data-outil="contraste"]');
+  verifier('changer d’outil : son réglage s’affiche sous la photo', (await page.$$eval('#panneaux-outils [data-panneau]', (p) => p.filter((x) => !x.hidden).map((x) => x.getAttribute('data-panneau')))).join() + ' / ' + (await presse(page, '[data-outil="contraste"]')), 'contraste / true');
+  await page.click('[data-outil="luminosite"]');
   verifier('le bouton principal devient « Enregistrer l’image »', await texte(page, '#action-retouche'), 'Enregistrer l’image');
   const origine = await pixel(page, 0.05, 0.05);
   await regler(page, 'retouche-luminosite', 40);
@@ -449,11 +504,13 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   const sombre = await pixel(page, 0.5, 0.9);
   verifier('contraste +40 : une zone sombre devient plus sombre', contraste[0] + contraste[1] + contraste[2] < sombre[0] + sombre[1] + sombre[2]);
   verifier('tout à zéro : l’image est exactement celle d’origine', (await pixel(page, 0.05, 0.05)).join(), origine.join());
+  await page.click('[data-outil="nb"]');
   await page.click('[data-bascule="nb"][data-valeur="oui"]');
   await page.waitForTimeout(150);
   const gris = await pixel(page, 0.05, 0.05);
   verifier('noir et blanc', gris[0] === gris[1] && gris[1] === gris[2]);
   await page.click('[data-bascule="nb"][data-valeur="non"]');
+  await page.click('[data-outil="format"]');
   await page.click('[data-format="4-5"]');
   await page.waitForTimeout(150);
   verifier('recadrage 4:5 (post)', await tailleApercu(page), '576 × 720');
@@ -464,19 +521,39 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.waitForTimeout(150);
   verifier('recadrage 1:1', await tailleApercu(page), '720 × 720');
   await page.click('[data-format="original"]');
+  await page.click('[data-outil="montage"]');
   verifier('montage : choix masqué tant qu’il n’y a pas de photo d’avant', await page.isHidden('#groupe-montage'));
   await page.setInputFiles('#fichier-avant', PHOTO_TEST);
   await page.waitForSelector('#groupe-montage:not([hidden])');
   await page.waitForTimeout(150);
   verifier('montage avant/après côte à côte : deux fois plus large', await tailleApercu(page), '720 × 480');
   verifier('montage : les deux moitiés montrent la même photo de test', (await pixel(page, 0.02, 0.05)).join(), (await pixel(page, 0.52, 0.05)).join());
+  await page.click('[data-outil="format"]');
   await page.click('[data-format="9-16"]');
   await page.waitForTimeout(150);
   verifier('montage en 9:16 : l’une au-dessus de l’autre', await tailleApercu(page), '405 × 720');
   await page.click('[data-format="original"]');
+  await page.click('[data-outil="montage"]');
   await page.click('[data-montage="non"]');
   await page.waitForTimeout(150);
   verifier('sans montage : retour à la photo seule', await tailleApercu(page), '540 × 720');
+  await regler(page, 'retouche-luminosite', 40);
+  await page.waitForTimeout(150);
+  const retouchee = await pixel(page, 0.05, 0.05);
+  const centre = await page.evaluate(() => { const r = document.querySelector('#apercu').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  await page.mouse.move(centre[0], centre[1]);
+  await page.mouse.down();
+  await page.waitForTimeout(450);
+  verifier('appui long sur la photo : l’original s’affiche', (await pixel(page, 0.05, 0.05)).join() + ' / ' + (await texte(page, '#legende-apercu')), origine.join() + ' / Original : relâche pour revoir la retouche.');
+  await page.mouse.up();
+  await page.waitForTimeout(150);
+  verifier('relâcher : la retouche revient', (await pixel(page, 0.05, 0.05)).join() + ' / ' + (await texte(page, '#legende-apercu')), retouchee.join() + ' / Appui long sur la photo : voir l’original.');
+  await page.mouse.move(centre[0], centre[1]);
+  await page.mouse.down();
+  await page.waitForTimeout(80);
+  await page.mouse.up();
+  await page.waitForTimeout(400);
+  verifier('un appui court ne montre pas l’original', (await pixel(page, 0.05, 0.05)).join(), retouchee.join());
   await regler(page, 'retouche-luminosite', 10);
   const [telechargement] = await Promise.all([page.waitForEvent('download'), page.click('#action-retouche')]);
   verifier('« Enregistrer l’image » : un fichier JPEG', telechargement.suggestedFilename(), 'coupe-studio.jpg');
@@ -522,6 +599,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('deux fonds studio : contradiction signalée, sans bloquer', (await texte(page, '#contradictions-ia .alerte')) + ' / ' + (await page.isVisible('#prompt-ia')),
     '« Fond studio gris » et « Fond studio couleur » se contredisent. Garde un seul des deux, sauf si c’est voulu. / true');
   const fragmentsIa = await page.evaluate(() => window.FONDS.ia.map((r) => r.fr + ' | ' + r.en));
+  const doc = fs.readFileSync(path.join(RACINE, 'CLAUDE.md'), 'utf8');
   const absents = fragmentsIa.filter((ligne) => { const [fr, en] = ligne.split(' | '); return !doc.split('\n').some((l) => l.startsWith('| ' + fr) && l.includes('`' + en + '`')); });
   verifier('le tableau des retouches IA de CLAUDE.md contient les 9 fragments', absents.join(' ; '), '');
   await page.waitForTimeout(300);
@@ -542,9 +620,9 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('stockage bloqué : l’appli démarre', await texte(page, '#titre-accueil'), 'Coupe Studio');
   await page.click('[data-mode="barber"]');
   await jusquAuCatalogue(page);
-  await page.click('#grille-coupes [data-coupe="quiff"]');
+  await page.click('#ecran-catalogue [data-coupe="quiff"]');
   await page.click('#action-reglages');
-  verifier('les prompts sont produits', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', await page.evaluate(() => window.CoupeStudio.coupeDuCatalogue('quiff').desc)));
+  verifier('les prompts sont produits', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'Quiff. Sides: short and faded. Top: 7-9 cm. Front: styled up and back with volume'));
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'reglages');
   verifier('le retour garde la coupe, même sans stockage', await texte(page, '#titre-reglages'), 'Quiff');
@@ -561,7 +639,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
     }
   }));
   await jusquAuCatalogue(page);
-  await page.click('#grille-coupes [data-coupe="quiff"]');
+  await page.click('#ecran-catalogue [data-coupe="quiff"]');
   await page.click('#action-reglages');
   await page.click('[data-copier="prompt-1"]');
   await page.waitForTimeout(150);

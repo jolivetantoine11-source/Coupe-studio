@@ -135,10 +135,10 @@ try {
         </header>
         <div id="bloc-conseillees" hidden>
           <h2>Conseillées pour ce client</h2>
-          <div class="coupes coupes-compactes" id="conseillees"></div>
+          <div class="coupes" id="conseillees"></div>
         </div>
         <div>
-          <h2 id="titre-toutes" hidden>Toutes les coupes</h2>
+          <h2 id="titre-toutes" hidden>Autres coupes</h2>
           <div class="coupes" id="grille-coupes"></div>
         </div>
         <button type="button" class="btn-2" id="ouvrir-ajout" aria-expanded="false" aria-controls="form-ajout">Ajouter ma coupe</button>
@@ -218,6 +218,11 @@ try {
     </div>
     <div class="actions">
       <div class="colonne">
+        <div class="pile" id="conflit" role="alert" hidden>
+          <p class="alerte" id="texte-conflit"></p>
+          <button type="button" class="btn-2" id="garder-existantes"></button>
+          <button type="button" class="btn-2" id="garder-nouvelle"></button>
+        </div>
         <div class="pile" id="contradictions" aria-live="polite" hidden></div>
         <p id="resume-personnalise" aria-live="polite"></p>
         <a class="btn" href="#resultat">Voir le résultat</a>
@@ -234,7 +239,7 @@ try {
           <p class="sous-titre" id="sous-titre-resultat"></p>
         </header>
         <div id="bloc-fiche" hidden>
-          <span class="etiquette" id="etiquette-fiche">Fiche technique pour</span>
+          <span class="etiquette" id="etiquette-fiche">Diagnostic et fiche pour</span>
           <div class="groupe" role="group" aria-labelledby="etiquette-fiche">
             <button type="button" class="choix" data-fiche="barber" aria-pressed="true">Barber</button>
             <button type="button" class="choix" data-fiche="salon" aria-pressed="false">Salon</button>
@@ -297,21 +302,25 @@ try {
     </div>
   </section>
 
-  <!-- ===== Retouches sans IA ===== -->
+  <!-- ===== Retouches sans IA : le titre et la photo restent en haut, les réglages défilent dessous ===== -->
   <section class="ecran" id="ecran-retouche" aria-labelledby="titre-retouche" hidden>
+    <div class="editeur-haut">
+      <div class="colonne">
+        <h1 id="titre-retouche" tabindex="-1">Retouches sans IA</h1>
+        <div class="apercu-zone" id="zone-apercu" hidden>
+          <canvas class="apercu" id="apercu" role="img" aria-label="Photo retouchée. Appui long : voir l’original."></canvas>
+        </div>
+        <p class="legende" id="legende-apercu" aria-live="polite" hidden>Appui long sur la photo : voir l’original.</p>
+      </div>
+    </div>
     <div class="defile">
       <div class="colonne">
-        <header>
-          <h1 id="titre-retouche" tabindex="-1">Retouches sans IA</h1>
-          <p class="sous-titre">Tout se passe dans ton téléphone : la photo n’est ni envoyée ni gardée. Cheveux intacts, garanti.</p>
-        </header>
+        <p class="sous-titre" id="intro-retouche">Tout se passe dans ton téléphone : la photo n’est ni envoyée ni gardée. Cheveux intacts, garanti.</p>
         <input type="file" id="fichier-photo" accept="image/*" hidden>
         <input type="file" id="fichier-avant" accept="image/*" hidden>
         <p class="alerte" id="message-retouche" role="alert" hidden></p>
-        <div class="apercu-zone" id="zone-apercu" hidden>
-          <canvas class="apercu" id="apercu" role="img" aria-label="Aperçu de la photo retouchée"></canvas>
-        </div>
-        <div class="blocs" id="outils-retouche" hidden></div>
+        <div class="groupe" id="barre-outils" role="group" aria-label="Outil" hidden></div>
+        <div id="panneaux-outils" hidden></div>
         <div class="pile" id="retouche-secondaires" hidden>
           <button type="button" class="btn-2" id="changer-photo">Changer de photo</button>
           <button type="button" class="btn-2" id="remettre-retouches">Remettre les réglages à zéro</button>

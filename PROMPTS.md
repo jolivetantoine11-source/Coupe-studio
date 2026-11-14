@@ -1,6 +1,6 @@
 # PROMPTS.md — les prompts de référence (texte exact)
 
-Source : les fichiers Word validés après les tests. Chaque bloc de code ci-dessous doit se retrouver MOT POUR MOT dans `prompts.js` (vérifier par un test de comparaison). Seul le marqueur `[COUPE]` est remplacé par l'appli.
+Source : les fichiers Word validés après les tests. Chaque bloc de code ci-dessous (7 blocs) doit se retrouver MOT POUR MOT dans `prompts.js` (vérifier par un test de comparaison). Seul le marqueur `[COUPE]` est remplacé par l'appli.
 La ligne « Consigne » de chaque section s'affiche dans l'appli au-dessus du bloc, elle ne fait pas partie du texte copié.
 
 ---
@@ -31,6 +31,40 @@ Règles :
 - Si le verdict est ✅, n'écris pas d'alternative.
 - Si le verdict est ⏳, propose une coupe intermédiaire réalisable maintenant qui va dans la direction souhaitée.
 - Les alternatives doivent être réalisables MAINTENANT sur ce client et garder l'esprit de la coupe demandée.
+- Si plus de 10 cm sont coupés, signale dans RAISON que le changement est radical et donne le temps de repousse, même si le verdict est ✅.
+```
+
+---
+
+## 1b. Diagnostic salon (texte, Gemini 3.1 Pro)
+
+Validé par Antoine le 15 novembre 2026. C'est le diagnostic de la section 1 avec seulement 4 remplacements :
+« Tu es un barbier expert. » → « Tu es un coiffeur expert. » ; « Voici la photo d'un client et la coupe qu'il souhaite » → « Voici la photo d'une cliente ou d'un client et la coupe souhaitée » ; « (côtés, nuque, dessus) » → « (devant, côtés, nuque, longueurs) » ; « sur ce client » → « sur cette personne ». Le reste est identique mot pour mot. Utilisé quand la coupe est en mode salon.
+
+Consigne : À envoyer en premier, avec le modèle 3.1 Pro et le selfie joint. Remplace [COUPE] par la coupe demandée.
+
+```text
+Tu es un coiffeur expert. Voici la photo d'une cliente ou d'un client et la coupe souhaitée : [COUPE].
+Avant toute génération d'image, analyse la faisabilité à partir de ce que tu VOIS sur la photo :
+- Longueur actuelle de chaque zone (devant, côtés, nuque, longueurs) : suffisante, limite ou insuffisante ? Les cheveux poussent d'environ 1 cm par mois.
+- Ligne frontale et densité : golfes, zones clairsemées, calvitie.
+- Texture : la coupe demande-t-elle un lissage, des boucles ou une texture que le client n'a pas ?
+- Couleur : la coupe demande-t-elle une coloration ?
+- Ampleur du changement : combien de centimètres seront coupés ?
+Donne UN verdict parmi :
+✅ FAISABLE MAINTENANT
+⏳ FAISABLE APRÈS POUSSE (indique le nombre de mois)
+⚠️ FAISABLE AVEC TECHNIQUE (lissage, coloration, coiffage spécifique : précise laquelle)
+❌ NON FAISABLE (la densité ou la ligne frontale ne le permettent pas)
+Format de réponse, 6 lignes maximum :
+VERDICT : …
+RAISON : une phrase, factuelle et bienveillante
+ALTERNATIVE 1 : nom en français — puis la description en anglais entre guillemets, prête à coller dans le prompt image
+ALTERNATIVE 2 : idem (optionnel)
+Règles :
+- Si le verdict est ✅, n'écris pas d'alternative.
+- Si le verdict est ⏳, propose une coupe intermédiaire réalisable maintenant qui va dans la direction souhaitée.
+- Les alternatives doivent être réalisables MAINTENANT sur cette personne et garder l'esprit de la coupe demandée.
 - Si plus de 10 cm sont coupés, signale dans RAISON que le changement est radical et donne le temps de repousse, même si le verdict est ✅.
 ```
 

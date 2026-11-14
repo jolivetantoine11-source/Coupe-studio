@@ -39,10 +39,28 @@ const ref = blocs('PROMPTS.md');
 const refFond = blocs('CLAUDE.md');
 
 console.log('1. Textes de prompts.js comparés à PROMPTS.md');
-if (ref.length !== 6) { console.log('  ÉCHEC   PROMPTS.md doit contenir 6 blocs, trouvé ' + ref.length); echecs++; }
-['diagnostic', 'image', 'barbeSeule', 'reference', 'ficheBarber', 'ficheSalon'].forEach((nom, i) => {
+if (ref.length !== 7) { console.log('  ÉCHEC   PROMPTS.md doit contenir 7 blocs, trouvé ' + ref.length); echecs++; }
+const NOMS = ['diagnostic', 'diagnosticSalon', 'image', 'barbeSeule', 'reference', 'ficheBarber', 'ficheSalon'];
+NOMS.forEach((nom, i) => {
   verifier(nom, PROMPTS.textes[nom], ref[i]);
 });
+const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_REF, R_FICHE_B, R_FICHE_S] = ref;
+
+console.log('1b. Diagnostic salon = diagnostic barber avec les 4 seuls remplacements validés par Antoine');
+const REMPLACEMENTS = [
+  ['Tu es un barbier expert.', 'Tu es un coiffeur expert.'],
+  ["Voici la photo d'un client et la coupe qu'il souhaite", "Voici la photo d'une cliente ou d'un client et la coupe souhaitée"],
+  ['(côtés, nuque, dessus)', '(devant, côtés, nuque, longueurs)'],
+  ['sur ce client', 'sur cette personne']
+];
+let attenduSalon = R_DIAG;
+REMPLACEMENTS.forEach(([avant, apres]) => {
+  const n = attenduSalon.split(avant).length - 1;
+  if (n !== 1) { echecs++; console.log('  ÉCHEC   « ' + avant + ' » apparaît ' + n + ' fois dans le diagnostic (attendu : 1)'); }
+  attenduSalon = attenduSalon.split(avant).join(apres);
+});
+verifier('diagnostic salon de PROMPTS.md', R_DIAG_SALON, attenduSalon);
+verifier('diagnostic salon de prompts.js', PROMPTS.textes.diagnosticSalon, attenduSalon);
 
 console.log('2. Prompt de fond comparé à CLAUDE.md, section 8');
 if (refFond.length !== 2) { console.log('  ÉCHEC   CLAUDE.md doit contenir 2 blocs (fond, règle ajoutée), trouvé ' + refFond.length); echecs++; }
@@ -54,22 +72,23 @@ console.log('3. Assemblage : seuls [COUPE] et [FOND] changent');
 const COUPE = 'Skin fade, sabot 0,5, dessus 5 cm, barbe entretenue $& $1';
 const DESC = 'mid skin fade, starting at clipper guard 0.5 $& $1';
 const FOND = 'a plain light grey photo studio backdrop';
-verifier('diagnostic assemblé', PROMPTS.diagnostic(COUPE), ref[0].split('[COUPE]').join(COUPE));
-verifier('image assemblée', PROMPTS.image(DESC, false), ref[1].split('[COUPE]').join(DESC));
-verifier('image + barbe seule', PROMPTS.image(DESC, true), ref[1].split('[COUPE]').join(DESC) + '\n' + ref[2]);
-verifier('photo de référence', PROMPTS.reference(), ref[3]);
-verifier('fiche barber', PROMPTS.fiche('barber'), ref[4]);
-verifier('fiche salon', PROMPTS.fiche('salon'), ref[5]);
+verifier('diagnostic barber assemblé', PROMPTS.diagnostic(COUPE, 'barber'), R_DIAG.split('[COUPE]').join(COUPE));
+verifier('diagnostic salon assemblé', PROMPTS.diagnostic(COUPE, 'salon'), R_DIAG_SALON.split('[COUPE]').join(COUPE));
+verifier('image assemblée', PROMPTS.image(DESC, false), R_IMAGE.split('[COUPE]').join(DESC));
+verifier('image + barbe seule', PROMPTS.image(DESC, true), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
+verifier('photo de référence', PROMPTS.reference(), R_REF);
+verifier('fiche barber', PROMPTS.fiche('barber'), R_FICHE_B);
+verifier('fiche salon', PROMPTS.fiche('salon'), R_FICHE_S);
 verifier('retouche assemblée : prompt de fond + règle', PROMPTS.retouche(FOND), refFond[0].split('[FOND]').join(FOND) + '\n' + refFond[1]);
 
 console.log('4. Marqueurs');
-[['diagnostic', '[COUPE]', 1], ['image', '[COUPE]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
+[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
   ['ficheBarber', '[COUPE]', 0], ['ficheSalon', '[COUPE]', 0]].forEach(([nom, marqueur, n]) => {
   const compte = PROMPTS.textes[nom].split(marqueur).length - 1;
   if (compte === n) console.log('  OK      ' + nom + ' contient ' + n + ' fois ' + marqueur);
   else { echecs++; console.log('  ÉCHEC   ' + nom + ' contient ' + compte + ' fois ' + marqueur + ', attendu ' + n); }
 });
-if (/\[COUPE\]|\[FOND\]/.test(PROMPTS.diagnostic('x') + PROMPTS.image('x', true) + PROMPTS.retouche('x'))) {
+if (/\[COUPE\]|\[FOND\]/.test(PROMPTS.diagnostic('x', 'barber') + PROMPTS.diagnostic('x', 'salon') + PROMPTS.image('x', true) + PROMPTS.retouche('x'))) {
   echecs++; console.log('  ÉCHEC   un marqueur reste dans un prompt assemblé');
 } else console.log('  OK      aucun marqueur ne reste après assemblage');
 

@@ -73,14 +73,19 @@ const VARIANTES = {
   ],
   reglages: [
     { nom: 'reglages' },
+    { nom: 'reglages-remplaces', graine: (g, theme) => {
+      const s = g.session['coupe-studio:session'];
+      s.k = theme === 'salon' ? ['frange-courte', 'platine'] : ['rase-cote', 'barbe-courte'];
+      if (theme !== 'salon') s.r.barbeSeule = true;
+    } },
     { nom: 'reglages-vide', graine: (g) => { g.session = {}; } }
   ],
   personnalise: [
     { nom: 'personnalise' },
-    { nom: 'personnalise-contradiction', graine: (g) => {
+    { nom: 'personnalise-conflit', graine: (g) => {
       const s = g.session['coupe-studio:session'];
-      s.b = false; s.k = ['frange-courte', 'frange-rideau', 'couleur-libre', 'lisse']; s.kl = 'copper red';
-    } }
+      s.b = false; s.k = ['undercut', 'couleur-libre', 'lisse']; s.kl = 'copper red';
+    }, action: async (page) => { await page.click('[data-caracteristique="rase-cote"]'); } }
   ],
   resultat: [
     { nom: 'resultat' },
@@ -95,6 +100,19 @@ const VARIANTES = {
     { nom: 'retouche-photo', action: async (page) => {
       await page.setInputFiles('#fichier-photo', PHOTO_TEST);
       await page.waitForSelector('#zone-apercu:not([hidden])');
+    } },
+    { nom: 'retouche-recadrage', action: async (page) => {
+      await page.setInputFiles('#fichier-photo', PHOTO_TEST);
+      await page.waitForSelector('#zone-apercu:not([hidden])');
+      await page.click('[data-outil="format"]');
+      await page.click('[data-format="4-5"]');
+    } },
+    { nom: 'retouche-montage', action: async (page) => {
+      await page.setInputFiles('#fichier-photo', PHOTO_TEST);
+      await page.waitForSelector('#zone-apercu:not([hidden])');
+      await page.click('[data-outil="montage"]');
+      await page.setInputFiles('#fichier-avant', PHOTO_TEST);
+      await page.waitForSelector('#groupe-montage:not([hidden])');
     } }
   ],
   'retouche-ia': [
@@ -263,6 +281,19 @@ function auditDansLaPage() {
     if (e.tagName === 'INPUT' && e.type === 'range') {
       const c = lireCouleur(s.accentColor);
       if (c && !dansPalette(c)) signaler('couleur du curseur hors thème', e, s.accentColor);
+    }
+
+    /* Thème barber : le rouge (principale) est réservé au bouton principal. Tout ce qui est
+       sélectionné utilise le bleu de sélection (DESIGN.md, sélection uniforme). */
+    if (racine.getAttribute('data-theme') === 'barber' && !e.matches('.btn')) {
+      const rouges = [['fond', s.backgroundColor], ['texte', s.color], ['bordure', s.borderTopColor], ['bordure', s.borderLeftColor],
+        ['curseur', e.tagName === 'INPUT' ? s.accentColor : null], ['contour', s.outlineStyle !== 'none' ? s.outlineColor : null]];
+      rouges.forEach(([quoi, valeur]) => {
+        const c = lireCouleur(valeur);
+        if (!c || c.a === 0) return;
+        if (quoi === 'bordure' && px(s.borderTopWidth) === 0 && px(s.borderLeftWidth) === 0) return;
+        if (palette[cle(c)] === '--principale') signaler('rouge hors bouton principal (' + quoi + ')', e, valeur);
+      });
     }
 
     /* Espacements : multiples de 8. */

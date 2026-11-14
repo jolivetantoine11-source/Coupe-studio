@@ -83,14 +83,14 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('Profil client → Que veux-tu faire ?', await ecran(page), 'choix');
   await page.click('#ecran-choix a[href="#catalogue"]');
   verifier('→ Catalogue coupe', await ecran(page), 'catalogue');
-  await page.click('#grille-coupes [data-coupe="skin-fade"]');
+  await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   verifier('toucher une coupe ouvre directement Réglages', await ecran(page), 'reglages');
   await page.click('[data-reglage="sabot"][data-valeur="1"]');
   await regler(page, 'curseur-dessus', 8);
   await page.click('[data-reglage="devant"][data-valeur="releve"]');
   await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
   await page.click('[data-reglage="barbe"][data-valeur="courte"]');
-  const resumeAttendu = 'Skin fade, sabot 1, dessus 8 cm, devant relevé, décoiffé, barbe taillée courte';
+  const resumeAttendu = 'Skin fade, sabot 1, dessus 8 cm, décoiffé, devant relevé, barbe taillée courte'; // ordre des zones
   verifier('réglages changés', await texte(page, '#resume-reglages'), resumeAttendu);
   const avant = await choix(page);
   const sessionAvant = await session(page);
@@ -99,7 +99,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   console.log('2. Trois retours en arrière, puis trois pas en avant');
   await page.goBack();
   verifier('retour 1 : Catalogue coupe', (await ecran(page)) + ' / ' + (await adresse(page)), 'catalogue / catalogue');
-  verifier('la coupe choisie est toujours marquée', await presse(page, '#grille-coupes [data-coupe="skin-fade"]'), 'true');
+  verifier('la coupe choisie est toujours marquée', await presse(page, '#ecran-catalogue [data-coupe="skin-fade"]'), 'true');
   verifier('rien n’a changé après le retour 1', await choix(page), avant);
   await page.goBack();
   verifier('retour 2 : Que veux-tu faire ?', await ecran(page), 'choix');
@@ -158,11 +158,14 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.goBack();
   verifier('2 retours : Catalogue coupe', await ecran(page), 'catalogue');
   verifier('les caractéristiques sont gardées', await choix(page), avecCaracteristiques);
-  await page.click('#grille-coupes [data-coupe="quiff"]');
+  await page.click('#ecran-catalogue [data-coupe="quiff"]');
   verifier('autre coupe choisie', await texte(page, '#titre-reglages'), 'Quiff');
   await page.goBack();
-  await page.click('#grille-coupes [data-coupe="skin-fade"]');
-  verifier('revenir à la première coupe retrouve ses réglages', await texte(page, '#resume-reglages'), resumeAttendu + ', trait rasé (motif), mèche sur le côté');
+  await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
+  verifier('revenir à la première coupe retrouve ses réglages, caractéristiques à leur place', await texte(page, '#resume-reglages'),
+    'Skin fade, sabot 1, trait rasé (motif), dessus 8 cm, décoiffé, mèche sur le côté, barbe taillée courte');
+  verifier('le coiffage devant est remplacé par la mèche, et la page le dit', await texte(page, '#texte-remplace-devant'), 'Coiffage, devant et frange remplacé par : mèche sur le côté');
+  verifier('le réglage remplacé garde sa valeur (retirer la mèche le rendra)', await page.evaluate(() => window.CoupeStudio.etat.reglages.devant), 'releve');
   await page.reload();
   verifier('après rechargement : même page', await ecran(page), 'reglages');
   verifier('après rechargement : tous les choix sont là', await choix(page), avecCaracteristiques);
@@ -177,6 +180,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.setInputFiles('#fichier-photo', PHOTO_TEST);
   await page.waitForSelector('#zone-apercu:not([hidden])');
   await regler(page, 'retouche-luminosite', 20);
+  await page.click('[data-outil="format"]');
   await page.click('[data-format="1-1"]');
   await page.goBack();
   await page.click('#ecran-fond a[href="#retouche-ia"]');
@@ -194,15 +198,16 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('la photo est toujours là, avec ses réglages', [
     await page.isVisible('#apercu'),
     await page.inputValue('#retouche-luminosite'),
-    await presse(page, '[data-format="1-1"]')
-  ].join(), 'true,20,true');
+    await presse(page, '[data-format="1-1"]'),
+    await presse(page, '[data-outil="format"]')
+  ].join(), 'true,20,true,true');
 
   console.log('6. « Nouveau client » : le seul geste qui remet à zéro');
   await page.evaluate(() => { window.confirmAppele = false; window.confirm = () => { window.confirmAppele = true; return true; }; });
   await page.goBack();
   await page.goBack();
   await page.click('#ecran-choix a[href="#catalogue"]');
-  await page.click('#grille-coupes [data-coupe="skin-fade"]');
+  await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   await page.click('#action-reglages');
   verifier('→ Résultat', await ecran(page), 'resultat');
   await page.click('#ecran-resultat [data-nouveau-client]');

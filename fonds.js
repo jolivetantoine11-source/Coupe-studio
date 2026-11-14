@@ -16,7 +16,8 @@
    Puis reporte la ligne dans le tableau de CLAUDE.md, section 8, pour qu'Antoine la valide.
 
    Une retouche SANS IA demande aussi du code dans retouche.js : la liste ci-dessous
-   fixe seulement son nom, son ordre et son type de réglage. */
+   fixe seulement son nom, son nom court (bouton de la rangée d'outils), son ordre et son
+   type de réglage. */
 (function (racine) {
   'use strict';
 
@@ -25,17 +26,17 @@
   var BUSTE = '<circle cx="32" cy="28" r="8"/>' + t('M16 54C16 42 48 42 48 54');
 
   var RETOUCHES_SANS_IA = [
-    { id: 'luminosite', fr: 'Luminosité', famille: 'sans-ia', type: 'curseur', min: -50, max: 50, gauche: 'Plus sombre', droite: 'Plus clair',
+    { id: 'luminosite', fr: 'Luminosité', court: 'Luminosité', famille: 'sans-ia', type: 'curseur', min: -50, max: 50, gauche: 'Plus sombre', droite: 'Plus clair',
       trace: '<circle cx="32" cy="32" r="9"/>' + t('M32 10V16M32 48V54M10 32H16M48 32H54M16 16L20 20M44 44L48 48M48 16L44 20M20 44L16 48') },
-    { id: 'contraste', fr: 'Contraste', famille: 'sans-ia', type: 'curseur', min: -50, max: 50, gauche: 'Plus doux', droite: 'Plus marqué',
+    { id: 'contraste', fr: 'Contraste', court: 'Contraste', famille: 'sans-ia', type: 'curseur', min: -50, max: 50, gauche: 'Plus doux', droite: 'Plus marqué',
       trace: '<circle cx="32" cy="32" r="18"/>' + t('M32 14V50M32 22H46M32 32H50M32 42H46') },
-    { id: 'chaleur', fr: 'Chaleur', famille: 'sans-ia', type: 'curseur', min: -50, max: 50, gauche: 'Plus froid', droite: 'Plus chaud',
+    { id: 'chaleur', fr: 'Chaleur', court: 'Chaleur', famille: 'sans-ia', type: 'curseur', min: -50, max: 50, gauche: 'Plus froid', droite: 'Plus chaud',
       trace: t('M27 14C27 8 37 8 37 14V34C44 38 44 52 32 52C20 52 20 38 27 34ZM32 28V42') },
-    { id: 'nb', fr: 'Noir et blanc', famille: 'sans-ia', type: 'bascule',
+    { id: 'nb', fr: 'Noir et blanc', court: 'N&B', famille: 'sans-ia', type: 'bascule',
       trace: '<rect x="12" y="12" width="40" height="40"/>' + t('M12 52L52 12M22 52L52 22M32 52L52 32M42 52L52 42') },
-    { id: 'format', fr: 'Recadrage', famille: 'sans-ia', type: 'format',
+    { id: 'format', fr: 'Recadrage', court: 'Recadrage', famille: 'sans-ia', type: 'format',
       trace: t('M20 8V44H56M8 20H44V56') },
-    { id: 'montage', fr: 'Montage avant/après', famille: 'sans-ia', type: 'montage',
+    { id: 'montage', fr: 'Montage avant/après', court: 'Avant/après', famille: 'sans-ia', type: 'montage',
       trace: '<rect x="8" y="16" width="22" height="32"/><rect x="34" y="16" width="22" height="32"/>' }
   ];
 

@@ -1,6 +1,6 @@
 # PROMPTS.md — les prompts de référence (texte exact)
 
-Source : les fichiers Word validés après les tests. Chaque bloc de code ci-dessous (7 blocs) doit se retrouver MOT POUR MOT dans `prompts.js` (vérifier par un test de comparaison). Seul le marqueur `[COUPE]` est remplacé par l'appli.
+Source : les fichiers Word validés après les tests. Chaque bloc de code ci-dessous (8 blocs) doit se retrouver MOT POUR MOT dans `prompts.js` (vérifier par un test de comparaison). Seul le marqueur `[COUPE]` est remplacé par l'appli.
 La ligne « Consigne » de chaque section s'affiche dans l'appli au-dessus du bloc, elle ne fait pas partie du texte copié.
 
 ---
@@ -95,6 +95,16 @@ Ligne ajoutée à la fin du prompt image :
 
 ```text
 Change ONLY the beard as described, keep the hair on top exactly as it is.
+```
+
+### Variante exception barbe / texture
+
+Ajoutée le 16 novembre 2026 à la demande d'Antoine. Ajoutée à la fin du prompt image (sur une nouvelle ligne) quand [COUPE] contient une zone Beard (hors barbe seule) ou une zone Texture. [CHANGEMENT] vaut « a beard change », « a texture change » ou « a beard change and a texture change ». Sinon le prompt image est inchangé.
+
+Ligne ajoutée à la fin du prompt image :
+
+```text
+Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only that change as described, and keep every other rule.
 ```
 
 ### Variante photo de référence

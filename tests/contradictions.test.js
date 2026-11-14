@@ -149,7 +149,7 @@ const occurrences = (texte, morceau) => texte.split(morceau).length - 1;
   await page.click('[data-caracteristique="rase-cote"]');
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'reglages');
-  verifier('caractéristique retirée : le réglage revient', (await desc()).split('. ').find((p) => p.startsWith('Sides:')), 'Sides: fade, starting at clipper guard 1 at the bottom');
+  verifier('caractéristique retirée : le réglage revient', (await desc()).split('. ').find((p) => p.startsWith('Sides:')), 'Sides: mid fade, from guard 1 at the bottom to guard 2 at the top');
 
   await navigateur.close();
   verifier('aucune erreur JavaScript', erreurs.join(' | '), '');

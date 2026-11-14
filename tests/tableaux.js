@@ -26,8 +26,10 @@ function tableauCoupes() {
   ['barber', 'salon'].forEach((mode) => {
     lignes.push('#### ' + (mode === 'barber' ? 'Barber' : 'Salon'), '', '| fr | Ligne affichée | Nom anglais | Zones (texte anglais) |', '|---|---|---|---|');
     C.coupes.filter((c) => c.mode === mode).forEach((c) => {
+      const deg = C.texteDegrade(c, c.recette);
+      const zonesCoupe = Object.assign({}, c.zones, deg ? { 'sides.style': deg.style.en + ' (réglages)', 'sides.guard': deg.guard.en } : {});
       const zones = C.zones.map((z) => {
-        const parts = z.parts.map((p) => c.zones[z.id + '.' + p]).filter(Boolean);
+        const parts = z.parts.map((p) => zonesCoupe[z.id + '.' + p]).filter(Boolean);
         return parts.length ? '**' + z.en + '** : ' + parts.join(', ') : null;
       }).filter(Boolean).join('<br>');
       lignes.push('| ' + c.fr + ' | ' + c.ligne + ' | ' + c.en + ' | ' + zones + ' |');

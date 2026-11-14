@@ -48,6 +48,12 @@
         { v: 'taper', fr: 'Taper', res: 'taper', en: 'low taper' },
         { v: 'ciseaux', fr: 'Ciseaux', res: 'côtés aux ciseaux', en: 'cut with scissors, no clipper fade' }
       ] },
+      /* Hauteur du dégradé : visible seulement quand les côtés sont en dégradé (décision du 16 novembre). */
+      { id: 'hauteur', nom: 'Hauteur', slot: 'sides.style', accord: 'remplacée', type: 'choix', siDegrade: true, options: [
+        { v: 'bas', fr: 'Bas', res: 'bas', en: 'low' },
+        { v: 'mi', fr: 'Mi', res: 'mi-hauteur', en: 'mid' },
+        { v: 'haut', fr: 'Haut', res: 'haut', en: 'high' }
+      ] },
       { id: 'sabot', nom: 'Sabot du bas', slot: 'sides.guard', accord: 'remplacé', type: 'choix', toujours: true, options: [
         { v: '0', fr: '0', res: 'sabot 0', en: 'starting at clipper guard 0 at the bottom' },
         { v: '0.5', fr: '0,5', res: 'sabot 0,5', en: 'starting at clipper guard 0.5 at the bottom' },
@@ -123,9 +129,54 @@
     ]
   };
 
+  /* ---------- Côtés en dégradé (décision d'Antoine du 16 novembre 2026) ----------
+     Sides = « <low|mid|high> <skin fade|fade>, from guard X at the bottom to guard Y at the top ».
+     Sabot du bas 0 = skin fade (« dégradé à blanc »), sinon fade (« dégradé »). Changer le sabot
+     du bas ne change que X ; Y vient de la coupe (`sabotHaut`, 2 par défaut). */
+  var DEGRADES = ['blanc', 'degrade'];
+
+  function estDegrade(r) {
+    return !!r && DEGRADES.indexOf(r.cotes) >= 0;
+  }
+
+  function texteDegrade(coupe, r) {
+    if (!estDegrade(r)) return null;
+    var hauteurs = { bas: ['low', 'bas'], mi: ['mid', 'mi-hauteur'], haut: ['high', 'haut'] };
+    var h = hauteurs[r.hauteur] || hauteurs.mi;
+    var x = r.sabot || (r.cotes === 'blanc' ? '0' : '0.5');
+    var y = (coupe && coupe.sabotHaut) || '2';
+    var blanc = x === '0';
+    return {
+      style: { en: h[0] + ' ' + (blanc ? 'skin fade' : 'fade'), fr: (blanc ? 'dégradé à blanc ' : 'dégradé ') + h[1] },
+      guard: {
+        en: 'from guard ' + x + ' at the bottom' + (Number(y) > Number(x) ? ' to guard ' + y + ' at the top' : ''),
+        fr: 'sabot ' + x.replace('.', ',')
+      }
+    };
+  }
+
+  /* Met côtés et sabot d'accord : sabot 0 = dégradé à blanc, sinon dégradé. */
+  function accorderDegrade(r, change) {
+    if (!estDegrade(r)) return r;
+    if (change === 'cotes') {
+      if (r.cotes === 'blanc') r.sabot = '0';
+      else if (r.sabot === null || r.sabot === undefined || r.sabot === '0') r.sabot = '0.5';
+    } else if (r.sabot !== null && r.sabot !== undefined) {
+      r.cotes = r.sabot === '0' ? 'blanc' : 'degrade';
+    }
+    if (!r.hauteur) r.hauteur = 'mi';
+    return r;
+  }
+
+  /* Nom de la coupe : le skin fade devient « Fade » / « Dégradé » quand le sabot du bas n'est pas 0. */
+  function nomCoupe(coupe, r) {
+    if (coupe.nomSiDegrade && r && r.cotes === 'degrade') return coupe.nomSiDegrade;
+    return { fr: coupe.fr, en: coupe.en };
+  }
+
   /* Valeurs de départ communes à toutes les coupes d'un mode. */
   var BASE = {
-    barber: { cotes: null, sabot: null, dessus: null, devant: null, coiffage: null, contours: null, barbe: 'inchangee', barbeSeule: false },
+    barber: { cotes: null, hauteur: null, sabot: null, dessus: null, devant: null, coiffage: null, contours: null, barbe: 'inchangee', barbeSeule: false },
     salon: { longueur: null, forme: null, couches: null, frange: null, raie: 'naturelle', couleur: 'inchangee', couleurAutre: '' }
   };
 
@@ -150,26 +201,26 @@
       { 'sides.style': 'short and tapered', 'sides.guard': 'clipper guard 2', 'top.length': '2-3 cm', 'front.style': 'slightly longer than the rest of the top' },
       { cotes: 'taper', sabot: '2', dessus: 3 }),
     coupe('barber', 'crop-texture', 'Crop texturé', 'Frange courte, côtés nets', 'Textured French crop',
-      { 'sides.style': 'faded', 'top.length': '3-5 cm', 'top.style': 'textured', 'front.style': 'a short straight fringe' },
-      { cotes: 'degrade', dessus: 4, devant: 'avant' }),
+      { 'top.length': '3-5 cm', 'top.style': 'textured', 'front.style': 'a short straight fringe' },
+      { cotes: 'degrade', hauteur: 'mi', sabot: '0.5', dessus: 4, devant: 'avant' }, { sabotHaut: '2' }),
     coupe('barber', 'taper-bas', 'Taper bas', 'Fondu discret sur la nuque', 'Low taper fade',
       { 'sides.style': 'low taper fade at the temples and nape only', 'top.length': 'length kept', 'nape.edges': 'clean natural neckline' },
       { cotes: 'taper', contours: 'naturels' }),
     coupe('barber', 'skin-fade', 'Skin fade', 'Fondu à blanc, dessus court', 'Skin fade',
-      { 'sides.style': 'mid skin fade', 'sides.guard': 'from guard 0 at the bottom to guard 2 at the top', 'top.length': '4-6 cm', 'top.style': 'textured' },
-      { cotes: 'blanc', sabot: '0', dessus: 5 }),
+      { 'top.length': '4-6 cm', 'top.style': 'textured' },
+      { cotes: 'blanc', hauteur: 'mi', sabot: '0', dessus: 5 }, { sabotHaut: '2', nomSiDegrade: { fr: 'Dégradé', en: 'Fade' } }),
     coupe('barber', 'raie-cote', 'Raie sur le côté', 'Classique, raie marquée', 'Classic side part',
       { 'sides.style': 'tapered', 'sides.guard': 'clipper guard 2-3', 'top.length': '5-7 cm', 'top.style': 'combed to the side', 'top.part': 'a defined part line' },
       { cotes: 'taper', sabot: '2', dessus: 6, coiffage: 'cote' }),
     coupe('barber', 'quiff', 'Quiff', 'Dessus relevé vers l’avant', 'Quiff',
-      { 'sides.style': 'short and faded', 'top.length': '7-9 cm', 'front.style': 'styled up and back with volume' },
-      { cotes: 'degrade', dessus: 8, devant: 'releve' }, { front: true }),
+      { 'top.length': '7-9 cm', 'front.style': 'styled up and back with volume' },
+      { cotes: 'degrade', hauteur: 'mi', sabot: '1', dessus: 8, devant: 'releve' }, { front: true, sabotHaut: '3' }),
     coupe('barber', 'slick-back', 'Slick back', 'Peigné en arrière', 'Slick back',
       { 'sides.style': 'tapered', 'top.length': '8-10 cm', 'top.style': 'combed straight back with a light natural shine', 'front.style': 'combed back' },
       { cotes: 'taper', dessus: 9, devant: 'arriere', coiffage: 'arriere' }, { front: true, lisse: true }),
-    coupe('barber', 'degrade-boucle', 'Dégradé bouclé', 'Fondu, boucles sur le dessus', 'Curly top with a mid fade',
-      { 'sides.style': 'mid fade', 'sides.guard': 'from guard 0.5 at the bottom to guard 2 at the top', 'top.length': '4-6 cm', 'top.style': 'natural, unstyled', 'texture.texture': 'natural defined curls on top' },
-      { cotes: 'degrade', sabot: '0.5', dessus: 5, coiffage: 'naturel' }),
+    coupe('barber', 'degrade-boucle', 'Dégradé bouclé', 'Fondu, boucles sur le dessus', 'Curly top with a fade',
+      { 'top.length': '4-6 cm', 'top.style': 'natural, unstyled', 'texture.texture': 'natural defined curls on top' },
+      { cotes: 'degrade', hauteur: 'mi', sabot: '0.5', dessus: 5, coiffage: 'naturel' }, { sabotHaut: '2' }),
     coupe('barber', 'classique-ciseaux', 'Classique aux ciseaux', 'Sans tondeuse, net', 'Classic scissor cut',
       { 'sides.style': 'short sides and back cut with scissors, no clipper fade', 'top.length': '4-5 cm', 'top.style': 'neat natural finish' },
       { cotes: 'ciseaux', dessus: 4 }),
@@ -177,8 +228,8 @@
       { 'sides.style': 'falling behind the ears', 'top.length': '10-14 cm', 'top.style': 'swept back with natural movement' },
       { dessus: 12, coiffage: 'arriere' }),
     coupe('barber', 'mulet-moderne', 'Mulet moderne', 'Court devant, long derrière', 'Modern mullet',
-      { 'sides.style': 'short and faded', 'top.style': 'textured', 'nape.shape': 'longer back reaching the nape' },
-      { cotes: 'degrade' }),
+      { 'top.style': 'textured', 'nape.shape': 'longer back reaching the nape' },
+      { cotes: 'degrade', hauteur: 'bas', sabot: '1' }, { sabotHaut: '3' }),
 
     coupe('salon', 'pixie', 'Pixie', 'Court, dégagé sur la nuque', 'Pixie cut',
       { 'layers.layers': 'very short layers', 'sides.style': 'short', 'top.style': 'slightly longer and textured', 'front.style': 'a side-swept fringe', 'nape.shape': 'short' },
@@ -237,6 +288,10 @@
     reglages: REGLAGES,
     base: BASE,
     zones: ZONES,
+    estDegrade: estDegrade,
+    texteDegrade: texteDegrade,
+    accorderDegrade: accorderDegrade,
+    nomCoupe: nomCoupe,
     picto: picto
   };
 

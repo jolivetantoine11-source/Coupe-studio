@@ -90,7 +90,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.click('[data-reglage="devant"][data-valeur="releve"]');
   await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
   await page.click('[data-reglage="barbe"][data-valeur="courte"]');
-  const resumeAttendu = 'Skin fade, sabot 1, dessus 8 cm, décoiffé, devant relevé, barbe taillée courte'; // ordre des zones
+  const resumeAttendu = 'Dégradé mi-hauteur, sabot 1, dessus 8 cm, décoiffé, devant relevé, barbe taillée courte'; // sabot 1 : le skin fade devient un dégradé
   verifier('réglages changés', await texte(page, '#resume-reglages'), resumeAttendu);
   const avant = await choix(page);
   const sessionAvant = await session(page);
@@ -163,7 +163,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.goBack();
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   verifier('revenir à la première coupe retrouve ses réglages, caractéristiques à leur place', await texte(page, '#resume-reglages'),
-    'Skin fade, sabot 1, trait rasé (motif), dessus 8 cm, décoiffé, mèche sur le côté, barbe taillée courte');
+    'Dégradé mi-hauteur, sabot 1, trait rasé (motif), dessus 8 cm, décoiffé, mèche sur le côté, barbe taillée courte');
   verifier('le coiffage devant est remplacé par la mèche, et la page le dit', await texte(page, '#texte-remplace-devant'), 'Coiffage, devant et frange remplacé par : mèche sur le côté');
   verifier('le réglage remplacé garde sa valeur (retirer la mèche le rendra)', await page.evaluate(() => window.CoupeStudio.etat.reglages.devant), 'releve');
   await page.reload();

@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+Version du 16 novembre 2026 : hauteur du dégradé barber et ligne d'exception barbe / texture dans le prompt image (sections 6 et 4.8).
+
 Version du 15 novembre 2026, après la deuxième revue d'Antoine : description [COUPE] structurée par zone, groupes de caractéristiques exclusifs, catalogues en texte, éditeur photo à la manière d'Instagram, option « Barbe seule », sélection en bleu dans le thème barber, diagnostic salon.
 
 (Version du 14 novembre : parcours page par page, plus de barre d'onglets, profil client en premier, catalogue personnalisé, catalogue fond.)
@@ -117,7 +119,7 @@ Voir section 8. Une page d'entrée présente les deux familles, clairement sépa
 ### 4.8 Résultat
 Les étapes, dans l'ordre, chacune dans une carte :
 1. **Diagnostic** : consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
-2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin.
+2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si [COUPE] contient une zone Beard ou une zone Texture, la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée à la fin, avec « a beard change », « a texture change » ou « a beard change and a texture change ». Sans barbe ni texture, le prompt image est inchangé.
 3. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
@@ -173,16 +175,16 @@ Avant le 15 novembre, les fragments des réglages s'ajoutaient à la fin de la d
 |---|---|---|---|
 | Buzz cut | Tondeuse sur toute la tête | Buzz cut | **Sides** : clipper guard 2 (6 mm)<br>**Top** : clipper guard 2 (6 mm), even all over<br>**Neckline** : natural hairline kept |
 | Crew cut | Court, dessus un peu plus long | Crew cut | **Sides** : short and tapered, clipper guard 2<br>**Top** : 2-3 cm<br>**Front** : slightly longer than the rest of the top |
-| Crop texturé | Frange courte, côtés nets | Textured French crop | **Sides** : faded<br>**Top** : 3-5 cm, textured<br>**Front** : a short straight fringe |
+| Crop texturé | Frange courte, côtés nets | Textured French crop | **Sides** : mid fade (réglages), from guard 0.5 at the bottom to guard 2 at the top<br>**Top** : 3-5 cm, textured<br>**Front** : a short straight fringe |
 | Taper bas | Fondu discret sur la nuque | Low taper fade | **Sides** : low taper fade at the temples and nape only<br>**Top** : length kept<br>**Neckline** : clean natural neckline |
-| Skin fade | Fondu à blanc, dessus court | Skin fade | **Sides** : mid skin fade, from guard 0 at the bottom to guard 2 at the top<br>**Top** : 4-6 cm, textured |
+| Skin fade | Fondu à blanc, dessus court | Skin fade | **Sides** : mid skin fade (réglages), from guard 0 at the bottom to guard 2 at the top<br>**Top** : 4-6 cm, textured |
 | Raie sur le côté | Classique, raie marquée | Classic side part | **Sides** : tapered, clipper guard 2-3<br>**Top** : 5-7 cm, combed to the side, a defined part line |
-| Quiff | Dessus relevé vers l’avant | Quiff | **Sides** : short and faded<br>**Top** : 7-9 cm<br>**Front** : styled up and back with volume |
+| Quiff | Dessus relevé vers l’avant | Quiff | **Sides** : mid fade (réglages), from guard 1 at the bottom to guard 3 at the top<br>**Top** : 7-9 cm<br>**Front** : styled up and back with volume |
 | Slick back | Peigné en arrière | Slick back | **Sides** : tapered<br>**Top** : 8-10 cm, combed straight back with a light natural shine<br>**Front** : combed back |
-| Dégradé bouclé | Fondu, boucles sur le dessus | Curly top with a mid fade | **Sides** : mid fade, from guard 0.5 at the bottom to guard 2 at the top<br>**Top** : 4-6 cm, natural, unstyled<br>**Texture** : natural defined curls on top |
+| Dégradé bouclé | Fondu, boucles sur le dessus | Curly top with a fade | **Sides** : mid fade (réglages), from guard 0.5 at the bottom to guard 2 at the top<br>**Top** : 4-6 cm, natural, unstyled<br>**Texture** : natural defined curls on top |
 | Classique aux ciseaux | Sans tondeuse, net | Classic scissor cut | **Sides** : short sides and back cut with scissors, no clipper fade<br>**Top** : 4-5 cm, neat natural finish |
 | Mi-long flow | Mi-long, rejeté en arrière | Medium length flow | **Sides** : falling behind the ears<br>**Top** : 10-14 cm, swept back with natural movement |
-| Mulet moderne | Court devant, long derrière | Modern mullet | **Sides** : short and faded<br>**Top** : textured<br>**Neckline** : longer back reaching the nape |
+| Mulet moderne | Court devant, long derrière | Modern mullet | **Sides** : low fade (réglages), from guard 1 at the bottom to guard 3 at the top<br>**Top** : textured<br>**Neckline** : longer back reaching the nape |
 
 #### Salon
 
@@ -212,6 +214,7 @@ Chaque réglage écrit dans UN emplacement. Laissé à la valeur de la coupe, il
 | Réglage | Emplacement | Options (texte anglais) |
 |---|---|---|
 | Côtés | Sides / style | Dégradé à blanc (`skin fade`) · Dégradé (`fade`) · Taper (`low taper`) · Ciseaux (`cut with scissors, no clipper fade`) |
+| Hauteur | Sides / style | Bas (`low`) · Mi (`mid`) · Haut (`high`) |
 | Sabot du bas | Sides / sabot | 0 (`starting at clipper guard 0 at the bottom`) · 0,5 (`starting at clipper guard 0.5 at the bottom`) · 1 (`starting at clipper guard 1 at the bottom`) · 1,5 (`starting at clipper guard 1.5 at the bottom`) · 2 (`starting at clipper guard 2 at the bottom`) · 3 (`starting at clipper guard 3 at the bottom`) |
 | Dessus | Top / longueur | curseur 1-15 cm (`about X cm`) |
 | Coiffage, devant et frange | Front / style | Vers l’avant (`styled forward`) · Relevé (`lifted up`) · Sur le côté (`swept to the side`) · En arrière (`pushed back`) |
@@ -231,6 +234,7 @@ Chaque réglage écrit dans UN emplacement. Laissé à la valeur de la coupe, il
 | Couleur | Color / couleur | Inchangée (rien) · Balayage (`change to a soft natural balayage`) · Autre (`change to X`) |
 <!-- /tableau:reglages -->
 
+- **Côtés en dégradé** (Dégradé à blanc ou Dégradé, décision du 16 novembre) : le réglage « Hauteur » (Bas / Mi / Haut) apparaît, préréglé par la coupe. Sides s'écrit « <low|mid|high> <skin fade|fade>, from guard X at the bottom to guard Y at the top ». X = sabot du bas ; Y vient de la coupe (`sabotHaut`, 2 par défaut ; omis si Y ≤ X). Changer le sabot du bas ne remplace que X. Sabot 0 = skin fade (« dégradé à blanc »), sinon fade (« dégradé ») : les boutons Côtés et Sabot se mettent d'accord tout seuls, et le nom suit (le skin fade devient « Fade » / « Dégradé » dès que le sabot n'est pas 0).
 - Longueur (salon) : curseur 10-60 cm et repères liés (menton jusqu'à 27 cm, épaules jusqu'à 39, omoplates jusqu'à 52, milieu du dos au-delà). Texte : « chin length, about 22 cm ».
 - Barbe seule : choix à part dans le groupe Barbe (section 4.5).
 - Le coiffage se choisit par zone (décision d'Antoine du 14 novembre), en mode barber. Le mode salon garde Frange et Raie, qui jouent ce rôle.
@@ -350,7 +354,7 @@ Pas de compte, pas de serveur, pas de génération d'image dans l'appli, pas de 
 
 - Le nom définitif de l'appli.
 - Le prompt de fond (section 8) n'a jamais été testé. Trois retouches (« Lumière studio douce », « Corriger le contre-jour », « Retirer les cheveux coupés ») ne sont pas des changements de fond : elles tiennent mal dans la phrase « replace ONLY the background with [FOND] », et « Retirer les cheveux coupés » contredit « Keep the person 100% identical: … clothing ». À tester, et à réécrire si Gemini les ignore.
-- Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). La zone Beard (hors barbe seule) et la zone Texture le contredisent. Le prompt n'a pas été modifié. À tester, et à ajuster si Gemini les ignore.
+- Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). La zone Beard (hors barbe seule) et la zone Texture le contredisent : depuis le 16 novembre, la ligne d'exception (PROMPTS.md) le dit à Gemini. À tester sur de vraies photos. Elle se déclenche aussi pour les coupes dont la texture fait partie de la description (dégradé bouclé, carré bouclé).
 - Le découpage coupe → zones (section 5), les textes des réglages (section 6) et des caractéristiques (section 13) sont à relire.
 - Le glissement depuis le bord gauche et l'appui long sur la photo n'ont pas été essayés sur un vrai iPhone.
 
@@ -379,7 +383,13 @@ Décidé par Antoine (15 novembre, deuxième revue) :
 - Thème barber : tout ce qui est sélectionné est en bleu `selection` ; le rouge est réservé au bouton principal.
 - Diagnostic salon (PROMPTS.md, 1b) : le diagnostic avec 4 remplacements seulement.
 
+Décidé par Antoine (16 novembre) :
+- Réglage « Hauteur » du dégradé, sabot 0 = skin fade, sinon fade ; le sabot du bas ne remplace que X.
+- Ligne d'exception barbe / texture à la fin du prompt image (PROMPTS.md).
+
 Choix faits par Claude, à confirmer :
+- **Hauteurs et sabots du haut préréglés** : skin fade mi, 0 → 2 ; crop texturé mi, 0,5 → 2 ; quiff mi, 1 → 3 ; dégradé bouclé mi, 0,5 → 2 ; mulet moderne bas, 1 → 3. Le nom anglais du dégradé bouclé devient « Curly top with a fade », pour ne pas contredire la hauteur.
+- **Côtés passés en dégradé sur une autre coupe** (ex. raie sur le côté) : hauteur Mi, sabot du haut 2.
 - **Zones ajoutées** : Length, Layers et Texture, en plus de Sides, Top, Front, Neckline, Color, Beard. Ordre : Length, Layers, Sides, Top, Front, Neckline, Texture, Color, Beard.
 - **Réglage modifié** : il remplace le texte de la coupe dans son emplacement. Exemple : sur le skin fade, changer le sabot remplace « from guard 0 at the bottom to guard 2 at the top » par « starting at clipper guard 0.5 at the bottom ».
 - **Côtés** : une caractéristique de côtés (rasé sur un côté, undercut, dégradé à blanc) remplace aussi le sabot.

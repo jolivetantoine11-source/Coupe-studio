@@ -76,6 +76,10 @@
       "Change ONLY the beard as described, keep the hair on top exactly as it is."
     ].join('\n'),
 
+    exception: [
+      "Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only that change as described, and keep every other rule."
+    ].join('\n'),
+
     reference: [
       "Image 1 is the client. Image 2 is a haircut reference.",
       "Apply the haircut from image 2 onto the person in image 1.",
@@ -199,9 +203,20 @@
   }
 
   /* Étape 2 : [COUPE] = description anglaise. `barbeSeule` ajoute la ligne de la variante à la fin. */
-  function image(descAnglaise, barbeSeule) {
+  /* Valeurs de [CHANGEMENT] dans la ligne d'exception (PROMPTS.md, variante exception barbe / texture). */
+  var CHANGEMENTS = {
+    barbe: 'a beard change',
+    texture: 'a texture change',
+    'barbe-texture': 'a beard change and a texture change'
+  };
+
+  /* `barbeSeule` ajoute la ligne de la variante barbe seule.
+     `changement` ('barbe', 'texture', 'barbe-texture' ou rien) ajoute la ligne d'exception. */
+  function image(descAnglaise, barbeSeule, changement) {
     var t = remplacer(TEXTES.image, '[COUPE]', descAnglaise);
-    return barbeSeule ? t + '\n' + TEXTES.barbeSeule : t;
+    if (barbeSeule) return t + '\n' + TEXTES.barbeSeule;
+    if (CHANGEMENTS[changement]) t += '\n' + remplacer(TEXTES.exception, '[CHANGEMENT]', CHANGEMENTS[changement]);
+    return t;
   }
 
   /* Étape 2, variante photo de référence : texte fixe. */

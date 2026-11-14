@@ -350,6 +350,7 @@
     }
 
     /* 2. Les réglages : un réglage modifié remplace le texte de la coupe dans son emplacement. */
+    var degrade = x.coupe ? C.texteDegrade(x.coupe, x.reglages) : null;
     if (x.coupe) {
       var base = reglagesParDefaut(x.coupe);
       C.reglages[x.coupe.mode].forEach(function (g) {
@@ -361,6 +362,9 @@
           if (remplacant) slots[g.slot] = [];
         }
         if (remplacant) { remplaces[g.id] = remplacant; return; }
+        /* Côtés en dégradé : écrits d'un bloc plus bas (hauteur, skin fade ou fade, sabots). */
+        if (degrade && (g.slot === 'sides.style' || g.slot === 'sides.guard')) return;
+        if (g.siDegrade) return;
         var t = texteReglage(g, x.reglages);
         if (!t) return;
         var toujours = g.toujours || g.type !== 'choix'; // les mesures (sabot, dessus, longueur) figurent toujours dans le résumé
@@ -372,6 +376,14 @@
           slots[g.slot] = [{ en: t.en, fr: toujours ? t.fr : null }];
         }
       });
+    }
+
+    /* Côtés en dégradé, s'ils ne sont pas remplacés par une caractéristique :
+       « <low|mid|high> <skin fade|fade>, from guard X at the bottom to guard Y at the top ». */
+    if (degrade) {
+      var styleModifie = ['cotes', 'hauteur'].some(function (id) { return x.reglages[id] !== base[id]; });
+      if (!remplaces.cotes && !remplaces.hauteur) slots['sides.style'] = [{ en: degrade.style.en, fr: styleModifie ? degrade.style.fr : null }];
+      if (!remplaces.sabot) slots['sides.guard'] = [{ en: degrade.guard.en, fr: degrade.guard.fr }];
     }
 
     /* 3. Les caractéristiques remplacent tout le reste dans leur emplacement. */
@@ -422,7 +434,7 @@
     };
     if (barbeSeule(x)) return ligne(zoneBarbe());
     var tete = 'Custom haircut';
-    if (x.coupe) tete = x.coupe.perso ? x.coupe.fr + ': ' + sansPointFinal(x.coupe.desc || x.coupe.ligne) : x.coupe.en;
+    if (x.coupe) tete = x.coupe.perso ? x.coupe.fr + ': ' + sansPointFinal(x.coupe.desc || x.coupe.ligne) : C.nomCoupe(x.coupe, x.reglages).en;
     return [sansPointFinal(tete)].concat(C.zones.map(ligne).filter(Boolean)).join('. ');
   }
 
@@ -440,7 +452,26 @@
     if (barbeSeule(x)) return 'Barbe seule : ' + fr([zoneBarbe()]).join(', ') + ', cheveux inchangés';
     var morceaux = fr(C.zones);
     if (!x.coupe) return morceaux.length ? 'Coupe personnalisée : ' + morceaux.join(', ') : '';
-    return [nomDeLaCoupe || x.coupe.fr].concat(morceaux).join(', ');
+    var nom = nomDeLaCoupe || C.nomCoupe(x.coupe, x.reglages).fr;
+    /* « Dégradé » + « dégradé haut » s'écrit « Dégradé haut ». */
+    if (morceaux.length && morceaux[0].indexOf(nom.toLowerCase() + ' ') === 0) nom += morceaux.shift().slice(nom.length);
+    return [nom].concat(morceaux).join(', ');
+  }
+
+  /* Le prompt image interdit de toucher à la barbe et à la texture. Si [COUPE] les demande
+     (zone Beard hors barbe seule, zone Texture), la ligne d'exception de PROMPTS.md est ajoutée.
+     Renvoie 'barbe', 'texture', 'barbe-texture' ou null. */
+  function changementDemande(x) {
+    if (barbeSeule(x)) return null;
+    var slots = composer(x).slots;
+    var remplie = function (id) {
+      var zone = C.zones.filter(function (z) { return z.id === id; })[0];
+      return entreesZone(slots, zone).some(function (e) { return e.en; });
+    };
+    var barbe = remplie('beard');
+    var texture = remplie('texture');
+    if (barbe && texture) return 'barbe-texture';
+    return barbe ? 'barbe' : (texture ? 'texture' : null);
   }
 
   /* Texte français qui remplace [COUPE] dans le diagnostic.
@@ -475,7 +506,10 @@
         propre[g.id] = Math.min(g.max, Math.max(g.min, Math.round(v)));
       }
     });
-    if (coupe.mode === 'barber') propre.barbeSeule = r.barbeSeule === true;
+    if (coupe.mode === 'barber') {
+      propre.barbeSeule = r.barbeSeule === true;
+      C.accorderDegrade(propre, null);
+    }
     if (coupe.mode === 'salon') propre.couleurAutre = texteCourt(r.couleurAutre, 80);
     return propre;
   }
@@ -1205,6 +1239,7 @@
       b.setAttribute('aria-pressed', String(r[b.getAttribute('data-reglage')] === b.getAttribute('data-valeur')));
     });
     C.reglages[coupe.mode].forEach(function (g) {
+      if (g.siDegrade) $('#reglage-' + g.id).hidden = !C.estDegrade(r);
       var remplacant = remplaces[g.id];
       $('[data-controles="' + g.id + '"]').hidden = !!remplacant;
       $('[data-remplace="' + g.id + '"]').hidden = !remplacant;
@@ -1287,8 +1322,10 @@
       var id = b.getAttribute('data-reglage');
       var valeur = b.getAttribute('data-valeur');
       if (r[id] !== valeur) r[id] = valeur;
-      /* Retoucher un choix actif le retire, mais seulement si la coupe ne l'imposait pas. */
-      else if (reglagesParDefaut(etat.coupe)[id] === null) r[id] = null;
+      /* Retoucher un choix actif le retire, mais seulement si la coupe ne l'imposait pas
+         (et jamais le sabot ou la hauteur d'un dégradé, qui en ont besoin). */
+      else if (reglagesParDefaut(etat.coupe)[id] === null && !(C.estDegrade(r) && (id === 'sabot' || id === 'hauteur'))) r[id] = null;
+      if (id === 'cotes' || id === 'sabot') C.accorderDegrade(r, id);
       if (id === 'cotes' && r.cotes === 'ciseaux') r.sabot = null; // pas de sabot aux ciseaux
     } else if (b.hasAttribute('data-repere')) {
       var g = reglage(etat.coupe, 'longueur');
@@ -1494,7 +1531,7 @@
       etapes.push({
         id: 'image', titre: 'Image',
         consigne: P.consignes.image + (seule ? ' ' + P.consignes.barbeSeule : ''),
-        texte: P.image(descAnglaise(x), seule), joindre: ['selfie']
+        texte: P.image(descAnglaise(x), seule, changementDemande(x)), joindre: ['selfie']
       });
     }
     etapes.push({
@@ -1998,6 +2035,7 @@
     validerCaracteristiques: validerCaracteristiques,
     resume: resume,
     descAnglaise: descAnglaise,
+    changementDemande: changementDemande,
     coupePourDiagnostic: coupePourDiagnostic,
     reglagesParDefaut: reglagesParDefaut,
     coupeDuCatalogue: coupeDuCatalogue,

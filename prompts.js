@@ -64,9 +64,12 @@
       "Strict rules:",
       "- Modify ONLY the hair. Everything else must stay identical: face, expression, skin, beard, eyebrows, glasses, earrings, clothing (including logos and text), background, framing and lighting.",
       "- Keep the face shape exactly as it is: do not slim, reshape, smooth or rejuvenate the face, jaw or skin.",
+      "- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.",
       "- Keep the EXACT original hair color, including highlights, grey hair and natural reflections. Do not darken, lighten or recolor, unless the requested haircut explicitly includes a color change.",
       "- Keep the natural hairline and hair density exactly as in the original: receding temples, thinning areas or a high forehead must remain visible. Never add hair where the person has none.",
+      "- If the requested length is longer than the current hair, keep the original hairline exactly; never lower it or fill receding areas.",
       "- Respect the natural hair texture (straight, wavy, curly or coily). Keep the same curl pattern and the same level of curl definition. Do not invent curls, straighten the hair, or make curls more defined, looser, smoother or shinier than they naturally are.",
+      "- Do not add a fringe, bangs or any element that is not explicitly requested. Keep jewelry identical.",
       "- The new haircut must be clearly visible and different from the original.",
       "- The haircut must be realistic and achievable by a real barber on this type of hair.",
       "- Photorealistic result, like a real photo taken right after leaving the barbershop. No filter, no beauty retouching, keep the original image quality and grain."

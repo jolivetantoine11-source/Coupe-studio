@@ -24,7 +24,7 @@ function blocs(fichier) {
 let echecs = 0;
 function verifier(nom, obtenu, attendu) {
   if (obtenu === attendu) {
-    console.log('  OK      ' + nom + ' (' + attendu.length + ' caractères)');
+    console.log('  OK      ' + nom + (typeof attendu === 'string' ? ' (' + attendu.length + ' caractères)' : ''));
     return;
   }
   echecs++;
@@ -45,6 +45,11 @@ NOMS.forEach((nom, i) => {
   verifier(nom, PROMPTS.textes[nom], ref[i]);
 });
 const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_FICHE_B, R_FICHE_S] = ref;
+['- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.',
+  '- Do not add a fringe, bangs or any element that is not explicitly requested. Keep jewelry identical.',
+  '- If the requested length is longer than the current hair, keep the original hairline exactly; never lower it or fill receding areas.'
+].forEach((regle) => verifier('règle du 15 novembre dans « Strict rules » : ' + regle.slice(2, 40) + '…', R_IMAGE.split('\n').includes(regle) && PROMPTS.textes.image.split('\n').includes(regle), true));
+verifier('« Strict rules » : 11 règles', R_IMAGE.split('\n').filter((l) => l.startsWith('- ')).length, 11);
 verifier('ligne d’exception demandée par Antoine (avec accord)', R_EXCEPTION, 'Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule.');
 
 console.log('1b. Diagnostic salon = diagnostic barber avec les 4 seuls remplacements validés par Antoine');

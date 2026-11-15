@@ -10,6 +10,7 @@
      efface : (facultatif) d'autres emplacements qu'elle vide (ex. le sabot quand on rase un côté)
      exclutReglage : (facultatif) { réglage: [valeurs] } qu'elle remplace aussi (ex. moustache
               remplace la barbe « Rasée » des réglages)
+     eclaircit : (facultatif) couleur qui demande un fort éclaircissement (avertissement décoloration)
      en     : texte anglais écrit dans l'emplacement. Une couleur doit écrire le changement
               (« change to … »), sinon le prompt image garde la couleur d'origine.
    Puis, si elle contredit d'autres caractéristiques, ajoute-la à un GROUPE (tout en bas).
@@ -45,10 +46,10 @@
       c('couches', 'Couches', 'visible layers', { slot: 'layers.layers' })
     ] },
     { id: 'couleur', nom: 'Couleur', liste: [
-      c('meches-blondes', 'Mèches blondes', 'change to blonde highlights', { slot: 'color.color' }),
+      c('meches-blondes', 'Mèches blondes', 'change to blonde highlights', { slot: 'color.color' }, { eclaircit: true }),
       c('balayage', 'Balayage', 'change to a soft natural balayage', { slot: 'color.color' }),
-      c('pointes-decolorees', 'Pointes décolorées', 'change to bleached tips', { slot: 'color.color' }),
-      c('platine', 'Platine', 'change to full platinum blonde', { slot: 'color.color' }),
+      c('pointes-decolorees', 'Pointes décolorées', 'change to bleached tips', { slot: 'color.color' }, { eclaircit: true }),
+      c('platine', 'Platine', 'change to full platinum blonde', { slot: 'color.color' }, { eclaircit: true }),
       c('reflets-cuivres', 'Reflets cuivrés', 'change to copper tones', { slot: 'color.color' }),
       c('poivre-sel', 'Poivre et sel gardé', 'natural salt-and-pepper grey kept, no coloring', { slot: 'color.color' }),
       c('couleur-libre', 'Couleur libre', 'change to X', { slot: 'color.color' }, { res: 'couleur', libre: true })

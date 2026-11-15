@@ -60,7 +60,7 @@
     { id: 'texture', nom: 'Texture', options: [['lisses', 'Lisses'], ['ondules', 'Ondulés'], ['boucles', 'Bouclés'], ['crepus', 'Crépus']] },
     { id: 'visage', nom: 'Visage', options: [['ovale', 'Ovale'], ['rond', 'Rond'], ['carre', 'Carré'], ['allonge', 'Allongé']] },
     /* « Cheveux fins » n'est proposé qu'en salon. */
-    { id: 'front', nom: 'Ligne frontale et densité', options: [['normale', 'Normale'], ['golfes-legers', 'Golfes légers'], ['golfes-marques', 'Golfes marqués'], ['fins', 'Cheveux fins', 'salon']] },
+    { id: 'front', nom: 'Ligne frontale et densité', options: [['normale', 'Normale'], ['golfes-legers', 'Golfes légers'], ['golfes-marques', 'Golfes marqués'], ['clairsemes', 'Clairsemés'], ['chauve', 'Chauve / rasé'], ['fins', 'Cheveux fins', 'salon']] },
     { id: 'longueur', nom: 'Longueur actuelle', options: [['courte', 'Courte'], ['moyenne', 'Moyenne'], ['longue', 'Longue']] },
     { id: 'lunettes', nom: 'Lunettes', options: [['oui', 'Oui'], ['non', 'Non']] }
   ];
@@ -425,6 +425,18 @@
 
   var FRONT_PAR_DEFAUT = 'no fringe, forehead uncovered, keep the front as in the original';
 
+  /* Golfes marqués, clairsemés ou chauve : toujours ajouté à la fin de [COUPE] (décision du 15 novembre). */
+  var DENSITE_FAIBLE = ['golfes-marques', 'clairsemes', 'chauve'];
+  var DENSITE = 'Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original';
+
+  function densiteFaible(profil) {
+    return !!profil && DENSITE_FAIBLE.indexOf(profil.front) >= 0;
+  }
+
+  function chauve(profil) {
+    return !!profil && profil.front === 'chauve';
+  }
+
   /* [COUPE] du prompt image :
      « <nom anglais>. Length: … Sides: … Top: … Front: … Neckline: … Color: … Beard: … »
      Seules les zones qui ont une valeur sont écrites. Pas de point final : le prompt en a un. */
@@ -434,7 +446,8 @@
       var en = entreesZone(slots, zone).map(function (e) { return e.en; }).filter(Boolean);
       return en.length ? zone.en + ': ' + sansDoublons(en).join(', ') : null;
     };
-    if (barbeSeule(x)) return ligne(zoneBarbe());
+    var densite = densiteFaible(x.profil || etat.profil) ? [DENSITE] : [];
+    if (barbeSeule(x)) return [ligne(zoneBarbe())].concat(densite).join('. ');
     var tete = 'Custom haircut';
     if (x.coupe) tete = x.coupe.perso ? x.coupe.fr + ': ' + sansPointFinal(x.coupe.desc || x.coupe.ligne) : C.nomCoupe(x.coupe, x.reglages).en;
     /* Front toujours écrit (décision du 15 novembre) : sans frange ni mèche choisie, on le dit
@@ -442,7 +455,7 @@
     return [sansPointFinal(tete)].concat(C.zones.map(function (zone) {
       if (sansCouleur && zone.id === 'color') return null; // la couleur a son étape à elle
       return ligne(zone) || (zone.id === 'front' ? zone.en + ': ' + FRONT_PAR_DEFAUT : null);
-    }).filter(Boolean)).join('. ');
+    }).filter(Boolean), densite).join('. ');
   }
 
   /* Résumé français en une ligne, dans l'ordre des zones,
@@ -1032,11 +1045,31 @@
     if (coupe.mode === 'salon' && profil.front === 'fins' && (r.couches === 'marquees' || coupe.id === 'shag' || coupe.id === 'wolf-cut')) {
       liste.push({ id: 'fins', titre: 'Cheveux fins', texte: 'Garder du volume en haut : une coupe très dégradée aplatit la forme.' });
     }
+    if (chauve(profil) && !coupe.sansLongueur) {
+      liste.push({ id: 'chauve', titre: 'Impossible sans cheveux', texte: 'Sur une tête chauve ou rasée, seuls le buzz cut et la barbe seule sont possibles.' });
+    }
+    if (decolorationNecessaire(r, { caracteristiques: etat.caracteristiques, couleurLibre: etat.couleurLibre })) liste.push(ALERTE_DECOLORATION);
     if (profil.lunettes === 'oui') {
       liste.push({ id: 'lunettes', titre: 'Lunettes', texte: 'Vérifie le contour d’oreille avec les lunettes remises.' });
     }
     return liste;
   }
+
+  /* Couleur fantaisie ou fort éclaircissement : sur cheveux foncés, il faut décolorer.
+     Le profil ne dit pas la couleur actuelle : l'avertissement le précise. */
+  var MOTS_ECLAIRCISSEMENT = /blond|platin|silver|grey|gray|white|ash|ice|pastel|pink|blue|green|purple|violet|lilac|lavender|turquoise|teal|neon|rainbow|bleach|rose|mint|peach/i;
+
+  function decolorationNecessaire(r, x) {
+    var libre = [];
+    if (r && r.couleur === 'autre' && r.couleurAutre) libre.push(r.couleurAutre);
+    var fort = caracteristiquesActives(x).some(function (c) {
+      if (c.libre) { libre.push(x.couleurLibre); return false; }
+      return c.eclaircit === true;
+    });
+    return fort || libre.some(function (t) { return MOTS_ECLAIRCISSEMENT.test(t); });
+  }
+
+  var ALERTE_DECOLORATION = { id: 'decoloration', titre: 'Décoloration', texte: 'Sur cheveux foncés : nécessite une décoloration, souvent en plusieurs séances.' };
 
   /* Coupe à risque pour ce client : golfes, lissage nécessaire, pousse nécessaire. */
   function risques(coupe, profil) {
@@ -1073,7 +1106,7 @@
     });
     return coupesDuMode()
       .map(function (c, ordre) { return { coupe: c, points: (points[c.id] || 0) - risques(c, profil).length, ordre: ordre }; })
-      .filter(function (x) { return !ecartees[x.coupe.id]; })
+      .filter(function (x) { return !ecartees[x.coupe.id] && (!chauve(profil) || x.coupe.sansLongueur); })
       .sort(function (a, b) { return b.points - a.points || a.ordre - b.ordre; })
       .slice(0, 3)
       .map(function (x) { return x.coupe; });
@@ -1089,13 +1122,15 @@
       type: 'button',
       'class': 'carte coupe',
       'data-coupe': c.id,
-      'aria-pressed': String(!!etat.coupe && etat.avecCoupe && etat.coupe.id === c.id)
+      'aria-pressed': String(!!etat.coupe && etat.avecCoupe && etat.coupe.id === c.id),
+      disabled: !!o.impossible
     }, [
       o.badge ? el('span', { 'class': 'badge', texte: 'Conseillée' }) : null,
       el('span', { 'class': 'coupe-nom', texte: c.fr }),
       el('span', { 'class': 'coupe-ligne', texte: c.ligne })
     ]);
     (o.risques || []).forEach(function (r) { carte.appendChild(el('span', { 'class': 'risque', texte: r })); });
+    if (o.impossible) carte.appendChild(el('span', { 'class': 'legende', texte: 'Impossible sans cheveux' }));
     return carte;
   }
 
@@ -1124,15 +1159,20 @@
     var zone = $('#conseillees');
     vider(zone);
     conseillees.forEach(function (c) { zone.appendChild(carteCoupe(c, { badge: true, risques: risques(c, etat.profil) })); });
-    $('#bloc-conseillees').hidden = !avecProfil;
-    $('#titre-toutes').hidden = !avecProfil;
+    /* Aucune coupe possible (ex. salon, tête chauve) : pas de titre vide. */
+    $('#bloc-conseillees').hidden = !avecProfil || !conseillees.length;
+    $('#titre-toutes').hidden = !avecProfil || !conseillees.length;
 
     /* « Autres coupes » : sans répéter les conseillées. */
     var grille = $('#grille-coupes');
     vider(grille);
     liste.forEach(function (c) {
       if (conseillees.indexOf(c) >= 0) return;
-      grille.appendChild(carteCoupe(c, { risques: avecProfil ? risques(c, etat.profil) : [] }));
+      var impossible = chauve(etat.profil) && !c.sansLongueur; // tête chauve ou rasée : seulement les coupes sans longueur
+      grille.appendChild(carteCoupe(c, {
+        risques: avecProfil && !impossible ? risques(c, etat.profil) : [],
+        impossible: impossible
+      }));
     });
     $('#ajout-type').hidden = !!etat.mode;
     fermerAjout();
@@ -1416,12 +1456,21 @@
     if (horsBarbe.length && barbeSeule(x)) {
       liste.push('« Barbe seule » est choisi dans les réglages : seules les caractéristiques de barbe partent dans le prompt.');
     }
+    if (horsBarbe.length && chauve(etat.profil)) {
+      liste.push('Tête chauve ou rasée : seules les caractéristiques de barbe sont possibles. Retire les autres.');
+    }
+    if (decolorationNecessaire(x.reglages, x)) liste.push(ALERTE_DECOLORATION.texte);
     return liste;
   }
 
   function synchroniserPersonnalise() {
     tous('#categories [data-caracteristique]').forEach(function (b) {
-      b.setAttribute('aria-pressed', String(etat.caracteristiques.indexOf(b.getAttribute('data-caracteristique')) >= 0));
+      var choisie = etat.caracteristiques.indexOf(b.getAttribute('data-caracteristique')) >= 0;
+      b.setAttribute('aria-pressed', String(choisie));
+      /* Tête chauve ou rasée : seules les caractéristiques de barbe ; une carte déjà choisie reste touchable pour la retirer. */
+      var impossible = chauve(etat.profil) && b.getAttribute('data-categorie') !== 'barbe' && !choisie;
+      b.disabled = impossible;
+      $('.legende', b).hidden = !impossible;
     });
     var champ = $('#couleur-libre');
     $('#bloc-couleur-libre').hidden = etat.caracteristiques.indexOf('couleur-libre') < 0;
@@ -1462,8 +1511,9 @@
     K.categories.forEach(function (categorie) {
       var grille = el('div', { 'class': 'coupes' });
       categorie.liste.forEach(function (c) {
-        grille.appendChild(el('button', { type: 'button', 'class': 'carte coupe', 'data-caracteristique': c.id, 'aria-pressed': 'false' }, [
-          el('span', { 'class': 'coupe-nom', texte: c.fr })
+        grille.appendChild(el('button', { type: 'button', 'class': 'carte coupe', 'data-caracteristique': c.id, 'data-categorie': categorie.id, 'aria-pressed': 'false' }, [
+          el('span', { 'class': 'coupe-nom', texte: c.fr }),
+          el('span', { 'class': 'legende', texte: 'Impossible sans cheveux', hidden: true })
         ]));
       });
       zone.appendChild(el('div', {}, [el('h2', { texte: categorie.nom }), grille]));
@@ -2068,6 +2118,7 @@
     descAnglaise: descAnglaise,
     changementDemande: changementDemande,
     couleurDemandee: couleurDemandee,
+    decolorationNecessaire: decolorationNecessaire,
     coupePourDiagnostic: coupePourDiagnostic,
     reglagesParDefaut: reglagesParDefaut,
     coupeDuCatalogue: coupeDuCatalogue,

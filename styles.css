@@ -435,6 +435,12 @@ button.carte {
   overflow-wrap: break-word;
 }
 
+.coupe:disabled {
+  border-style: dashed;
+  color: var(--texte-2);
+  cursor: not-allowed;
+}
+
 .coupe-ligne {
   color: var(--texte-2);
 }

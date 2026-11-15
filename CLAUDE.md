@@ -92,6 +92,7 @@ Trois gros boutons : « Catalogue coupe », « Catalogue personnalisé », « Ca
 - Cartes texte compactes, grille de 2 colonnes : nom (police des titres du thème), une ligne de description, badges. Plus de silhouettes : on voit plus de coupes sans défiler.
 - Si le profil est rempli : en haut, « Conseillées pour ce client », 3 coupes avec le badge « Conseillée » (règles en section 7). Puis « Autres coupes », SANS répéter les coupes conseillées.
 - 12 coupes du mode actif (section 5). Thème neutre : 6 barber et 6 salon mêlées.
+- Profil « Chauve / rasé » : seules les coupes sans longueur (buzz cut) restent actives ; les autres sont grisées avec « Impossible sans cheveux ». La barbe seule reste possible depuis les réglages du buzz cut. Une coupe déjà choisie avant n'est jamais effacée, et Réglages affiche l'avertissement « Impossible sans cheveux ».
 - Si le profil rend la coupe risquée, la carte porte un badge d'avertissement court : « Golfes », « Lissage nécessaire », « Pousse nécessaire ».
 - Toucher une carte ouvre directement Réglages. Si cette coupe a déjà été réglée pour ce client, ses réglages sont retrouvés.
 - Bouton secondaire « Ajouter ma coupe » : nom + description libre en français + description anglaise facultative. Enregistrée en localStorage, affichée en fin de grille.
@@ -109,6 +110,7 @@ Trois gros boutons : « Catalogue coupe », « Catalogue personnalisé », « Ca
 Magazine de caractéristiques (section 13), en cartes texte comme le Catalogue coupe (nom seul, plus de pictogrammes), par catégorie. Sélection multiple.
 - Deux usages : ajouter des caractéristiques à la coupe choisie, ou partir uniquement des caractéristiques (coupe 100 % personnalisée).
 - Si une coupe est choisie, un choix « Coupe de départ » (la coupe / Aucune) dit si elle sert de base. « Aucune » ne l'efface pas.
+- Profil « Chauve / rasé » : seules les caractéristiques de barbe restent actives ; les autres sont grisées avec « Impossible sans cheveux » (une carte déjà choisie reste touchable pour la retirer).
 - **Groupes exclusifs** (section 13) : choisir une caractéristique d'un groupe déjà occupé ne l'ajoute pas tout de suite. Un message dans la page dit ce qui entre en conflit et propose « Garder X » / « Garder Y ». Jamais de `confirm()`.
 - **RÈGLE : le prompt final ne contient jamais deux consignes contradictoires pour une même zone.** Une caractéristique remplace la coupe et les réglages de son emplacement ; un test le vérifie sur toutes les paires de chaque groupe.
 - Bouton principal « Voir le résultat ».
@@ -147,6 +149,7 @@ Avant le 15 novembre, les fragments des réglages s'ajoutaient à la fin de la d
 - Coupe ajoutée (« Ajouter ma coupe ») : « <nom> : <description> », puis les zones des réglages et caractéristiques.
 - Coupe 100 % personnalisée : « Custom haircut », puis les zones.
 - Barbe seule : seulement « Beard: … ».
+- **Density** (décision du 15 novembre, tests série 3) : si le profil dit Golfes marqués, Clairsemés ou Chauve / rasé, [COUPE] finit toujours par « Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original » (aussi en barbe seule et sans coupe de départ).
 - **Front toujours écrit** (décision du 15 novembre) : sans frange, mèche ni coiffage du devant (coupe, réglage ou caractéristique), Front = « no fringe, forehead uncovered, keep the front as in the original ». Barber et salon, coupe 100 % personnalisée comprise.
 - Le résumé français (diagnostic et barre du bas) suit le même ordre de zones.
 
@@ -251,7 +254,7 @@ Le profil se remplit en premier (page 4.2), mais reste facultatif.
 Questions (une ligne chacune, boutons à bascule) :
 - Texture : Lisses · Ondulés · Bouclés · Crépus
 - Visage : Ovale · Rond · Carré · Allongé
-- Ligne frontale et densité : Normale · Golfes légers · Golfes marqués · Cheveux fins (salon)
+- Ligne frontale et densité : Normale · Golfes légers · Golfes marqués · Clairsemés · Chauve / rasé · Cheveux fins (salon)
 - Longueur actuelle : Courte · Moyenne · Longue
 - Lunettes : Oui · Non
 
@@ -273,6 +276,8 @@ Avertissements complets, affichés sur la page Réglages (bloc « alerte » selo
 - **Changement radical** : passage de Longue à Courte. « Plus de 10 cm coupés : changement radical, plusieurs mois pour revenir en arrière. »
 - **Cheveux fins** (salon) : profil « Cheveux fins » avec couches marquées, shag ou wolf cut. « Garder du volume en haut : une coupe très dégradée aplatit la forme. »
 - **Lunettes** : « Vérifie le contour d'oreille avec les lunettes remises. »
+- **Impossible sans cheveux** : profil Chauve / rasé et coupe avec longueur. « Sur une tête chauve ou rasée, seuls le buzz cut et la barbe seule sont possibles. »
+- **Décoloration** : couleur fantaisie ou fort éclaircissement (platine, mèches blondes, pointes décolorées, couleur libre contenant blond, platinum, silver, grey, pastel, pink, blue, green, purple…). « Sur cheveux foncés : nécessite une décoloration, souvent en plusieurs séances. » Aussi affiché dans le Catalogue personnalisé.
 - **Changement léger** : longueur demandée dans la même classe que la longueur actuelle (courte / moyenne / longue). « Changement léger : le rendu sera peu visible. »
 
 ## 8. Catalogue fond (remplace l'ancien écran Fond)
@@ -395,11 +400,16 @@ Décidé par Antoine (15 novembre, ajustements) :
 - La ligne d'exception ne vient que d'un choix de l'utilisateur, jamais du texte par défaut de la coupe ; accord « that change » / « those changes ».
 - Préréglages de hauteur et de sabot du haut validés (skin fade mi, 0 → 2 ; crop texturé mi, 0,5 → 2 ; quiff mi, 1 → 3 ; dégradé bouclé mi, 0,5 → 2 ; mulet moderne bas, 1 → 3).
 
+Décidé par Antoine (15 novembre, tests série 3) :
+- Densité : « Clairsemés » et « Chauve / rasé » ; ligne Density dans [COUPE] ; tête chauve = buzz cut, barbe seule et caractéristiques de barbe seulement.
+- Avertissement décoloration pour une couleur fantaisie ou un fort éclaircissement.
+
 Décidé par Antoine (15 novembre, suite) :
 - Coupe + couleur = 2 étapes (Image sans Color, puis Couleur sur l'image générée).
 - Avertissement « Changement léger » quand la longueur demandée est proche de la longueur actuelle.
 
 Choix faits par Claude, à confirmer :
+- **Décoloration** : le profil ne demande pas la couleur actuelle des cheveux (5 questions au plus) ; l'avertissement dit donc « Sur cheveux foncés : … » au lieu de deviner. Couleurs concernées : voir section 7.
 - **Étape Couleur** : « Strict rules » rédigées par Claude ; [COULEUR] sans « change to » ; placée entre Image et Fiche.
 - **« Proche de la longueur actuelle »** : même classe de longueur (courte / moyenne / longue, seuils de l'avertissement Pousse).
 - **Nom anglais du dégradé bouclé** : « Curly top with a fade », pour ne pas contredire la hauteur.

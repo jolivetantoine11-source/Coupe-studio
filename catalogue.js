@@ -186,7 +186,8 @@
      zones  : texte anglais de la coupe, emplacement par emplacement (CLAUDE.md, section 5)
      reglages : valeurs de départ des réglages, cohérentes avec les zones
      classe : longueur de la coupe quand le curseur est vide (sert aux avertissements)
-     lisse  : coupe qui demande des cheveux lisses      front : coupe qui dégage le front */
+     lisse  : coupe qui demande des cheveux lisses      front : coupe qui dégage le front
+     sansLongueur : coupe possible sur une tête chauve ou rasée (profil « Chauve / rasé ») */
   function coupe(mode, id, fr, ligne, en, zones, reglages, plus) {
     var c = { id: id, mode: mode, fr: fr, ligne: ligne, en: en, zones: zones, recette: reglages || {} };
     for (var k in plus) { if (Object.prototype.hasOwnProperty.call(plus, k)) c[k] = plus[k]; }
@@ -196,7 +197,7 @@
   var COUPES = [
     coupe('barber', 'buzz-cut', 'Buzz cut', 'Tondeuse sur toute la tête', 'Buzz cut',
       { 'sides.guard': 'clipper guard 2 (6 mm)', 'top.length': 'clipper guard 2 (6 mm), even all over', 'nape.edges': 'natural hairline kept' },
-      { sabot: '2', dessus: 1, contours: 'naturels' }),
+      { sabot: '2', dessus: 1, contours: 'naturels' }, { sansLongueur: true }),
     coupe('barber', 'crew-cut', 'Crew cut', 'Court, dessus un peu plus long', 'Crew cut',
       { 'sides.style': 'short and tapered', 'sides.guard': 'clipper guard 2', 'top.length': '2-3 cm', 'front.style': 'slightly longer than the rest of the top' },
       { cotes: 'taper', sabot: '2', dessus: 3 }),

@@ -140,13 +140,14 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('visage allongé : crop et crew cut, pas de quiff', regles.allonge.startsWith('crop-texture,crew-cut') && !regles.allonge.includes('quiff'));
 
   /* ============ C. Réglages ============ */
+  /* Le profil de la section B a « Golfes marqués » : [COUPE] finit donc par la ligne Density. */
   console.log('C. Réglages d’une coupe : [COUPE] structurée par zone, coiffage par zone, barbe seule');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   verifier('toucher une coupe ouvre directement Réglages', await ecran(page), 'reglages');
   verifier('titre = nom de la coupe', await texte(page, '#titre-reglages'), 'Skin fade');
   verifier('résumé de départ', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0, dessus 5 cm');
   verifier('[COUPE] structurée par zone, nom anglais en tête', await desc(page),
-    'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original');
+    'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original');
   verifier('réglages barber, coiffage par zone', (await page.$$eval('#zone-reglages .etiquette', (e) => e.map((x) => x.textContent))).join(' | '),
     'Côtés | Hauteur | Sabot du bas | Dessus | Coiffage, devant et frange | Coiffage, dessus | Contours | Barbe');
   verifier('zone devant : 4 choix', (await page.$$eval('[data-reglage="devant"]', (b) => b.map((x) => x.textContent))).join(' · '), 'Vers l’avant · Relevé · Sur le côté · En arrière');
@@ -158,7 +159,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-reglage="hauteur"][data-valeur="haut"]');
   verifier('retoucher la hauteur ne la retire pas', await presse(page, '[data-reglage="hauteur"][data-valeur="haut"]'), 'true');
   await page.click('[data-reglage="sabot"][data-valeur="0.5"]');
-  verifier('[COUPE] « skin fade, sabot 0,5, hauteur Haut » : fade, seul X change, le nom suit', await desc(page), 'Fade. Sides: high fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original');
+  verifier('[COUPE] « skin fade, sabot 0,5, hauteur Haut » : fade, seul X change, le nom suit', await desc(page), 'Fade. Sides: high fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original');
   verifier('sabot 0,5 : Côtés passe tout seul à « Dégradé », le résumé suit', (await presse(page, '[data-reglage="cotes"][data-valeur="degrade"]')) + ' / ' + (await texte(page, '#resume-reglages')), 'true / Dégradé haut, sabot 0,5, dessus 5 cm');
   await page.click('[data-reglage="sabot"][data-valeur="0"]');
   verifier('sabot 0 : retour au skin fade et au nom « Skin fade »', (await presse(page, '[data-reglage="cotes"][data-valeur="blanc"]')) + ' / ' + (await desc(page)).split('. ').slice(0, 2).join('. '), 'true / Skin fade. Sides: high skin fade, from guard 0 at the bottom to guard 2 at the top');
@@ -168,7 +169,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('côtés en taper : Hauteur cachée, le sabot reprend son texte', (await page.isHidden('#reglage-hauteur')) + ' / ' + (await desc(page)).split('. ')[1], 'true / Sides: low taper, starting at clipper guard 0.5 at the bottom');
   await page.click('[data-reglage="cotes"][data-valeur="blanc"]');
   await page.click('[data-reglage="hauteur"][data-valeur="mi"]');
-  verifier('retour aux réglages de la coupe', await desc(page), 'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original');
+  verifier('retour aux réglages de la coupe', await desc(page), 'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original');
   const degrades = await page.evaluate(() => ['crop-texture', 'quiff', 'degrade-boucle', 'mulet-moderne'].map((id) => {
     const A = window.CoupeStudio;
     const c = A.coupeDuCatalogue(id);
@@ -178,12 +179,12 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-reglage="sabot"][data-valeur="0.5"]');
   await page.click('[data-reglage="barbe"][data-valeur="entretenue"]');
   verifier('résumé', await texte(page, '#resume-reglages'), 'Dégradé mi-hauteur, sabot 0,5, dessus 5 cm, barbe entretenue');
-  const BASE = 'Fade. Sides: mid fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original. Beard: well-groomed with clean cheek lines';
+  const BASE = 'Fade. Sides: mid fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original. Beard: well-groomed with clean cheek lines. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original';
   verifier('le sabot ne remplace que X (plus d’ambiguïté)', await desc(page), BASE);
   await page.click('[data-reglage="devant"][data-valeur="releve"]');
   await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
   verifier('chaque réglage écrit dans sa zone', await desc(page),
-    'Fade. Sides: mid fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, messy and textured. Front: lifted up. Beard: well-groomed with clean cheek lines');
+    'Fade. Sides: mid fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, messy and textured. Front: lifted up. Beard: well-groomed with clean cheek lines. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original');
   verifier('résumé dans l’ordre des zones', await texte(page, '#resume-reglages'), 'Dégradé mi-hauteur, sabot 0,5, dessus 5 cm, décoiffé, devant relevé, barbe entretenue');
   /* Chaque option de chaque réglage s'écrit dans la zone de son emplacement, et une seule fois. */
   const options = await page.evaluate(() => {
@@ -251,11 +252,11 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('barbe seule : pas d’avertissement sur les cheveux', cas.barbeSeule, '');
   verifier('« Barbe seule » est dans le groupe Barbe, toujours visible', (await texte(page, '#reglage-barbe [data-barbe-seule]')) + ' / ' + (await page.isVisible('#reglage-barbe [data-barbe-seule]')), 'Barbe seule (ne pas toucher aux cheveux) / true');
   await page.click('[data-barbe-seule="oui"]');
-  verifier('barbe seule : résumé et [COUPE]', (await texte(page, '#resume-reglages')) + ' / ' + (await desc(page)), 'Barbe seule : barbe entretenue, cheveux inchangés / Beard: well-groomed with clean cheek lines');
+  verifier('barbe seule : résumé et [COUPE]', (await texte(page, '#resume-reglages')) + ' / ' + (await desc(page)), 'Barbe seule : barbe entretenue, cheveux inchangés / Beard: well-groomed with clean cheek lines. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original');
   await page.click('#action-reglages');
   verifier('« Voir le résultat » ouvre Résultat', await ecran(page), 'resultat');
   verifier('barbe seule : ligne de la variante ajoutée à la fin du prompt image', await page.textContent('#prompt-2'),
-    avec(IMAGE, '[COUPE]', 'Beard: well-groomed with clean cheek lines') + '\n' + BARBE_SEULE);
+    avec(IMAGE, '[COUPE]', 'Beard: well-groomed with clean cheek lines. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original') + '\n' + BARBE_SEULE);
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'reglages');
   await page.click('[data-reglage="barbe"][data-valeur="inchangee"]');
@@ -274,7 +275,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-caracteristique="meche-cote"]');
   await page.click('[data-caracteristique="undercut"]');
   verifier('sélection multiple', (await presse(page, '[data-caracteristique="meche-cote"]')) + (await presse(page, '[data-caracteristique="undercut"]')), 'truetrue');
-  const AVEC_UNDERCUT = 'Skin fade. Sides: undercut, clipped short and disconnected from a longer top. Top: 4-6 cm, textured. Front: a side-swept lock. Beard: well-groomed with clean cheek lines';
+  const AVEC_UNDERCUT = 'Skin fade. Sides: undercut, clipped short and disconnected from a longer top. Top: 4-6 cm, textured. Front: a side-swept lock. Beard: well-groomed with clean cheek lines. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original';
   verifier('la caractéristique remplace la coupe et les réglages de sa zone (sabot compris)', await desc(page), AVEC_UNDERCUT);
   verifier('résumé dans l’ordre des zones', await texte(page, '#resume-personnalise'), 'Skin fade, undercut, dessus 5 cm, mèche sur le côté, barbe entretenue');
   verifier('pas de message sans conflit', (await page.isHidden('#conflit')) && (await page.isHidden('#contradictions')));
@@ -294,7 +295,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-caracteristique="couleur-libre"]');
   verifier('« Couleur libre » sans texte : rien n’est ajouté', (await desc(page)).includes('Color:'), false);
   await page.fill('#couleur-libre', 'copper red');
-  verifier('couleur libre : le changement est écrit clairement', (await desc(page)).endsWith('Color: change to copper red. Beard: well-groomed with clean cheek lines'));
+  verifier('couleur libre : le changement est écrit clairement', (await desc(page)).endsWith('Color: change to copper red. Beard: well-groomed with clean cheek lines. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original'));
   await page.click('[data-caracteristique="platine"]');
   await page.click('#garder-nouvelle');
   verifier('une seule couleur à la fois', (await desc(page)).split('. ').filter((p) => p.startsWith('Color:')).join(), 'Color: change to full platinum blonde');
@@ -320,12 +321,12 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('« Modifier » ouvre le Catalogue personnalisé', await ecran(page), 'personnalise');
   await page.click('[data-caracteristique="dessus-decoiffe"]');
   await page.click('[data-base="non"]');
-  verifier('« Aucune » : coupe 100 % personnalisée', await desc(page), 'Custom haircut. Front: a side-swept lock');
+  verifier('« Aucune » : coupe 100 % personnalisée', await desc(page), 'Custom haircut. Front: a side-swept lock. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original');
   verifier('résumé sans coupe de départ', await texte(page, '#resume-personnalise'), 'Coupe personnalisée : mèche sur le côté');
   verifier('« Aucune » n’efface pas la coupe', await page.evaluate(() => window.CoupeStudio.etat.coupe.id + ' / ' + window.CoupeStudio.etat.reglages.sabot), 'skin-fade / 0');
   await page.click('#ecran-personnalise .btn');
   verifier('100 % personnalisée : diagnostic', await page.textContent('#prompt-1'), avec(DIAGNOSTIC, '[COUPE]', 'Coupe personnalisée : mèche sur le côté'));
-  verifier('100 % personnalisée : prompt image', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'Custom haircut. Front: a side-swept lock'));
+  verifier('100 % personnalisée : prompt image', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'Custom haircut. Front: a side-swept lock. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original'));
   verifier('100 % personnalisée en mode barber : fiche barber', await page.textContent('#prompt-3'), FICHE_BARBER);
   await page.click('#retour');
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'personnalise');
@@ -335,7 +336,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   /* ============ E. Résultat ============ */
   console.log('E. Résultat : prompts, copie, Gemini, photo de référence');
   const coupeFr = 'Skin fade, sabot 0, dessus 5 cm, mèche sur le côté, barbe entretenue';
-  const coupeEn = 'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: a side-swept lock. Beard: well-groomed with clean cheek lines';
+  const coupeEn = 'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: a side-swept lock. Beard: well-groomed with clean cheek lines. Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original';
   verifier('3 étapes, plus d’étape Fond', (await page.$$eval('#etapes .etape', (e) => e.map((x) => x.textContent))).join(' | '), 'Étape 1 · Diagnostic | Étape 2 · Image | Étape 3 · Fiche');
   verifier('étape 1 = prompt diagnostic, [COUPE] en français', await page.textContent('#prompt-1'), avec(DIAGNOSTIC, '[COUPE]', coupeFr));
   verifier('étape 2 = prompt image, [COUPE] en anglais, ligne d’exception car la barbe change', await page.textContent('#prompt-2'), imageAvec(coupeEn, 'a beard change'));

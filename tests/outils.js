@@ -69,7 +69,8 @@ const VARIANTES = {
   catalogue: [
     { nom: 'catalogue' },
     { nom: 'catalogue-sans-profil', graine: (g) => { g.session['coupe-studio:session'].p = {}; } },
-    { nom: 'catalogue-ajout', action: async (page) => { await page.click('#ouvrir-ajout'); } }
+    { nom: 'catalogue-ajout', action: async (page) => { await page.click('#ouvrir-ajout'); } },
+    { nom: 'catalogue-chauve', graine: (g) => { g.session['coupe-studio:session'].p.front = 'chauve'; } }
   ],
   reglages: [
     { nom: 'reglages' },
@@ -85,7 +86,11 @@ const VARIANTES = {
     { nom: 'personnalise-conflit', graine: (g) => {
       const s = g.session['coupe-studio:session'];
       s.b = false; s.k = ['undercut', 'couleur-libre', 'lisse']; s.kl = 'copper red';
-    }, action: async (page) => { await page.click('[data-caracteristique="rase-cote"]'); } }
+    }, action: async (page) => { await page.click('[data-caracteristique="rase-cote"]'); } },
+    { nom: 'personnalise-chauve', graine: (g) => {
+      const s = g.session['coupe-studio:session'];
+      s.p.front = 'chauve'; s.k = ['moustache', 'platine'];
+    } }
   ],
   resultat: [
     { nom: 'resultat' },

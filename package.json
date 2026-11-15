@@ -4,7 +4,7 @@
   "private": true,
   "description": "Coupe Studio (V1) : site statique, aucune dépendance à l'exécution. Playwright ne sert qu'aux tests.",
   "scripts": {
-    "test": "node tests/prompts.test.js && node tests/tableaux.js && node tests/contradictions.test.js && node tests/retour.test.js && node tests/parcours.test.js && node tests/contraste.test.js && node tests/design.test.js",
+    "test": "node tests/prompts.test.js && node tests/tableaux.js && node tests/contradictions.test.js && node tests/densite.test.js && node tests/retour.test.js && node tests/parcours.test.js && node tests/contraste.test.js && node tests/design.test.js",
     "captures": "node tests/captures.js"
   },
   "devDependencies": {

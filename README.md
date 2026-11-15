@@ -43,6 +43,7 @@ Les tests demandent Node et Playwright (une seule fois : `npm install` puis `npx
 |---|---|
 | `node tests/prompts.test.js` | `prompts.js` est identique à `PROMPTS.md` (dont le diagnostic salon) et à `CLAUDE.md` section 8, caractère pour caractère |
 | `node tests/tableaux.js` | Les tableaux de `CLAUDE.md` correspondent aux fichiers de données |
+| `node tests/densite.test.js` | Densité faible (ligne Density), tête chauve (coupes et caractéristiques grisées), avertissement décoloration |
 | `node tests/contradictions.test.js` | Jamais deux consignes contraires dans une même zone : toutes les paires de chaque groupe, et chaque réglage face aux caractéristiques |
 | `node tests/retour.test.js` | Revenir en arrière (3 fois, puis en avant) ne perd aucun choix ; flèche, glissement, rechargement, « Nouveau client » |
 | `node tests/parcours.test.js` | Tout le parcours marche : profil, coupes conseillées, réglages, caractéristiques, prompts, retouches photo |

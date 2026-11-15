@@ -85,7 +85,10 @@ verifier('diagnostic salon assemblé', PROMPTS.diagnostic(COUPE, 'salon'), R_DIA
 verifier('image assemblée', PROMPTS.image(DESC, false), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('image + barbe seule', PROMPTS.image(DESC, true), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
 [['barbe', 'a beard change', 'that change'], ['texture', 'a texture change', 'that change'], ['barbe-texture', 'a beard change and a texture change', 'those changes']].forEach(([cle, valeur, accord]) => {
-  verifier('image + exception ' + cle + ' (« ' + accord + ' »)', PROMPTS.image(DESC, false, cle), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_EXCEPTION.split('[CHANGEMENT]').join(valeur).split('[CE_CHANGEMENT]').join(accord));
+  const ligne = R_EXCEPTION.split('[CHANGEMENT]').join(valeur).split('[CE_CHANGEMENT]').join(accord);
+  const image = R_IMAGE.split('[COUPE]').join(DESC);
+  const attendu = cle === 'barbe' ? image + '\n' + ligne : image.replace('\nStrict rules:\n', '\n' + ligne + '\nStrict rules:\n');
+  verifier('image + exception ' + cle + ' (« ' + accord + ' », ' + (cle === 'barbe' ? 'à la fin' : 'avant « Strict rules »') + ')', PROMPTS.image(DESC, false, cle), attendu);
 });
 verifier('sans barbe ni texture : prompt image inchangé', PROMPTS.image(DESC, false, null), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('barbe seule : pas de ligne d’exception', PROMPTS.image(DESC, true, 'barbe'), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);

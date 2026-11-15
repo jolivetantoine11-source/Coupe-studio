@@ -423,7 +423,10 @@
     return String(texte).replace(/[\s.]+$/, '');
   }
 
-  var FRONT_PAR_DEFAUT = 'no fringe, forehead uncovered, keep the front as in the original';
+  var FRONT_PAR_DEFAUT = 'no fringe, no bangs, no curtain bangs, forehead uncovered as in the original';
+
+  /* Changement de texture choisi : la tête ne doit pas bouger (décision du 15 novembre, tests série 4). */
+  var POSE_TEXTURE = 'Head pose: keep the exact head tilt and rotation of the original; change only the hair texture';
 
   /* Golfes marqués, clairsemés ou chauve : toujours ajouté à la fin de [COUPE] (décision du 15 novembre). */
   var DENSITE_FAIBLE = ['golfes-marques', 'clairsemes', 'chauve'];
@@ -447,6 +450,8 @@
       return en.length ? zone.en + ': ' + sansDoublons(en).join(', ') : null;
     };
     var densite = densiteFaible(x.profil || etat.profil) ? [DENSITE] : [];
+    var changement = changementDemande(x);
+    if (changement === 'texture' || changement === 'barbe-texture') densite.unshift(POSE_TEXTURE);
     if (barbeSeule(x)) return [ligne(zoneBarbe())].concat(densite).join('. ');
     var tete = 'Custom haircut';
     if (x.coupe) tete = x.coupe.perso ? x.coupe.fr + ': ' + sansPointFinal(x.coupe.desc || x.coupe.ligne) : C.nomCoupe(x.coupe, x.reglages).en;
@@ -1646,6 +1651,21 @@
     });
   }
 
+  /* Avertissements de l'écran Résultat (composant Avertissement). */
+  function alertesResultat(x) {
+    var liste = [];
+    var changement = changementDemande(x);
+    if (changement === 'texture' || changement === 'barbe-texture') {
+      liste.push({ titre: 'Changement de texture', texte: 'Vérifie que la tête et le visage n’ont pas bougé. Sinon, relance.' });
+    }
+    var profil = etat.profil;
+    var demandee = x.coupe && !barbeSeule(x) ? longueurDemandee(x.coupe, x.reglages) : null;
+    if (demandee && profil.longueur && RANG_LONGUEUR[demandee] > RANG_LONGUEUR[profil.longueur]) {
+      liste.push({ titre: 'Rallongement', texte: 'Environ 1 cm par mois de pousse. Sinon, extensions.' });
+    }
+    return liste;
+  }
+
   RENDUS.resultat = function () {
     var x = creation();
     var vide = creationVide(x);
@@ -1660,6 +1680,10 @@
     messageResultat('');
     $('#lien-partage').hidden = true;
     fermerConfirmations();
+    var zoneAlertes = $('#alertes-resultat');
+    vider(zoneAlertes);
+    if (!vide) alertesResultat(x).forEach(function (a) { zoneAlertes.appendChild(alerte(a.titre, a.texte)); });
+    zoneAlertes.hidden = !zoneAlertes.firstChild;
     if (vide) return;
     construireEtapes();
     tous('#bloc-reference [data-reference]').forEach(function (b) {
@@ -2117,6 +2141,7 @@
     resume: resume,
     descAnglaise: descAnglaise,
     changementDemande: changementDemande,
+    alertesResultat: alertesResultat,
     couleurDemandee: couleurDemandee,
     decolorationNecessaire: decolorationNecessaire,
     coupePourDiagnostic: coupePourDiagnostic,

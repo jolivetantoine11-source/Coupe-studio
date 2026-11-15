@@ -56,7 +56,7 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
     const c = A.coupeDuCatalogue('buzz-cut');
     return A.descAnglaise({ coupe: c, reglages: A.reglagesParDefaut(c), caracteristiques: [], couleurLibre: '', profil: { front: 'chauve' } });
   });
-  verifier('texte exact, sans point final', exemple, 'Buzz cut. Sides: clipper guard 2 (6 mm). Top: clipper guard 2 (6 mm), even all over. Front: no fringe, forehead uncovered, keep the front as in the original. Neckline: natural hairline kept. ' + DENSITE);
+  verifier('texte exact, sans point final', exemple, 'Buzz cut. Sides: clipper guard 2 (6 mm). Top: clipper guard 2 (6 mm), even all over. Front: no fringe, no bangs, no curtain bangs, forehead uncovered as in the original. Neckline: natural hairline kept. ' + DENSITE);
 
   console.log('3. Chauve / rasé : seulement le buzz cut et la barbe');
   await page.goto(ADRESSE);
@@ -81,7 +81,7 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   await page.click('#vers-caracteristiques');
   const cartes = await page.$$eval('#categories [data-caracteristique]', (c) => c.map((x) => (x.disabled ? 'g' : 'a') + ':' + x.getAttribute('data-categorie')));
   verifier('Catalogue personnalisé : seules les 5 caractéristiques de barbe sont actives', cartes.filter((c) => c.startsWith('a')).join(), 'a:barbe,a:barbe,a:barbe,a:barbe,a:barbe');
-  verifier('les autres sont grisées avec « Impossible sans cheveux »', await page.$$eval('#categories [data-caracteristique]:disabled .legende:not([hidden])', (l) => l.length), 30);
+  verifier('les autres sont grisées avec « Impossible sans cheveux »', await page.$$eval('#categories [data-caracteristique]:disabled .legende:not([hidden])', (l) => l.length), 32);
   await page.click('[data-caracteristique="moustache"]');
   verifier('une caractéristique de barbe se choisit', await page.getAttribute('[data-caracteristique="moustache"]', 'aria-pressed'), 'true');
   /* Une coupe choisie AVANT de répondre « chauve » est gardée (on n'efface jamais un choix). */

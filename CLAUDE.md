@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+Mise à jour série 4 (tests d'Antoine) : Front par défaut, ligne Head pose et exception texture avant « Strict rules: », avertissements « Changement de texture » et « Rallongement » sur Résultat (sections 4.8, 5, 12).
+
 Version du 16 novembre 2026 : hauteur du dégradé barber et ligne d'exception barbe / texture dans le prompt image (sections 6 et 4.8).
 
 Version du 15 novembre 2026, après la deuxième revue d'Antoine : description [COUPE] structurée par zone, groupes de caractéristiques exclusifs, catalogues en texte, éditeur photo à la manière d'Instagram, option « Barbe seule », sélection en bleu dans le thème barber, diagnostic salon.
@@ -121,9 +123,13 @@ Voir section 8. Une page d'entrée présente les deux familles, clairement sépa
 ### 4.8 Résultat
 Les étapes, dans l'ordre, chacune dans une carte :
 1. **Diagnostic** : consigne photo « Photo de face, regard caméra, cheveux bien visibles. », consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
-2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe ou de texture (réglage modifié ou caractéristique, jamais le texte par défaut d'une coupe comme le dégradé bouclé ou le carré bouclé), la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée à la fin, avec « a beard change » / « a texture change » + « Apply only that change », ou « a beard change and a texture change » + « Apply only those changes ». Sinon, le prompt image est inchangé. Sous le prompt image : « Résultat bizarre (tête tournée, frange en trop) ? Relance la génération. »
+2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe ou de texture (réglage modifié ou caractéristique, jamais le texte par défaut d'une coupe comme le dégradé bouclé ou le carré bouclé), la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée (à la fin pour un changement de barbe seul, juste avant « Strict rules: » dès qu'il y a un changement de texture), avec « a beard change » / « a texture change » + « Apply only that change », ou « a beard change and a texture change » + « Apply only those changes ». Sinon, le prompt image est inchangé. Sous le prompt image : « Résultat bizarre (tête tournée, frange en trop) ? Relance la génération. »
 3. **Couleur** (seulement si une couleur est demandée, décision du 15 novembre) : coupe + couleur = 2 étapes. L'étape Image ne contient alors pas la zone Color ; l'étape Couleur (PROMPTS.md, 2b) applique la couleur sur l'image générée. « Poivre et sel gardé » n'est pas un changement : pas d'étape Couleur.
 4. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
+
+Au-dessus des étapes, des avertissements (composant alerte) :
+- **Changement de texture** (lissé, kératine, permanente, défrisage, boucles…, choisi par l'utilisateur) : « Vérifie que la tête et le visage n'ont pas bougé. Sinon, relance. »
+- **Rallongement** (longueur demandée au-dessus de la longueur actuelle du profil) : « Environ 1 cm par mois de pousse. Sinon, extensions. »
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
 
@@ -150,7 +156,8 @@ Avant le 15 novembre, les fragments des réglages s'ajoutaient à la fin de la d
 - Coupe 100 % personnalisée : « Custom haircut », puis les zones.
 - Barbe seule : seulement « Beard: … ».
 - **Density** (décision du 15 novembre, tests série 3) : si le profil dit Golfes marqués, Clairsemés ou Chauve / rasé, [COUPE] finit toujours par « Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original » (aussi en barbe seule et sans coupe de départ).
-- **Front toujours écrit** (décision du 15 novembre) : sans frange, mèche ni coiffage du devant (coupe, réglage ou caractéristique), Front = « no fringe, forehead uncovered, keep the front as in the original ». Barber et salon, coupe 100 % personnalisée comprise.
+- **Head pose** (décision du 15 novembre, série 4) : sur un changement de texture choisi par l'utilisateur, [COUPE] finit par « Head pose: keep the exact head tilt and rotation of the original; change only the hair texture » (avant la ligne Density s'il y en a une).
+- **Front toujours écrit** (décision du 15 novembre) : sans frange, mèche ni coiffage du devant (coupe, réglage ou caractéristique), Front = « no fringe, no bangs, no curtain bangs, forehead uncovered as in the original ». Barber et salon, coupe 100 % personnalisée comprise.
 - Le résumé français (diagnostic et barre du bas) suit le même ordre de zones.
 
 ### Zones et emplacements
@@ -408,7 +415,14 @@ Décidé par Antoine (15 novembre, suite) :
 - Coupe + couleur = 2 étapes (Image sans Color, puis Couleur sur l'image générée).
 - Avertissement « Changement léger » quand la longueur demandée est proche de la longueur actuelle.
 
+Décidé par Antoine (15 novembre, série 4) :
+- Front par défaut : « no fringe, no bangs, no curtain bangs, forehead uncovered as in the original ».
+- Changement de texture : ligne Head pose dans [COUPE], ligne d'exception avant « Strict rules: », avertissement « Changement de texture » sur Résultat.
+- Avertissement « Rallongement » sur Résultat.
+
 Choix faits par Claude, à confirmer :
+- **Kératine et Défrisage** ajoutés aux caractéristiques de texture (groupe exclusif texture), pour couvrir la liste d'Antoine.
+- **Exception barbe seule** : sans changement de texture, la ligne reste à la fin du prompt image. Avec texture (seule ou avec barbe), elle passe avant « Strict rules: » ; elle dit toujours « the rules above », alors que les règles sont désormais en dessous : à reformuler si Antoine le souhaite.
 - **Décoloration** : le profil ne demande pas la couleur actuelle des cheveux (5 questions au plus) ; l'avertissement dit donc « Sur cheveux foncés : … » au lieu de deviner. Couleurs concernées : voir section 7.
 - **Étape Couleur** : « Strict rules » rédigées par Claude ; [COULEUR] sans « change to » ; placée entre Image et Fiche.
 - **« Proche de la longueur actuelle »** : même classe de longueur (courte / moyenne / longue, seuils de l'avertissement Pousse).
@@ -466,6 +480,8 @@ Chaque caractéristique choisie écrit son texte anglais dans son emplacement de
 | Texture | Lissé | Texture / texture | `straightened and sleek` | texture |
 | Texture | Twists | Texture / texture | `short twists` | texture |
 | Texture | Vanilles | Texture / texture | `two-strand twists` | texture |
+| Texture | Kératine | Texture / texture | `keratin-smoothed, sleek and frizz-free` | texture |
+| Texture | Défrisage | Texture / texture | `chemically relaxed and straightened` | texture |
 | Barbe | Taillée courte | Beard / style | `trimmed short and neat` | barbe |
 | Barbe | Dégradé dans la barbe | Beard / style | `faded into the sideburns` | barbe |
 | Barbe | Rasée | Beard / style | `clean-shaven` | barbe ; pas avec moustache, bouc |
@@ -489,7 +505,7 @@ Une seule caractéristique par groupe. En choisir une deuxième ouvre un message
 | côtés | rasé sur un côté / undercut / dégradé à blanc |
 | frange | frange courte droite / frange rideau / mèche longue devant |
 | couleur | platine / mèches blondes / balayage / pointes décolorées / reflets cuivrés / poivre et sel gardé / couleur libre |
-| texture | lissé / boucles définies / ondulations / permanente / twists / vanilles |
+| texture | lissé / boucles définies / ondulations / permanente / twists / vanilles / kératine / défrisage |
 | barbe | rasée / taillée courte / dégradé dans la barbe |
 | nuque | nuque dégagée / nuque arrondie / nuque carrée |
 | barbe (paire) | rasée / moustache |

@@ -235,7 +235,12 @@
     var t = remplacer(TEXTES.image, '[COUPE]', descAnglaise);
     if (barbeSeule) return t + '\n' + TEXTES.barbeSeule;
     var c = CHANGEMENTS[changement];
-    if (c) t += '\n' + remplacer(remplacer(TEXTES.exception, '[CHANGEMENT]', c[0]), '[CE_CHANGEMENT]', c[1]);
+    if (!c) return t;
+    var ligne = remplacer(remplacer(TEXTES.exception, '[CHANGEMENT]', c[0]), '[CE_CHANGEMENT]', c[1]);
+    /* Changement de texture : la ligne va juste avant « Strict rules: » (décision du 15 novembre, tests série 4).
+       Barbe seule : elle reste à la fin. */
+    if (changement === 'texture' || changement === 'barbe-texture') return t.replace('\nStrict rules:\n', '\n' + ligne + '\nStrict rules:\n');
+    t += '\n' + ligne;
     return t;
   }
 

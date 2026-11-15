@@ -60,7 +60,9 @@
       c('permanente', 'Permanente', 'permed curls', { slot: 'texture.texture' }),
       c('lisse', 'Lissé', 'straightened and sleek', { slot: 'texture.texture' }),
       c('twists', 'Twists', 'short twists', { slot: 'texture.texture' }),
-      c('vanilles', 'Vanilles', 'two-strand twists', { slot: 'texture.texture' })
+      c('vanilles', 'Vanilles', 'two-strand twists', { slot: 'texture.texture' }),
+      c('keratine', 'Kératine', 'keratin-smoothed, sleek and frizz-free', { slot: 'texture.texture' }),
+      c('defrisage', 'Défrisage', 'chemically relaxed and straightened', { slot: 'texture.texture' })
     ] },
     { id: 'barbe', nom: 'Barbe', liste: [
       c('barbe-courte', 'Taillée courte', 'trimmed short and neat', { slot: 'beard.style' }, { res: 'barbe taillée courte' }),
@@ -83,7 +85,7 @@
     { id: 'cotes', nom: 'côtés', ids: ['rase-cote', 'undercut', 'degrade-blanc'] },
     { id: 'frange', nom: 'frange', ids: ['frange-courte', 'frange-rideau', 'meche-longue'] },
     { id: 'couleur', nom: 'couleur', ids: ['platine', 'meches-blondes', 'balayage', 'pointes-decolorees', 'reflets-cuivres', 'poivre-sel', 'couleur-libre'] },
-    { id: 'texture', nom: 'texture', ids: ['lisse', 'boucles', 'ondulations', 'permanente', 'twists', 'vanilles'] },
+    { id: 'texture', nom: 'texture', ids: ['lisse', 'boucles', 'ondulations', 'permanente', 'twists', 'vanilles', 'keratine', 'defrisage'] },
     { id: 'barbe', nom: 'barbe', ids: ['barbe-rasee', 'barbe-courte', 'barbe-degradee'] },
     { id: 'nuque', nom: 'nuque', ids: ['nuque-degagee', 'nuque-arrondie', 'nuque-carree'] }
   ];

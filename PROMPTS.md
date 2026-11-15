@@ -104,7 +104,7 @@ Change ONLY the beard as described, keep the hair on top exactly as it is.
 
 ### Variante exception barbe / texture
 
-Ajoutée le 16 novembre 2026 à la demande d'Antoine. Ajoutée à la fin du prompt image (sur une nouvelle ligne) quand l'utilisateur a choisi un changement dans la zone Beard (hors barbe seule) ou dans la zone Texture. [CHANGEMENT] vaut « a beard change », « a texture change » ou « a beard change and a texture change ». [CE_CHANGEMENT] s'accorde (mise à jour du 15 novembre) : « that change » pour un seul changement, « those changes » pour deux. Seul un choix de l'utilisateur (réglage ou caractéristique) déclenche cette ligne, jamais le texte par défaut d'une coupe (dégradé bouclé, carré bouclé). Sinon le prompt image est inchangé.
+Ajoutée le 16 novembre 2026 à la demande d'Antoine. Ajoutée à la fin du prompt image (sur une nouvelle ligne) quand l'utilisateur a choisi un changement dans la zone Beard (hors barbe seule) ou dans la zone Texture. [CHANGEMENT] vaut « a beard change », « a texture change » ou « a beard change and a texture change ». [CE_CHANGEMENT] s'accorde (mise à jour du 15 novembre) : « that change » pour un seul changement, « those changes » pour deux. Place : à la fin du prompt pour un changement de barbe seul ; juste avant « Strict rules: » dès qu'il y a un changement de texture (décision du 15 novembre, tests série 4 ; dans ce cas [COUPE] finit aussi par « Head pose: keep the exact head tilt and rotation of the original; change only the hair texture »). Seul un choix de l'utilisateur (réglage ou caractéristique) déclenche cette ligne, jamais le texte par défaut d'une coupe (dégradé bouclé, carré bouclé). Sinon le prompt image est inchangé.
 
 Ligne ajoutée à la fin du prompt image :
 

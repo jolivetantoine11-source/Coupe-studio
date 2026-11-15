@@ -118,8 +118,8 @@ Voir section 8. Une page d'entrée présente les deux familles, clairement sépa
 
 ### 4.8 Résultat
 Les étapes, dans l'ordre, chacune dans une carte :
-1. **Diagnostic** : consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
-2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe ou de texture (réglage modifié ou caractéristique, jamais le texte par défaut d'une coupe comme le dégradé bouclé ou le carré bouclé), la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée à la fin, avec « a beard change » / « a texture change » + « Apply only that change », ou « a beard change and a texture change » + « Apply only those changes ». Sinon, le prompt image est inchangé.
+1. **Diagnostic** : consigne photo « Photo de face, regard caméra, cheveux bien visibles. », consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
+2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe ou de texture (réglage modifié ou caractéristique, jamais le texte par défaut d'une coupe comme le dégradé bouclé ou le carré bouclé), la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée à la fin, avec « a beard change » / « a texture change » + « Apply only that change », ou « a beard change and a texture change » + « Apply only those changes ». Sinon, le prompt image est inchangé. Sous le prompt image : « Résultat bizarre (tête tournée, frange en trop) ? Relance la génération. »
 3. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
@@ -146,6 +146,7 @@ Avant le 15 novembre, les fragments des réglages s'ajoutaient à la fin de la d
 - Coupe ajoutée (« Ajouter ma coupe ») : « <nom> : <description> », puis les zones des réglages et caractéristiques.
 - Coupe 100 % personnalisée : « Custom haircut », puis les zones.
 - Barbe seule : seulement « Beard: … ».
+- **Front toujours écrit** (décision du 15 novembre) : sans frange, mèche ni coiffage du devant (coupe, réglage ou caractéristique), Front = « no fringe, forehead uncovered, keep the front as in the original ». Barber et salon, coupe 100 % personnalisée comprise.
 - Le résumé français (diagnostic et barre du bas) suit le même ordre de zones.
 
 ### Zones et emplacements

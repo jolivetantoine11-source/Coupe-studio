@@ -183,8 +183,12 @@
   /* Consignes affichées au-dessus de chaque bloc (elles ne sont pas copiées).
      Reprises de PROMPTS.md, sans la phrase « Remplace [COUPE]… » : l'appli le fait déjà. */
   var CONSIGNES = {
+    /* Affichée en tête de l'étape Diagnostic : la photo à prendre. */
+    photo: 'Photo de face, regard caméra, cheveux bien visibles.',
     diagnostic: 'À envoyer en premier, avec le modèle 3.1 Pro et le selfie joint.',
     image: 'À envoyer après le diagnostic, avec le selfie joint. Si le diagnostic propose une alternative, remplace la description de la coupe par la sienne.',
+    /* Affiché sous le prompt image. */
+    apresImage: 'Résultat bizarre (tête tournée, frange en trop) ? Relance la génération.',
     barbeSeule: 'Barbe seule : la ligne qui garde les cheveux intacts est déjà ajoutée à la fin.',
     reference: 'Joins 2 images : le selfie du client, puis la photo de référence.',
     ficheBarber: 'À envoyer avec le modèle 3.1 Pro, en joignant le selfie d’origine (image 1) puis l’image générée (image 2). Ne nomme pas la coupe dans ta demande : écris juste « image 2 ».',

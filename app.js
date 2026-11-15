@@ -423,6 +423,8 @@
     return String(texte).replace(/[\s.]+$/, '');
   }
 
+  var FRONT_PAR_DEFAUT = 'no fringe, forehead uncovered, keep the front as in the original';
+
   /* [COUPE] du prompt image :
      « <nom anglais>. Length: … Sides: … Top: … Front: … Neckline: … Color: … Beard: … »
      Seules les zones qui ont une valeur sont écrites. Pas de point final : le prompt en a un. */
@@ -435,7 +437,11 @@
     if (barbeSeule(x)) return ligne(zoneBarbe());
     var tete = 'Custom haircut';
     if (x.coupe) tete = x.coupe.perso ? x.coupe.fr + ': ' + sansPointFinal(x.coupe.desc || x.coupe.ligne) : C.nomCoupe(x.coupe, x.reglages).en;
-    return [sansPointFinal(tete)].concat(C.zones.map(ligne).filter(Boolean)).join('. ');
+    /* Front toujours écrit (décision du 15 novembre) : sans frange ni mèche choisie, on le dit
+       explicitement, pour que Gemini n'en invente pas. */
+    return [sansPointFinal(tete)].concat(C.zones.map(function (zone) {
+      return ligne(zone) || (zone.id === 'front' ? zone.en + ': ' + FRONT_PAR_DEFAUT : null);
+    }).filter(Boolean)).join('. ');
   }
 
   /* Résumé français en une ligne, dans l'ordre des zones,
@@ -1524,16 +1530,16 @@
     var seule = barbeSeule(x);
     var mode = modePrompts(x);
     var etapes = [{
-      id: 'diagnostic', titre: 'Diagnostic', consigne: P.consignes.diagnostic,
+      id: 'diagnostic', titre: 'Diagnostic', consigne: P.consignes.diagnostic, photo: P.consignes.photo,
       texte: P.diagnostic(coupePourDiagnostic(x), mode), joindre: ['selfie']
     }];
     if (etat.reference) {
-      etapes.push({ id: 'image', titre: 'Image', consigne: P.consignes.reference, texte: P.reference(), joindre: ['selfie', 'reference'] });
+      etapes.push({ id: 'image', titre: 'Image', consigne: P.consignes.reference, texte: P.reference(), joindre: ['selfie', 'reference'], apres: P.consignes.apresImage });
     } else {
       etapes.push({
         id: 'image', titre: 'Image',
         consigne: P.consignes.image + (seule ? ' ' + P.consignes.barbeSeule : ''),
-        texte: P.image(descAnglaise(x), seule, changementDemande(x)), joindre: ['selfie']
+        texte: P.image(descAnglaise(x), seule, changementDemande(x)), joindre: ['selfie'], apres: P.consignes.apresImage
       });
     }
     etapes.push({
@@ -1556,12 +1562,14 @@
       var n = i + 1;
       zone.appendChild(el('div', { 'class': 'carte' }, [
         el('p', { 'class': 'etape', texte: 'Étape ' + n + ' · ' + etape.titre }),
+        etape.photo ? el('p', { 'class': 'consigne carte-titre', texte: etape.photo }) : null,
         el('p', { 'class': 'consigne', texte: etape.consigne }),
         el('pre', { 'class': 'prompt', id: 'prompt-' + n, tabindex: '0', role: 'group', 'aria-label': 'Prompt de l’étape ' + n, texte: etape.texte }),
         el('div', { 'class': 'rangee' }, [
           el('button', { type: 'button', 'class': 'btn-2', 'data-copier': 'prompt-' + n, texte: 'Copier' }),
           el('a', { 'class': 'btn-2', href: ADRESSE_GEMINI, target: '_blank', rel: 'noopener', texte: 'Ouvrir Gemini' })
         ]),
+        etape.apres ? el('p', { 'class': 'consigne discret', texte: etape.apres }) : null,
         el('p', { 'class': 'alerte consigne', id: 'message-prompt-' + n, role: 'alert', hidden: true })
       ]));
     });

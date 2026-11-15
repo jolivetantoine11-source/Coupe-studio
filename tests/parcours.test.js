@@ -146,7 +146,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('titre = nom de la coupe', await texte(page, '#titre-reglages'), 'Skin fade');
   verifier('résumé de départ', await texte(page, '#resume-reglages'), 'Skin fade, sabot 0, dessus 5 cm');
   verifier('[COUPE] structurée par zone, nom anglais en tête', await desc(page),
-    'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured');
+    'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original');
   verifier('réglages barber, coiffage par zone', (await page.$$eval('#zone-reglages .etiquette', (e) => e.map((x) => x.textContent))).join(' | '),
     'Côtés | Hauteur | Sabot du bas | Dessus | Coiffage, devant et frange | Coiffage, dessus | Contours | Barbe');
   verifier('zone devant : 4 choix', (await page.$$eval('[data-reglage="devant"]', (b) => b.map((x) => x.textContent))).join(' · '), 'Vers l’avant · Relevé · Sur le côté · En arrière');
@@ -158,7 +158,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-reglage="hauteur"][data-valeur="haut"]');
   verifier('retoucher la hauteur ne la retire pas', await presse(page, '[data-reglage="hauteur"][data-valeur="haut"]'), 'true');
   await page.click('[data-reglage="sabot"][data-valeur="0.5"]');
-  verifier('[COUPE] « skin fade, sabot 0,5, hauteur Haut » : fade, seul X change, le nom suit', await desc(page), 'Fade. Sides: high fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured');
+  verifier('[COUPE] « skin fade, sabot 0,5, hauteur Haut » : fade, seul X change, le nom suit', await desc(page), 'Fade. Sides: high fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original');
   verifier('sabot 0,5 : Côtés passe tout seul à « Dégradé », le résumé suit', (await presse(page, '[data-reglage="cotes"][data-valeur="degrade"]')) + ' / ' + (await texte(page, '#resume-reglages')), 'true / Dégradé haut, sabot 0,5, dessus 5 cm');
   await page.click('[data-reglage="sabot"][data-valeur="0"]');
   verifier('sabot 0 : retour au skin fade et au nom « Skin fade »', (await presse(page, '[data-reglage="cotes"][data-valeur="blanc"]')) + ' / ' + (await desc(page)).split('. ').slice(0, 2).join('. '), 'true / Skin fade. Sides: high skin fade, from guard 0 at the bottom to guard 2 at the top');
@@ -168,7 +168,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('côtés en taper : Hauteur cachée, le sabot reprend son texte', (await page.isHidden('#reglage-hauteur')) + ' / ' + (await desc(page)).split('. ')[1], 'true / Sides: low taper, starting at clipper guard 0.5 at the bottom');
   await page.click('[data-reglage="cotes"][data-valeur="blanc"]');
   await page.click('[data-reglage="hauteur"][data-valeur="mi"]');
-  verifier('retour aux réglages de la coupe', await desc(page), 'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured');
+  verifier('retour aux réglages de la coupe', await desc(page), 'Skin fade. Sides: mid skin fade, from guard 0 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original');
   const degrades = await page.evaluate(() => ['crop-texture', 'quiff', 'degrade-boucle', 'mulet-moderne'].map((id) => {
     const A = window.CoupeStudio;
     const c = A.coupeDuCatalogue(id);
@@ -178,7 +178,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-reglage="sabot"][data-valeur="0.5"]');
   await page.click('[data-reglage="barbe"][data-valeur="entretenue"]');
   verifier('résumé', await texte(page, '#resume-reglages'), 'Dégradé mi-hauteur, sabot 0,5, dessus 5 cm, barbe entretenue');
-  const BASE = 'Fade. Sides: mid fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Beard: well-groomed with clean cheek lines';
+  const BASE = 'Fade. Sides: mid fade, from guard 0.5 at the bottom to guard 2 at the top. Top: 4-6 cm, textured. Front: no fringe, forehead uncovered, keep the front as in the original. Beard: well-groomed with clean cheek lines';
   verifier('le sabot ne remplace que X (plus d’ambiguïté)', await desc(page), BASE);
   await page.click('[data-reglage="devant"][data-valeur="releve"]');
   await page.click('[data-reglage="coiffage"][data-valeur="decoiffe"]');
@@ -357,7 +357,17 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('étape 3 = fiche barber', await page.textContent('#prompt-3'), FICHE_BARBER);
   verifier('les étapes disent quelles photos joindre (prêt pour la V2)', await page.evaluate(() => window.CoupeStudio.etapesResultat().map((e) => e.id + ':' + e.joindre.join('+')).join(' | ')),
     'diagnostic:selfie | image:selfie | fiche:selfie+image-generee');
-  verifier('chaque carte affiche sa consigne', await page.$$eval('#etapes .consigne:not([hidden])', (c) => c.filter((x) => x.textContent.trim()).length), 3);
+  verifier('chaque carte affiche sa consigne', await page.$$eval('#etapes .carte', (c) => c.filter((x) => x.querySelector('.consigne:not(.discret):not(.carte-titre):not(.alerte)').textContent.trim()).length), 3);
+  verifier('consigne photo avant le diagnostic', await page.$eval('#etapes .carte', (c) => c.querySelector('.consigne').textContent), 'Photo de face, regard caméra, cheveux bien visibles.');
+  verifier('sous le prompt image : relancer si le résultat est bizarre', await page.$eval('#etapes .carte:nth-child(2) .consigne.discret', (p) => p.textContent), 'Résultat bizarre (tête tournée, frange en trop) ? Relance la génération.');
+  const fronts = await page.evaluate(() => {
+    const A = window.CoupeStudio;
+    const front = (id, reglages, k) => { const c = id ? A.coupeDuCatalogue(id) : null; return A.descAnglaise({ coupe: c, reglages: c ? Object.assign(A.reglagesParDefaut(c), reglages) : null, caracteristiques: k, couleurLibre: '' }).split('. ').find((p) => p.startsWith('Front:')) || 'aucune zone Front'; };
+    return [front('skin-fade', {}, []), front('long-droit', {}, []), front(null, {}, ['balayage']), front('crop-texture', {}, []), front('skin-fade', { devant: 'releve' }, []), front('skin-fade', {}, ['meche-cote']), front('carre-droit', { frange: 'rideau' }, []), front('skin-fade', { barbe: 'courte', barbeSeule: true }, [])].join(' | ');
+  });
+  verifier('Front toujours écrit, barber et salon : par défaut « no fringe… », sinon le choix', fronts,
+    ['Front: no fringe, forehead uncovered, keep the front as in the original', 'Front: no fringe, forehead uncovered, keep the front as in the original', 'Front: no fringe, forehead uncovered, keep the front as in the original',
+     'Front: a short straight fringe', 'Front: lifted up', 'Front: a side-swept lock', 'Front: curtain bangs', 'aucune zone Front'].join(' | '));
   const liens = await page.$$eval('#etapes a', (a) => a.map((x) => [x.textContent, x.href, x.target, x.rel].join('|')));
   verifier('« Ouvrir Gemini » : bon lien, nouvel onglet', [...new Set(liens)].join(), 'Ouvrir Gemini|https://gemini.google.com/app|_blank|noopener');
   await page.click('[data-copier="prompt-2"]');
@@ -428,11 +438,11 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('visage carré en salon : carré flou et frange rideau conseillés', (await ids(page, '#conseillees [data-coupe]', 'data-coupe')).slice(0, 2).sort().join(), 'carre-flou,frange-rideau');
   await page.click('#ecran-catalogue [data-coupe="carre-plongeant"]');
   verifier('résumé de départ', await texte(page, '#resume-reglages'), 'Carré plongeant, longueur au menton, 22 cm');
-  verifier('[COUPE] salon : zone Length', await desc(page), 'Angled bob. Length: reaching the chin at the front, shorter at the nape, longer at the front');
+  verifier('[COUPE] salon : zone Length', await desc(page), 'Angled bob. Length: reaching the chin at the front, shorter at the nape, longer at the front. Front: no fringe, forehead uncovered, keep the front as in the original');
   verifier('réglages salon', (await page.$$eval('#zone-reglages .etiquette', (e) => e.map((x) => x.textContent))).join(' | '),
     'Longueur | Longueur en centimètres | Forme | Couches | Frange | Raie | Couleur | Couleur voulue, en anglais');
   await page.click('[data-repere="epaules"]');
-  verifier('repère Épaules : la longueur remplace celle de la coupe', await desc(page), 'Angled bob. Length: shoulder length, about 32 cm, shorter at the nape, longer at the front');
+  verifier('repère Épaules : la longueur remplace celle de la coupe', await desc(page), 'Angled bob. Length: shoulder length, about 32 cm, shorter at the nape, longer at the front. Front: no fringe, forehead uncovered, keep the front as in the original');
   await regler(page, 'curseur-longueur', 50);
   verifier('curseur à 50 cm : le repère suit', (await presse(page, '[data-repere="omoplates"]')) + ' / ' + (await texte(page, '#valeur-longueur')), 'true / 50 cm, aux omoplates');
   await regler(page, 'curseur-longueur', 22);

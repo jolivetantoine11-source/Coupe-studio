@@ -77,7 +77,7 @@
     ].join('\n'),
 
     exception: [
-      "Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only that change as described, and keep every other rule."
+      "Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule."
     ].join('\n'),
 
     reference: [
@@ -205,9 +205,9 @@
   /* Étape 2 : [COUPE] = description anglaise. `barbeSeule` ajoute la ligne de la variante à la fin. */
   /* Valeurs de [CHANGEMENT] dans la ligne d'exception (PROMPTS.md, variante exception barbe / texture). */
   var CHANGEMENTS = {
-    barbe: 'a beard change',
-    texture: 'a texture change',
-    'barbe-texture': 'a beard change and a texture change'
+    barbe: ['a beard change', 'that change'],
+    texture: ['a texture change', 'that change'],
+    'barbe-texture': ['a beard change and a texture change', 'those changes']
   };
 
   /* `barbeSeule` ajoute la ligne de la variante barbe seule.
@@ -215,7 +215,8 @@
   function image(descAnglaise, barbeSeule, changement) {
     var t = remplacer(TEXTES.image, '[COUPE]', descAnglaise);
     if (barbeSeule) return t + '\n' + TEXTES.barbeSeule;
-    if (CHANGEMENTS[changement]) t += '\n' + remplacer(TEXTES.exception, '[CHANGEMENT]', CHANGEMENTS[changement]);
+    var c = CHANGEMENTS[changement];
+    if (c) t += '\n' + remplacer(remplacer(TEXTES.exception, '[CHANGEMENT]', c[0]), '[CE_CHANGEMENT]', c[1]);
     return t;
   }
 

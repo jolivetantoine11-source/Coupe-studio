@@ -45,7 +45,7 @@ NOMS.forEach((nom, i) => {
   verifier(nom, PROMPTS.textes[nom], ref[i]);
 });
 const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_FICHE_B, R_FICHE_S] = ref;
-verifier('ligne d’exception demandée par Antoine', R_EXCEPTION, 'Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only that change as described, and keep every other rule.');
+verifier('ligne d’exception demandée par Antoine (avec accord)', R_EXCEPTION, 'Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule.');
 
 console.log('1b. Diagnostic salon = diagnostic barber avec les 4 seuls remplacements validés par Antoine');
 const REMPLACEMENTS = [
@@ -77,8 +77,8 @@ verifier('diagnostic barber assemblé', PROMPTS.diagnostic(COUPE, 'barber'), R_D
 verifier('diagnostic salon assemblé', PROMPTS.diagnostic(COUPE, 'salon'), R_DIAG_SALON.split('[COUPE]').join(COUPE));
 verifier('image assemblée', PROMPTS.image(DESC, false), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('image + barbe seule', PROMPTS.image(DESC, true), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
-[['barbe', 'a beard change'], ['texture', 'a texture change'], ['barbe-texture', 'a beard change and a texture change']].forEach(([cle, valeur]) => {
-  verifier('image + exception ' + cle, PROMPTS.image(DESC, false, cle), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_EXCEPTION.split('[CHANGEMENT]').join(valeur));
+[['barbe', 'a beard change', 'that change'], ['texture', 'a texture change', 'that change'], ['barbe-texture', 'a beard change and a texture change', 'those changes']].forEach(([cle, valeur, accord]) => {
+  verifier('image + exception ' + cle + ' (« ' + accord + ' »)', PROMPTS.image(DESC, false, cle), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_EXCEPTION.split('[CHANGEMENT]').join(valeur).split('[CE_CHANGEMENT]').join(accord));
 });
 verifier('sans barbe ni texture : prompt image inchangé', PROMPTS.image(DESC, false, null), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('barbe seule : pas de ligne d’exception', PROMPTS.image(DESC, true, 'barbe'), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
@@ -88,7 +88,7 @@ verifier('fiche salon', PROMPTS.fiche('salon'), R_FICHE_S);
 verifier('retouche assemblée : prompt de fond + règle', PROMPTS.retouche(FOND), refFond[0].split('[FOND]').join(FOND) + '\n' + refFond[1]);
 
 console.log('4. Marqueurs');
-[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
+[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['exception', '[CE_CHANGEMENT]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
   ['ficheBarber', '[COUPE]', 0], ['ficheSalon', '[COUPE]', 0]].forEach(([nom, marqueur, n]) => {
   const compte = PROMPTS.textes[nom].split(marqueur).length - 1;
   if (compte === n) console.log('  OK      ' + nom + ' contient ' + n + ' fois ' + marqueur);

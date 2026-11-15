@@ -119,7 +119,7 @@ Voir section 8. Une page d'entrée présente les deux familles, clairement sépa
 ### 4.8 Résultat
 Les étapes, dans l'ordre, chacune dans une carte :
 1. **Diagnostic** : consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
-2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si [COUPE] contient une zone Beard ou une zone Texture, la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée à la fin, avec « a beard change », « a texture change » ou « a beard change and a texture change ». Sans barbe ni texture, le prompt image est inchangé.
+2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe ou de texture (réglage modifié ou caractéristique, jamais le texte par défaut d'une coupe comme le dégradé bouclé ou le carré bouclé), la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée à la fin, avec « a beard change » / « a texture change » + « Apply only that change », ou « a beard change and a texture change » + « Apply only those changes ». Sinon, le prompt image est inchangé.
 3. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
@@ -354,7 +354,7 @@ Pas de compte, pas de serveur, pas de génération d'image dans l'appli, pas de 
 
 - Le nom définitif de l'appli.
 - Le prompt de fond (section 8) n'a jamais été testé. Trois retouches (« Lumière studio douce », « Corriger le contre-jour », « Retirer les cheveux coupés ») ne sont pas des changements de fond : elles tiennent mal dans la phrase « replace ONLY the background with [FOND] », et « Retirer les cheveux coupés » contredit « Keep the person 100% identical: … clothing ». À tester, et à réécrire si Gemini les ignore.
-- Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). La zone Beard (hors barbe seule) et la zone Texture le contredisent : depuis le 16 novembre, la ligne d'exception (PROMPTS.md) le dit à Gemini. À tester sur de vraies photos. Elle se déclenche aussi pour les coupes dont la texture fait partie de la description (dégradé bouclé, carré bouclé).
+- Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). La zone Beard (hors barbe seule) et la zone Texture le contredisent : depuis le 16 novembre, la ligne d'exception (PROMPTS.md) le dit à Gemini. À tester sur de vraies photos. Elle ne se déclenche que sur un choix de l'utilisateur, pas pour le texte par défaut des coupes bouclées.
 - Le découpage coupe → zones (section 5), les textes des réglages (section 6) et des caractéristiques (section 13) sont à relire.
 - Le glissement depuis le bord gauche et l'appui long sur la photo n'ont pas été essayés sur un vrai iPhone.
 
@@ -387,11 +387,15 @@ Décidé par Antoine (16 novembre) :
 - Réglage « Hauteur » du dégradé, sabot 0 = skin fade, sinon fade ; le sabot du bas ne remplace que X.
 - Ligne d'exception barbe / texture à la fin du prompt image (PROMPTS.md).
 
+Décidé par Antoine (15 novembre, ajustements) :
+- La ligne d'exception ne vient que d'un choix de l'utilisateur, jamais du texte par défaut de la coupe ; accord « that change » / « those changes ».
+- Préréglages de hauteur et de sabot du haut validés (skin fade mi, 0 → 2 ; crop texturé mi, 0,5 → 2 ; quiff mi, 1 → 3 ; dégradé bouclé mi, 0,5 → 2 ; mulet moderne bas, 1 → 3).
+
 Choix faits par Claude, à confirmer :
-- **Hauteurs et sabots du haut préréglés** : skin fade mi, 0 → 2 ; crop texturé mi, 0,5 → 2 ; quiff mi, 1 → 3 ; dégradé bouclé mi, 0,5 → 2 ; mulet moderne bas, 1 → 3. Le nom anglais du dégradé bouclé devient « Curly top with a fade », pour ne pas contredire la hauteur.
+- **Nom anglais du dégradé bouclé** : « Curly top with a fade », pour ne pas contredire la hauteur.
 - **Côtés passés en dégradé sur une autre coupe** (ex. raie sur le côté) : hauteur Mi, sabot du haut 2.
 - **Zones ajoutées** : Length, Layers et Texture, en plus de Sides, Top, Front, Neckline, Color, Beard. Ordre : Length, Layers, Sides, Top, Front, Neckline, Texture, Color, Beard.
-- **Réglage modifié** : il remplace le texte de la coupe dans son emplacement. Exemple : sur le skin fade, changer le sabot remplace « from guard 0 at the bottom to guard 2 at the top » par « starting at clipper guard 0.5 at the bottom ».
+- **Réglage modifié** : il remplace le texte de la coupe dans son emplacement (pour les côtés en dégradé, le sabot du bas ne remplace que X, voir section 6).
 - **Côtés** : une caractéristique de côtés (rasé sur un côté, undercut, dégradé à blanc) remplace aussi le sabot.
 - **Moustache, bouc** : ils remplacent la barbe « Rasée » des réglages, pas les autres barbes.
 - **Contours** : rangés dans la zone Neckline (« Neckline: squared, sharp line-up »).

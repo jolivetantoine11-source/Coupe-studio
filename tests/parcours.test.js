@@ -19,7 +19,7 @@ function blocs(fichier) {
 }
 const [DIAGNOSTIC, DIAGNOSTIC_SALON, IMAGE, BARBE_SEULE, EXCEPTION, REFERENCE, FICHE_BARBER, FICHE_SALON] = blocs('PROMPTS.md');
 /* Le prompt image, avec la ligne d'exception si [COUPE] demande un changement de barbe ou de texture. */
-const imageAvec = (coupe, changement) => avec(IMAGE, '[COUPE]', coupe) + (changement ? '\n' + avec(EXCEPTION, '[CHANGEMENT]', changement) : '');
+const imageAvec = (coupe, changement) => avec(IMAGE, '[COUPE]', coupe) + (changement ? '\n' + avec(avec(EXCEPTION, '[CHANGEMENT]', changement), '[CE_CHANGEMENT]', changement.includes(' and ') ? 'those changes' : 'that change') : '');
 const [FOND, REGLE] = blocs('CLAUDE.md');
 const avec = (bloc, marqueur, valeur) => bloc.split(marqueur).join(valeur);
 
@@ -342,9 +342,18 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
     const A = window.CoupeStudio;
     const x = (id, reglages, k) => { const c = A.coupeDuCatalogue(id); return { coupe: c, reglages: Object.assign(A.reglagesParDefaut(c), reglages), caracteristiques: k, couleurLibre: '' }; };
     return [x('skin-fade', {}, []), x('skin-fade', {}, ['boucles']), x('crop-texture', { barbe: 'courte' }, ['permanente']),
-      x('skin-fade', { barbe: 'courte', barbeSeule: true }, []), x('skin-fade', {}, ['moustache'])].map((c) => A.changementDemande(c) || 'aucun').join(' | ');
+      x('skin-fade', { barbe: 'courte', barbeSeule: true }, []), x('skin-fade', {}, ['moustache']),
+      x('degrade-boucle', {}, []), x('carre-boucle', {}, []), x('carre-boucle', {}, ['lisse']), x('degrade-boucle', { barbe: 'rasee' }, [])].map((c) => A.changementDemande(c) || 'aucun').join(' | ');
   });
-  verifier('ligne d’exception : seulement si Beard (hors barbe seule) ou Texture', exceptions, 'aucun | texture | barbe-texture | aucun | barbe');
+  verifier('ligne d’exception : seulement si l’utilisateur change Beard (hors barbe seule) ou Texture', exceptions,
+    'aucun | texture | barbe-texture | aucun | barbe | aucun | aucun | texture | barbe');
+  const boucles = await page.evaluate(() => ['degrade-boucle', 'carre-boucle'].map((id) => {
+    const A = window.CoupeStudio;
+    const c = A.coupeDuCatalogue(id);
+    const x = { coupe: c, reglages: A.reglagesParDefaut(c), caracteristiques: [], couleurLibre: '' };
+    return /Texture: /.test(A.descAnglaise(x)) + '/' + /Exception to the rules above/.test(window.PROMPTS.image(A.descAnglaise(x), false, A.changementDemande(x)));
+  }).join(' | '));
+  verifier('dégradé bouclé et carré bouclé par défaut : zone Texture écrite, mais pas de ligne d’exception', boucles, 'true/false | true/false');
   verifier('étape 3 = fiche barber', await page.textContent('#prompt-3'), FICHE_BARBER);
   verifier('les étapes disent quelles photos joindre (prêt pour la V2)', await page.evaluate(() => window.CoupeStudio.etapesResultat().map((e) => e.id + ':' + e.joindre.join('+')).join(' | ')),
     'diagnostic:selfie | image:selfie | fiche:selfie+image-generee');

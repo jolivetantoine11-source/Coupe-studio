@@ -346,7 +346,7 @@
 
     /* 1. Le texte de la coupe. */
     if (x.coupe && x.coupe.zones) {
-      Object.keys(x.coupe.zones).forEach(function (slot) { slots[slot] = [{ en: x.coupe.zones[slot], fr: null }]; });
+      Object.keys(x.coupe.zones).forEach(function (slot) { slots[slot] = [{ en: x.coupe.zones[slot], fr: null, choix: false }]; });
     }
 
     /* 2. Les réglages : un réglage modifié remplace le texte de la coupe dans son emplacement. */
@@ -369,11 +369,11 @@
         if (!t) return;
         var toujours = g.toujours || g.type !== 'choix'; // les mesures (sabot, dessus, longueur) figurent toujours dans le résumé
         if (x.reglages[g.id] !== base[g.id]) {
-          slots[g.slot] = t.en || t.fr ? [{ en: t.en, fr: t.fr || null }] : [];
+          slots[g.slot] = t.en || t.fr ? [{ en: t.en, fr: t.fr || null, choix: true }] : [];
         } else if (slots[g.slot] && slots[g.slot].length) {
           if (toujours) slots[g.slot][0].fr = t.fr;
         } else if (t.en) {
-          slots[g.slot] = [{ en: t.en, fr: toujours ? t.fr : null }];
+          slots[g.slot] = [{ en: t.en, fr: toujours ? t.fr : null, choix: false }];
         }
       });
     }
@@ -382,13 +382,13 @@
        « <low|mid|high> <skin fade|fade>, from guard X at the bottom to guard Y at the top ». */
     if (degrade) {
       var styleModifie = ['cotes', 'hauteur'].some(function (id) { return x.reglages[id] !== base[id]; });
-      if (!remplaces.cotes && !remplaces.hauteur) slots['sides.style'] = [{ en: degrade.style.en, fr: styleModifie ? degrade.style.fr : null }];
-      if (!remplaces.sabot) slots['sides.guard'] = [{ en: degrade.guard.en, fr: degrade.guard.fr }];
+      if (!remplaces.cotes && !remplaces.hauteur) slots['sides.style'] = [{ en: degrade.style.en, fr: styleModifie ? degrade.style.fr : null, choix: styleModifie }];
+      if (!remplaces.sabot) slots['sides.guard'] = [{ en: degrade.guard.en, fr: degrade.guard.fr, choix: x.reglages.sabot !== base.sabot }];
     }
 
     /* 3. Les caractéristiques remplacent tout le reste dans leur emplacement. */
     Object.keys(parSlot).forEach(function (slot) {
-      slots[slot] = parSlot[slot].map(function (c) { return texteCaracteristique(c, x); });
+      slots[slot] = parSlot[slot].map(function (c) { var t = texteCaracteristique(c, x); t.choix = true; return t; });
     });
     Object.keys(effaces).forEach(function (slot) { if (!parSlot[slot]) slots[slot] = []; });
     return { slots: slots, remplaces: remplaces };
@@ -458,15 +458,17 @@
     return [nom].concat(morceaux).join(', ');
   }
 
-  /* Le prompt image interdit de toucher à la barbe et à la texture. Si [COUPE] les demande
-     (zone Beard hors barbe seule, zone Texture), la ligne d'exception de PROMPTS.md est ajoutée.
+  /* Le prompt image interdit de toucher à la barbe et à la texture. Si l'utilisateur en demande un
+     changement (réglage modifié ou caractéristique dans la zone Beard hors barbe seule, ou Texture),
+     la ligne d'exception de PROMPTS.md est ajoutée. Le texte par défaut de la coupe (ex. « natural
+     curls » du carré bouclé) ne la déclenche jamais.
      Renvoie 'barbe', 'texture', 'barbe-texture' ou null. */
   function changementDemande(x) {
     if (barbeSeule(x)) return null;
     var slots = composer(x).slots;
     var remplie = function (id) {
       var zone = C.zones.filter(function (z) { return z.id === id; })[0];
-      return entreesZone(slots, zone).some(function (e) { return e.en; });
+      return entreesZone(slots, zone).some(function (e) { return e.en && e.choix === true; });
     };
     var barbe = remplie('beard');
     var texture = remplie('texture');

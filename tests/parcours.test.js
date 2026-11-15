@@ -17,7 +17,7 @@ function blocs(fichier) {
   }
   return sortie;
 }
-const [DIAGNOSTIC, DIAGNOSTIC_SALON, IMAGE, BARBE_SEULE, EXCEPTION, REFERENCE, FICHE_BARBER, FICHE_SALON] = blocs('PROMPTS.md');
+const [DIAGNOSTIC, DIAGNOSTIC_SALON, IMAGE, BARBE_SEULE, EXCEPTION, REFERENCE, COULEUR, FICHE_BARBER, FICHE_SALON] = blocs('PROMPTS.md');
 /* Le prompt image, avec la ligne d'exception si [COUPE] demande un changement de barbe ou de texture. */
 const imageAvec = (coupe, changement) => avec(IMAGE, '[COUPE]', coupe) + (changement ? '\n' + avec(avec(EXCEPTION, '[CHANGEMENT]', changement), '[CE_CHANGEMENT]', changement.includes(' and ') ? 'those changes' : 'that change') : '');
 const [FOND, REGLE] = blocs('CLAUDE.md');
@@ -221,7 +221,8 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('curseur Dessus', (await texte(page, '#valeur-dessus')) + ' / ' + (await desc(page)).includes('Top: about 7 cm, textured'), '7 cm / true');
   verifier('avertissements sur la page Réglages (pousse, lunettes)', (await page.$$eval('#avertissements .alerte b', (b) => b.map((x) => x.textContent))).join(), 'Pousse,Lunettes');
   await regler(page, 'curseur-dessus', 5);
-  verifier('dessus revenu à 5 cm : plus d’avertissement de pousse', (await page.$$eval('#avertissements .alerte b', (b) => b.map((x) => x.textContent))).join(), 'Lunettes');
+  verifier('dessus revenu à 5 cm : plus de pousse, mais changement léger (courte → courte)', (await page.$$eval('#avertissements .alerte b', (b) => b.map((x) => x.textContent))).join(), 'Changement léger,Lunettes');
+  verifier('texte de l’avertissement « Changement léger »', await page.$eval('#avertissements .alerte', (a) => a.textContent), 'Changement légerLe rendu sera peu visible.');
   const cas = await page.evaluate(() => {
     const A = window.CoupeStudio;
     const vide = { texture: null, visage: null, front: null, longueur: null, lunettes: null };
@@ -241,7 +242,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
     };
   });
   verifier('Golfes', cas.golfes, 'Golfes marqués : Ces coupes dégagent le front : garder du dessus pour couvrir la ligne frontale.');
-  verifier('Lissage', cas.lissage, 'Lissage : Le rendu demande un lissage ou un brushing.');
+  verifier('Lissage (et changement léger : longue → longue)', cas.lissage, 'Lissage : Le rendu demande un lissage ou un brushing. | Changement léger : Le rendu sera peu visible.');
   verifier('Pousse', cas.pousse, 'Pousse : Il faut laisser pousser : environ 1 cm par mois.');
   verifier('Changement radical', cas.radical, 'Changement radical : Plus de 10 cm coupés : changement radical, plusieurs mois pour revenir en arrière.');
   verifier('Cheveux fins', cas.fins, 'Cheveux fins : Garder du volume en haut : une coupe très dégradée aplatit la forme.');
@@ -345,6 +346,14 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
       x('skin-fade', { barbe: 'courte', barbeSeule: true }, []), x('skin-fade', {}, ['moustache']),
       x('degrade-boucle', {}, []), x('carre-boucle', {}, []), x('carre-boucle', {}, ['lisse']), x('degrade-boucle', { barbe: 'rasee' }, [])].map((c) => A.changementDemande(c) || 'aucun').join(' | ');
   });
+  const couleurs = await page.evaluate(() => {
+    const A = window.CoupeStudio;
+    const x = (id, reglages, k, libre) => { const c = id ? A.coupeDuCatalogue(id) : null; return { coupe: c, reglages: c ? Object.assign(A.reglagesParDefaut(c), reglages) : null, caracteristiques: k, couleurLibre: libre || '' }; };
+    return [x('skin-fade', {}, []), x('skin-fade', {}, ['meches-blondes']), x('skin-fade', {}, ['poivre-sel']), x('carre-plongeant', { couleur: 'balayage' }, []),
+      x('carre-plongeant', { couleur: 'autre', couleurAutre: 'copper red' }, []), x(null, {}, ['couleur-libre'], 'dark auburn'), x('skin-fade', { barbe: 'courte', barbeSeule: true }, ['platine'])]
+      .map((c) => (A.couleurDemandee(c) || 'aucune') + ' / ' + A.etapesResultat.length).join(' | ').replace(/ \/ \d+/g, '');
+  });
+  verifier('étape Couleur seulement pour un vrai changement de couleur choisi', couleurs, 'aucune | blonde highlights | aucune | a soft natural balayage | copper red | dark auburn | aucune');
   verifier('ligne d’exception : seulement si l’utilisateur change Beard (hors barbe seule) ou Texture', exceptions,
     'aucun | texture | barbe-texture | aucun | barbe | aucun | aucun | texture | barbe');
   const boucles = await page.evaluate(() => ['degrade-boucle', 'carre-boucle'].map((id) => {
@@ -474,11 +483,14 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-caracteristique="frange-rideau"]');
   await page.click('[data-caracteristique="balayage"]');
   await page.click('#ecran-personnalise .btn');
-  verifier('prompt image fait des seules caractéristiques', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'Custom haircut. Front: curtain bangs parted in the middle. Color: change to a soft natural balayage'));
+  verifier('coupe + couleur : l’étape Image ne contient pas la couleur', await page.textContent('#prompt-2'), avec(IMAGE, '[COUPE]', 'Custom haircut. Front: curtain bangs parted in the middle'));
+  verifier('coupe + couleur : 4 étapes, Couleur après Image', (await page.$$eval('#etapes .etape', (e) => e.map((x) => x.textContent))).join(' | '), 'Étape 1 · Diagnostic | Étape 2 · Image | Étape 3 · Couleur | Étape 4 · Fiche');
+  verifier('étape Couleur : prompt de PROMPTS.md (2b), couleur sans « change to »', await page.textContent('#prompt-3'), avec(COULEUR, '[COULEUR]', 'a soft natural balayage'));
+  verifier('étape Couleur : à envoyer sur l’image générée', (await page.$$eval('#etapes .carte:nth-child(3) .consigne', (c) => c.map((x) => x.textContent).filter(Boolean))).join(), 'À envoyer après l’étape Image, en joignant l’image générée.');
   verifier('thème neutre sans coupe : choix de la fiche proposé', await page.isVisible('#bloc-fiche'));
-  verifier('diagnostic et fiche barber par défaut', ((await page.textContent('#prompt-3')) === FICHE_BARBER) + ' / ' + (await page.textContent('#prompt-1')).startsWith('Tu es un barbier expert.'), 'true / true');
+  verifier('diagnostic et fiche barber par défaut', ((await page.textContent('#prompt-4')) === FICHE_BARBER) + ' / ' + (await page.textContent('#prompt-1')).startsWith('Tu es un barbier expert.'), 'true / true');
   await page.click('[data-fiche="salon"]');
-  verifier('salon sur demande : fiche salon et diagnostic salon', ((await page.textContent('#prompt-3')) === FICHE_SALON) + ' / ' + (await page.textContent('#prompt-1')).startsWith('Tu es un coiffeur expert.'), 'true / true');
+  verifier('salon sur demande : fiche salon et diagnostic salon', ((await page.textContent('#prompt-4')) === FICHE_SALON) + ' / ' + (await page.textContent('#prompt-1')).startsWith('Tu es un coiffeur expert.'), 'true / true');
   await page.goto(ADRESSE);
   await jusquAuCatalogue(page);
   await page.click('#ouvrir-ajout');

@@ -428,7 +428,7 @@
   /* [COUPE] du prompt image :
      « <nom anglais>. Length: … Sides: … Top: … Front: … Neckline: … Color: … Beard: … »
      Seules les zones qui ont une valeur sont écrites. Pas de point final : le prompt en a un. */
-  function descAnglaise(x) {
+  function descAnglaise(x, sansCouleur) {
     var slots = composer(x).slots;
     var ligne = function (zone) {
       var en = entreesZone(slots, zone).map(function (e) { return e.en; }).filter(Boolean);
@@ -440,6 +440,7 @@
     /* Front toujours écrit (décision du 15 novembre) : sans frange ni mèche choisie, on le dit
        explicitement, pour que Gemini n'en invente pas. */
     return [sansPointFinal(tete)].concat(C.zones.map(function (zone) {
+      if (sansCouleur && zone.id === 'color') return null; // la couleur a son étape à elle
       return ligne(zone) || (zone.id === 'front' ? zone.en + ': ' + FRONT_PAR_DEFAUT : null);
     }).filter(Boolean)).join('. ');
   }
@@ -462,6 +463,18 @@
     /* « Dégradé » + « dégradé haut » s'écrit « Dégradé haut ». */
     if (morceaux.length && morceaux[0].indexOf(nom.toLowerCase() + ' ') === 0) nom += morceaux.shift().slice(nom.length);
     return [nom].concat(morceaux).join(', ');
+  }
+
+  /* Couleur demandée par l'utilisateur (réglage ou caractéristique), sans « change to »,
+     ou null. « Poivre et sel gardé » n'est pas un changement. Sert à l'étape Couleur. */
+  function couleurDemandee(x) {
+    if (!x.coupe && creationVide(x)) return null;
+    if (barbeSeule(x)) return null;
+    var zone = C.zones.filter(function (z) { return z.id === 'color'; })[0];
+    var changements = entreesZone(composer(x).slots, zone)
+      .filter(function (e) { return e.choix === true && /^change to /.test(e.en); })
+      .map(function (e) { return e.en.replace(/^change to /, ''); });
+    return changements.length ? changements.join(', ') : null;
   }
 
   /* Le prompt image interdit de toucher à la barbe et à la texture. Si l'utilisateur en demande un
@@ -1013,6 +1026,9 @@
     if (profil.longueur === 'longue' && demandee === 'courte') {
       liste.push({ id: 'radical', titre: 'Changement radical', texte: 'Plus de 10 cm coupés : changement radical, plusieurs mois pour revenir en arrière.' });
     }
+    if (demandee && profil.longueur && demandee === profil.longueur) {
+      liste.push({ id: 'leger', titre: 'Changement léger', texte: 'Le rendu sera peu visible.' });
+    }
     if (coupe.mode === 'salon' && profil.front === 'fins' && (r.couches === 'marquees' || coupe.id === 'shag' || coupe.id === 'wolf-cut')) {
       liste.push({ id: 'fins', titre: 'Cheveux fins', texte: 'Garder du volume en haut : une coupe très dégradée aplatit la forme.' });
     }
@@ -1539,8 +1555,13 @@
       etapes.push({
         id: 'image', titre: 'Image',
         consigne: P.consignes.image + (seule ? ' ' + P.consignes.barbeSeule : ''),
-        texte: P.image(descAnglaise(x), seule, changementDemande(x)), joindre: ['selfie'], apres: P.consignes.apresImage
+        texte: P.image(descAnglaise(x, !!couleurDemandee(x)), seule, changementDemande(x)), joindre: ['selfie'], apres: P.consignes.apresImage
       });
+    }
+    /* Coupe + couleur = 2 étapes : l'image ne décrit que la coupe, la couleur vient ensuite. */
+    var couleur = couleurDemandee(x);
+    if (couleur) {
+      etapes.push({ id: 'couleur', titre: 'Couleur', consigne: P.consignes.couleur, texte: P.couleur(couleur), joindre: ['image-generee'] });
     }
     etapes.push({
       id: 'fiche', titre: 'Fiche', consigne: mode === 'salon' ? P.consignes.ficheSalon : P.consignes.ficheBarber,
@@ -2046,6 +2067,7 @@
     resume: resume,
     descAnglaise: descAnglaise,
     changementDemande: changementDemande,
+    couleurDemandee: couleurDemandee,
     coupePourDiagnostic: coupePourDiagnostic,
     reglagesParDefaut: reglagesParDefaut,
     coupeDuCatalogue: coupeDuCatalogue,

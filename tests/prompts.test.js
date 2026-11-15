@@ -39,12 +39,14 @@ const ref = blocs('PROMPTS.md');
 const refFond = blocs('CLAUDE.md');
 
 console.log('1. Textes de prompts.js comparés à PROMPTS.md');
-if (ref.length !== 8) { console.log('  ÉCHEC   PROMPTS.md doit contenir 8 blocs, trouvé ' + ref.length); echecs++; }
-const NOMS = ['diagnostic', 'diagnosticSalon', 'image', 'barbeSeule', 'exception', 'reference', 'ficheBarber', 'ficheSalon'];
+if (ref.length !== 9) { console.log('  ÉCHEC   PROMPTS.md doit contenir 9 blocs, trouvé ' + ref.length); echecs++; }
+const NOMS = ['diagnostic', 'diagnosticSalon', 'image', 'barbeSeule', 'exception', 'reference', 'couleur', 'ficheBarber', 'ficheSalon'];
 NOMS.forEach((nom, i) => {
   verifier(nom, PROMPTS.textes[nom], ref[i]);
 });
-const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_FICHE_B, R_FICHE_S] = ref;
+const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_COULEUR, R_FICHE_B, R_FICHE_S] = ref;
+verifier('étape Couleur : première ligne demandée par Antoine', R_COULEUR.split('\n')[0], 'Edit this photo: keep the haircut, length and shape exactly as they are. Color: [COULEUR], subtle and natural.');
+verifier('étape Couleur : « Strict rules »', R_COULEUR.split('\n')[1], 'Strict rules:');
 ['- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.',
   '- Do not add a fringe, bangs or any element that is not explicitly requested. Keep jewelry identical.',
   '- If the requested length is longer than the current hair, keep the original hairline exactly; never lower it or fill receding areas.'
@@ -88,12 +90,13 @@ verifier('image + barbe seule', PROMPTS.image(DESC, true), R_IMAGE.split('[COUPE
 verifier('sans barbe ni texture : prompt image inchangé', PROMPTS.image(DESC, false, null), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('barbe seule : pas de ligne d’exception', PROMPTS.image(DESC, true, 'barbe'), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
 verifier('photo de référence', PROMPTS.reference(), R_REF);
+verifier('couleur assemblée', PROMPTS.couleur('blonde highlights'), R_COULEUR.split('[COULEUR]').join('blonde highlights'));
 verifier('fiche barber', PROMPTS.fiche('barber'), R_FICHE_B);
 verifier('fiche salon', PROMPTS.fiche('salon'), R_FICHE_S);
 verifier('retouche assemblée : prompt de fond + règle', PROMPTS.retouche(FOND), refFond[0].split('[FOND]').join(FOND) + '\n' + refFond[1]);
 
 console.log('4. Marqueurs');
-[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['exception', '[CE_CHANGEMENT]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
+[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['exception', '[CE_CHANGEMENT]', 1], ['couleur', '[COULEUR]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
   ['ficheBarber', '[COUPE]', 0], ['ficheSalon', '[COUPE]', 0]].forEach(([nom, marqueur, n]) => {
   const compte = PROMPTS.textes[nom].split(marqueur).length - 1;
   if (compte === n) console.log('  OK      ' + nom + ' contient ' + n + ' fois ' + marqueur);

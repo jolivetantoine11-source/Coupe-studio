@@ -120,7 +120,8 @@ Voir section 8. Une page d'entrée présente les deux familles, clairement sépa
 Les étapes, dans l'ordre, chacune dans une carte :
 1. **Diagnostic** : consigne photo « Photo de face, regard caméra, cheveux bien visibles. », consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
 2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe ou de texture (réglage modifié ou caractéristique, jamais le texte par défaut d'une coupe comme le dégradé bouclé ou le carré bouclé), la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée à la fin, avec « a beard change » / « a texture change » + « Apply only that change », ou « a beard change and a texture change » + « Apply only those changes ». Sinon, le prompt image est inchangé. Sous le prompt image : « Résultat bizarre (tête tournée, frange en trop) ? Relance la génération. »
-3. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
+3. **Couleur** (seulement si une couleur est demandée, décision du 15 novembre) : coupe + couleur = 2 étapes. L'étape Image ne contient alors pas la zone Color ; l'étape Couleur (PROMPTS.md, 2b) applique la couleur sur l'image générée. « Poivre et sel gardé » n'est pas un changement : pas d'étape Couleur.
+4. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
 
@@ -272,6 +273,7 @@ Avertissements complets, affichés sur la page Réglages (bloc « alerte » selo
 - **Changement radical** : passage de Longue à Courte. « Plus de 10 cm coupés : changement radical, plusieurs mois pour revenir en arrière. »
 - **Cheveux fins** (salon) : profil « Cheveux fins » avec couches marquées, shag ou wolf cut. « Garder du volume en haut : une coupe très dégradée aplatit la forme. »
 - **Lunettes** : « Vérifie le contour d'oreille avec les lunettes remises. »
+- **Changement léger** : longueur demandée dans la même classe que la longueur actuelle (courte / moyenne / longue). « Changement léger : le rendu sera peu visible. »
 
 ## 8. Catalogue fond (remplace l'ancien écran Fond)
 
@@ -356,6 +358,7 @@ Pas de compte, pas de serveur, pas de génération d'image dans l'appli, pas de 
 - Le nom définitif de l'appli.
 - Le prompt de fond (section 8) n'a jamais été testé. Trois retouches (« Lumière studio douce », « Corriger le contre-jour », « Retirer les cheveux coupés ») ne sont pas des changements de fond : elles tiennent mal dans la phrase « replace ONLY the background with [FOND] », et « Retirer les cheveux coupés » contredit « Keep the person 100% identical: … clothing ». À tester, et à réécrire si Gemini les ignore.
 - Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). La zone Beard (hors barbe seule) et la zone Texture le contredisent : depuis le 16 novembre, la ligne d'exception (PROMPTS.md) le dit à Gemini. À tester sur de vraies photos. Elle ne se déclenche que sur un choix de l'utilisateur, pas pour le texte par défaut des coupes bouclées.
+- Les « Strict rules » de l'étape Couleur (PROMPTS.md, 2b) ont été rédigées par Claude : à valider.
 - Le découpage coupe → zones (section 5), les textes des réglages (section 6) et des caractéristiques (section 13) sont à relire.
 - Le glissement depuis le bord gauche et l'appui long sur la photo n'ont pas été essayés sur un vrai iPhone.
 
@@ -392,7 +395,13 @@ Décidé par Antoine (15 novembre, ajustements) :
 - La ligne d'exception ne vient que d'un choix de l'utilisateur, jamais du texte par défaut de la coupe ; accord « that change » / « those changes ».
 - Préréglages de hauteur et de sabot du haut validés (skin fade mi, 0 → 2 ; crop texturé mi, 0,5 → 2 ; quiff mi, 1 → 3 ; dégradé bouclé mi, 0,5 → 2 ; mulet moderne bas, 1 → 3).
 
+Décidé par Antoine (15 novembre, suite) :
+- Coupe + couleur = 2 étapes (Image sans Color, puis Couleur sur l'image générée).
+- Avertissement « Changement léger » quand la longueur demandée est proche de la longueur actuelle.
+
 Choix faits par Claude, à confirmer :
+- **Étape Couleur** : « Strict rules » rédigées par Claude ; [COULEUR] sans « change to » ; placée entre Image et Fiche.
+- **« Proche de la longueur actuelle »** : même classe de longueur (courte / moyenne / longue, seuils de l'avertissement Pousse).
 - **Nom anglais du dégradé bouclé** : « Curly top with a fade », pour ne pas contredire la hauteur.
 - **Côtés passés en dégradé sur une autre coupe** (ex. raie sur le côté) : hauteur Mi, sabot du haut 2.
 - **Zones ajoutées** : Length, Layers et Texture, en plus de Sides, Top, Front, Neckline, Color, Beard. Ordre : Length, Layers, Sides, Top, Front, Neckline, Texture, Color, Beard.

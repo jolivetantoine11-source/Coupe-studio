@@ -127,6 +127,27 @@ Photorealistic result.
 
 ---
 
+## 2b. Couleur (sur l'image générée)
+
+Ajoutée le 15 novembre 2026 à la demande d'Antoine : une coupe avec un changement de couleur se fait en 2 étapes. L'étape Image ne décrit que la coupe (sans la zone Color) ; cette étape applique ensuite la couleur sur l'image générée. [COULEUR] = la couleur choisie (réglage ou caractéristique), sans « change to » (ex. « blonde highlights »). « Poivre et sel gardé » n'est pas un changement : pas d'étape Couleur.
+
+La première phrase est celle d'Antoine. **Les « Strict rules » ont été rédigées par Claude : à valider par Antoine.**
+
+Consigne : À envoyer après l'étape Image, en joignant l'image générée.
+
+```text
+Edit this photo: keep the haircut, length and shape exactly as they are. Color: [COULEUR], subtle and natural.
+Strict rules:
+- Change ONLY the hair color. Everything else must stay identical: face, expression, skin, beard, eyebrows, glasses, earrings, clothing (including logos and text), background, framing and lighting.
+- Keep the haircut identical: same length, shape, volume, parting, hairline and hair edges.
+- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.
+- Respect the natural hair texture and curl pattern: do not straighten the hair or add curls.
+- The new color must look realistic on this hair, with natural depth, roots and shine. No flat or painted look.
+- Photorealistic result, keep the original image quality and grain.
+```
+
+---
+
 ## 3a. Fiche technique barber
 
 Consigne : À envoyer avec le modèle 3.1 Pro, en joignant le selfie d'origine (image 1) puis l'image générée (image 2). Ne nomme pas la coupe dans ta demande : écris juste « image 2 ».

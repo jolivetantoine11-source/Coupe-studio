@@ -83,6 +83,17 @@
       "Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule."
     ].join('\n'),
 
+    couleur: [
+      "Edit this photo: keep the haircut, length and shape exactly as they are. Color: [COULEUR], subtle and natural.",
+      "Strict rules:",
+      "- Change ONLY the hair color. Everything else must stay identical: face, expression, skin, beard, eyebrows, glasses, earrings, clothing (including logos and text), background, framing and lighting.",
+      "- Keep the haircut identical: same length, shape, volume, parting, hairline and hair edges.",
+      "- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.",
+      "- Respect the natural hair texture and curl pattern: do not straighten the hair or add curls.",
+      "- The new color must look realistic on this hair, with natural depth, roots and shine. No flat or painted look.",
+      "- Photorealistic result, keep the original image quality and grain."
+    ].join('\n'),
+
     reference: [
       "Image 1 is the client. Image 2 is a haircut reference.",
       "Apply the haircut from image 2 onto the person in image 1.",
@@ -187,6 +198,7 @@
     photo: 'Photo de face, regard caméra, cheveux bien visibles.',
     diagnostic: 'À envoyer en premier, avec le modèle 3.1 Pro et le selfie joint.',
     image: 'À envoyer après le diagnostic, avec le selfie joint. Si le diagnostic propose une alternative, remplace la description de la coupe par la sienne.',
+    couleur: 'À envoyer après l’étape Image, en joignant l’image générée.',
     /* Affiché sous le prompt image. */
     apresImage: 'Résultat bizarre (tête tournée, frange en trop) ? Relance la génération.',
     barbeSeule: 'Barbe seule : la ligne qui garde les cheveux intacts est déjà ajoutée à la fin.',
@@ -227,6 +239,11 @@
     return t;
   }
 
+  /* Étape Couleur, sur l'image générée : [COULEUR] = la couleur choisie, sans « change to ». */
+  function couleur(texteCouleur) {
+    return remplacer(TEXTES.couleur, '[COULEUR]', texteCouleur);
+  }
+
   /* Étape 2, variante photo de référence : texte fixe. */
   function reference() {
     return TEXTES.reference;
@@ -250,7 +267,8 @@
     image: image,
     reference: reference,
     fiche: fiche,
-    retouche: retouche
+    retouche: retouche,
+    couleur: couleur
   };
 
   racine.PROMPTS = PROMPTS;

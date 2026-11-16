@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+Mise à jour série contrôle (16 novembre) : densité faible (Density après le nom, pas de frange, dessus gardé), étape Texture à part (Image → Texture → Couleur), exception barbe « rules below » avant « Strict rules: », nouvelle consigne photo (sections 4.8, 5, 11, 12).
+
 Mise à jour série 4 (tests d'Antoine) : Front par défaut, ligne Head pose et exception texture avant « Strict rules: », avertissements « Changement de texture » et « Rallongement » sur Résultat (sections 4.8, 5, 12).
 
 Version du 16 novembre 2026 : hauteur du dégradé barber et ligne d'exception barbe / texture dans le prompt image (sections 6 et 4.8).
@@ -122,13 +124,14 @@ Voir section 8. Une page d'entrée présente les deux familles, clairement sépa
 
 ### 4.8 Résultat
 Les étapes, dans l'ordre, chacune dans une carte :
-1. **Diagnostic** : consigne photo « Photo de face, regard caméra, cheveux bien visibles. », consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
-2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe ou de texture (réglage modifié ou caractéristique, jamais le texte par défaut d'une coupe comme le dégradé bouclé ou le carré bouclé), la ligne « Exception to the rules above… » de PROMPTS.md est ajoutée (à la fin pour un changement de barbe seul, juste avant « Strict rules: » dès qu'il y a un changement de texture), avec « a beard change » / « a texture change » + « Apply only that change », ou « a beard change and a texture change » + « Apply only those changes ». Sinon, le prompt image est inchangé. Sous le prompt image : « Résultat bizarre (tête tournée, frange en trop) ? Relance la génération. »
-3. **Couleur** (seulement si une couleur est demandée, décision du 15 novembre) : coupe + couleur = 2 étapes. L'étape Image ne contient alors pas la zone Color ; l'étape Couleur (PROMPTS.md, 2b) applique la couleur sur l'image générée. « Poivre et sel gardé » n'est pas un changement : pas d'étape Couleur.
-4. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
+1. **Diagnostic** : consigne photo « Tête droite, face à l'objectif. Si elle est tournée, Gemini la redresse. », consigne + bloc de prompt. Diagnostic barber ou diagnostic salon (PROMPTS.md, 1 et 1b) selon la coupe : le mode de la coupe, sinon le mode de l'accueil, sinon le choix Barber / Salon de la page.
+2. **Image** : consigne + bloc. Si « Barbe seule » est sur Oui, la ligne de la variante barbe seule est ajoutée à la fin. Sinon, si l'utilisateur a choisi un changement de barbe (réglage modifié ou caractéristique), la ligne « Exception to the rules below… » de PROMPTS.md (« a beard change », « Apply only that change ») est placée juste avant « Strict rules: ». Sinon, le prompt image est inchangé. Le prompt image ne contient jamais la texture choisie par l'utilisateur (elle a son étape) ; le texte par défaut d'une coupe bouclée y reste. Sous le prompt image : « Résultat bizarre (tête tournée, frange en trop) ? Relance la génération. »
+3. **Texture** (seulement si l'utilisateur a choisi une texture, décision du 16 novembre) : PROMPTS.md, 2a, sur l'image générée.
+4. **Couleur** (seulement si une couleur est demandée, décision du 15 novembre) : coupe + couleur = 2 étapes. L'étape Image ne contient alors pas la zone Color ; l'étape Couleur (PROMPTS.md, 2b) applique la couleur sur la dernière image générée (après Texture s'il y en a une). « Poivre et sel gardé » n'est pas un changement : pas d'étape Couleur.
+5. **Fiche** : fiche barber ou fiche salon, selon la même règle. Pour une coupe 100 % personnalisée en thème neutre, un choix Barber / Salon est proposé ; il vaut pour le diagnostic et la fiche.
 
 Au-dessus des étapes, des avertissements (composant alerte) :
-- **Changement de texture** (lissé, kératine, permanente, défrisage, boucles…, choisi par l'utilisateur) : « Vérifie que la tête et le visage n'ont pas bougé. Sinon, relance. »
+- **Changement de texture** (lissé, kératine, permanente, défrisage, boucles…, choisi par l'utilisateur, donc étape Texture) : « Vérifie que la tête et le visage n'ont pas bougé. Sinon, relance. »
 - **Rallongement** (longueur demandée au-dessus de la longueur actuelle du profil) : « Environ 1 cm par mois de pousse. Sinon, extensions. »
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
@@ -155,8 +158,11 @@ Avant le 15 novembre, les fragments des réglages s'ajoutaient à la fin de la d
 - Coupe ajoutée (« Ajouter ma coupe ») : « <nom> : <description> », puis les zones des réglages et caractéristiques.
 - Coupe 100 % personnalisée : « Custom haircut », puis les zones.
 - Barbe seule : seulement « Beard: … ».
-- **Density** (décision du 15 novembre, tests série 3) : si le profil dit Golfes marqués, Clairsemés ou Chauve / rasé, [COUPE] finit toujours par « Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original » (aussi en barbe seule et sans coupe de départ).
-- **Head pose** (décision du 15 novembre, série 4) : sur un changement de texture choisi par l'utilisateur, [COUPE] finit par « Head pose: keep the exact head tilt and rotation of the original; change only the hair texture » (avant la ligne Density s'il y en a une).
+- **Density** (décision du 15 novembre, tests série 3 ; place et effets revus le 16 novembre, série contrôle) : si le profil dit Golfes marqués, Clairsemés ou Chauve / rasé :
+  - la ligne « Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original » vient juste après le nom de la coupe (en barbe seule, qui n'a pas de nom, elle reste après « Beard: … ») ;
+  - Front est forcé au texte par défaut ci-dessous, même si la coupe, un réglage ou une caractéristique demande une frange ou une mèche ;
+  - la longueur du dessus (Top / longueur) devient « kept at the current length, no added volume », même sans Top dans la coupe (salon). Exceptions choisies par Claude : le buzz cut garde sa tondeuse (c'est sa définition et il ne rallonge rien) ; un coiffage du dessus « avec volume » (« Dessus relevé », « voluminous blow-dry » du butterfly) est retiré, pour ne pas contredire « no added volume ».
+- **Texture choisie** (16 novembre, série contrôle) : elle ne part plus dans [COUPE] mais dans l'étape Texture. La ligne Head pose de la série 4 est supprimée (le prompt Texture a sa règle de pose).
 - **Front toujours écrit** (décision du 15 novembre) : sans frange, mèche ni coiffage du devant (coupe, réglage ou caractéristique), Front = « no fringe, no bangs, no curtain bangs, forehead uncovered as in the original ». Barber et salon, coupe 100 % personnalisée comprise.
 - Le résumé français (diagnostic et barre du bas) suit le même ordre de zones.
 
@@ -369,7 +375,8 @@ Pas de compte, pas de serveur, pas de génération d'image dans l'appli, pas de 
 
 - Le nom définitif de l'appli.
 - Le prompt de fond (section 8) n'a jamais été testé. Trois retouches (« Lumière studio douce », « Corriger le contre-jour », « Retirer les cheveux coupés ») ne sont pas des changements de fond : elles tiennent mal dans la phrase « replace ONLY the background with [FOND] », et « Retirer les cheveux coupés » contredit « Keep the person 100% identical: … clothing ». À tester, et à réécrire si Gemini les ignore.
-- Le prompt image dit de garder la barbe et la texture des cheveux à l'identique (« Everything else must stay identical: … beard », « Do not invent curls, straighten the hair… »). La zone Beard (hors barbe seule) et la zone Texture le contredisent : depuis le 16 novembre, la ligne d'exception (PROMPTS.md) le dit à Gemini. À tester sur de vraies photos. Elle ne se déclenche que sur un choix de l'utilisateur, pas pour le texte par défaut des coupes bouclées.
+- Le prompt image dit de garder la barbe et la texture à l'identique. Un changement de barbe choisi est signalé par la ligne d'exception (avant « Strict rules: ») ; une texture choisie part dans l'étape Texture. Le texte par défaut des coupes bouclées (« natural curls ») reste dans le prompt image, sans exception : à tester sur cheveux lisses.
+- L'étape Texture (PROMPTS.md, 2a) n'a pas encore été testée sur de vraies photos.
 - Les « Strict rules » de l'étape Couleur (PROMPTS.md, 2b) ont été rédigées par Claude : à valider.
 - Le découpage coupe → zones (section 5), les textes des réglages (section 6) et des caractéristiques (section 13) sont à relire.
 - Le glissement depuis le bord gauche et l'appui long sur la photo n'ont pas été essayés sur un vrai iPhone.
@@ -417,12 +424,19 @@ Décidé par Antoine (15 novembre, suite) :
 
 Décidé par Antoine (15 novembre, série 4) :
 - Front par défaut : « no fringe, no bangs, no curtain bangs, forehead uncovered as in the original ».
-- Changement de texture : ligne Head pose dans [COUPE], ligne d'exception avant « Strict rules: », avertissement « Changement de texture » sur Résultat.
+- Changement de texture : ligne Head pose dans [COUPE], ligne d'exception avant « Strict rules: », avertissement « Changement de texture » sur Résultat. (remplacé le 16 novembre : étape Texture)
 - Avertissement « Rallongement » sur Résultat.
 
+Décidé par Antoine (16 novembre, série contrôle) :
+- Densité faible : Density juste après le nom, Front forcé sans frange, dessus « kept at the current length, no added volume ».
+- Texture = étape séparée, comme Couleur ; ordre Image → Texture → Couleur ; plus de texture ni de Head pose dans le prompt image.
+- Exception barbe : « Exception to the rules below », placée avant « Strict rules: ».
+- Consigne photo : « Tête droite, face à l'objectif. Si elle est tournée, Gemini la redresse. »
+
 Choix faits par Claude, à confirmer :
+- **Densité faible** : le buzz cut garde sa tondeuse au lieu de « kept at the current length » ; un coiffage du dessus avec volume est retiré ; la ligne Top est écrite aussi en salon. En barbe seule, Density reste après Beard.
+- **Étape Texture** : seulement pour une texture choisie par l'utilisateur ; le texte par défaut du dégradé bouclé et du carré bouclé reste dans le prompt image. Consigne de l'étape Couleur : « À envoyer après l'étape précédente (Image, ou Texture s'il y en a une), en joignant la dernière image générée. »
 - **Kératine et Défrisage** ajoutés aux caractéristiques de texture (groupe exclusif texture), pour couvrir la liste d'Antoine.
-- **Exception barbe seule** : sans changement de texture, la ligne reste à la fin du prompt image. Avec texture (seule ou avec barbe), elle passe avant « Strict rules: » ; elle dit toujours « the rules above », alors que les règles sont désormais en dessous : à reformuler si Antoine le souhaite.
 - **Décoloration** : le profil ne demande pas la couleur actuelle des cheveux (5 questions au plus) ; l'avertissement dit donc « Sur cheveux foncés : … » au lieu de deviner. Couleurs concernées : voir section 7.
 - **Étape Couleur** : « Strict rules » rédigées par Claude ; [COULEUR] sans « change to » ; placée entre Image et Fiche.
 - **« Proche de la longueur actuelle »** : même classe de longueur (courte / moyenne / longue, seuils de l'avertissement Pousse).
@@ -528,7 +542,7 @@ Une seule caractéristique par groupe. En choisir une deuxième ouvre un message
 Après les réglages, l'appli ouvre l'appareil photo, on prend la ou les photos, elles partent directement à l'IA et le résultat (diagnostic, image, fiche) revient dans l'appli, sans copier-coller ni quitter l'appli.
 
 Ce que la V1 prépare déjà pour s'y brancher sans tout refaire :
-- `etapesResultat()` (app.js) renvoie les étapes sous forme de données : `{ id, titre, consigne, texte, joindre }`, où `id` vaut `diagnostic`, `image` ou `fiche`, `texte` est le prompt final et `joindre` dit quelles photos envoyer, dans l'ordre (`selfie`, `reference`, `image-generee`). La V2 n'a qu'à parcourir cette liste.
+- `etapesResultat()` (app.js) renvoie les étapes sous forme de données : `{ id, titre, consigne, texte, joindre }`, où `id` vaut `diagnostic`, `image`, `texture`, `couleur` ou `fiche`, `texte` est le prompt final et `joindre` dit quelles photos envoyer, dans l'ordre (`selfie`, `reference`, `image-generee`). La V2 n'a qu'à parcourir cette liste.
 - `generateImage(photo, prompt)` (app.js) est le point d'entrée prévu pour l'étape `image` ; le diagnostic et la fiche demanderont une fonction sœur (texte en sortie).
 - L'affichage du Résultat lit ces mêmes étapes : il suffira d'afficher la réponse de l'IA à la place du bouton « Copier ».
 - Les retouches IA du Catalogue fond suivent la même forme (un prompt + la photo à joindre).

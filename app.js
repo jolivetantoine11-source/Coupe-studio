@@ -425,12 +425,12 @@
 
   var FRONT_PAR_DEFAUT = 'no fringe, no bangs, no curtain bangs, forehead uncovered as in the original';
 
-  /* Changement de texture choisi : la tête ne doit pas bouger (décision du 15 novembre, tests série 4). */
-  var POSE_TEXTURE = 'Head pose: keep the exact head tilt and rotation of the original; change only the hair texture';
-
-  /* Golfes marqués, clairsemés ou chauve : toujours ajouté à la fin de [COUPE] (décision du 15 novembre). */
+  /* Golfes marqués, clairsemés ou chauve (série contrôle, 16 novembre) : la ligne Density vient juste
+     après le nom de la coupe, Front est forcé à FRONT_PAR_DEFAUT et la longueur du dessus devient
+     TOP_DENSITE. */
   var DENSITE_FAIBLE = ['golfes-marques', 'clairsemes', 'chauve'];
   var DENSITE = 'Density: use only the existing hair; keep the original thin density and receding hairline, scalp visible as in the original';
+  var TOP_DENSITE = 'kept at the current length, no added volume';
 
   function densiteFaible(profil) {
     return !!profil && DENSITE_FAIBLE.indexOf(profil.front) >= 0;
@@ -443,24 +443,32 @@
   /* [COUPE] du prompt image :
      « <nom anglais>. Length: … Sides: … Top: … Front: … Neckline: … Color: … Beard: … »
      Seules les zones qui ont une valeur sont écrites. Pas de point final : le prompt en a un. */
-  function descAnglaise(x, sansCouleur) {
+  function descAnglaise(x, sansCouleur, sansTexture) {
     var slots = composer(x).slots;
+    var faible = densiteFaible(x.profil || etat.profil);
     var ligne = function (zone) {
       var en = entreesZone(slots, zone).map(function (e) { return e.en; }).filter(Boolean);
       return en.length ? zone.en + ': ' + sansDoublons(en).join(', ') : null;
     };
-    var densite = densiteFaible(x.profil || etat.profil) ? [DENSITE] : [];
-    var changement = changementDemande(x);
-    if (changement === 'texture' || changement === 'barbe-texture') densite.unshift(POSE_TEXTURE);
-    if (barbeSeule(x)) return [ligne(zoneBarbe())].concat(densite).join('. ');
+    if (barbeSeule(x)) return [ligne(zoneBarbe())].concat(faible ? [DENSITE] : []).join('. ');
+    if (faible) {
+      /* Densité faible : pas de frange, dessus gardé à sa longueur, sans volume ajouté.
+         Le buzz cut (coupe sans longueur) garde sa tondeuse : c'est sa définition, et il ne rallonge rien.
+         Un coiffage du dessus « avec volume » contredirait « no added volume » : il est retiré. */
+      slots['front.style'] = [{ en: FRONT_PAR_DEFAUT, fr: null }];
+      slots['front.extra'] = [];
+      if (!(x.coupe && x.coupe.sansLongueur)) slots['top.length'] = [{ en: TOP_DENSITE, fr: null }];
+      slots['top.style'] = (slots['top.style'] || []).filter(function (e) { return !/volum/i.test(e.en || ''); });
+    }
     var tete = 'Custom haircut';
     if (x.coupe) tete = x.coupe.perso ? x.coupe.fr + ': ' + sansPointFinal(x.coupe.desc || x.coupe.ligne) : C.nomCoupe(x.coupe, x.reglages).en;
     /* Front toujours écrit (décision du 15 novembre) : sans frange ni mèche choisie, on le dit
        explicitement, pour que Gemini n'en invente pas. */
-    return [sansPointFinal(tete)].concat(C.zones.map(function (zone) {
+    return [sansPointFinal(tete)].concat(faible ? [DENSITE] : [], C.zones.map(function (zone) {
       if (sansCouleur && zone.id === 'color') return null; // la couleur a son étape à elle
+      if (sansTexture && zone.id === 'texture') return null; // la texture aussi
       return ligne(zone) || (zone.id === 'front' ? zone.en + ': ' + FRONT_PAR_DEFAUT : null);
-    }).filter(Boolean), densite).join('. ');
+    }).filter(Boolean)).join('. ');
   }
 
   /* Résumé français en une ligne, dans l'ordre des zones,
@@ -493,6 +501,16 @@
       .filter(function (e) { return e.choix === true && /^change to /.test(e.en); })
       .map(function (e) { return e.en.replace(/^change to /, ''); });
     return changements.length ? changements.join(', ') : null;
+  }
+
+  /* Texture choisie par l'utilisateur (réglage ou caractéristique), ou null. Sert à l'étape Texture
+     (série contrôle, 16 novembre). Le texte par défaut d'une coupe bouclée reste dans le prompt image. */
+  function textureDemandee(x) {
+    if (!x.coupe && creationVide(x)) return null;
+    if (barbeSeule(x)) return null;
+    var zone = C.zones.filter(function (z) { return z.id === 'texture'; })[0];
+    var choisies = entreesZone(composer(x).slots, zone).filter(function (e) { return e.choix === true && e.en; }).map(function (e) { return e.en; });
+    return choisies.length ? choisies.join(', ') : null;
   }
 
   /* Le prompt image interdit de toucher à la barbe et à la texture. Si l'utilisateur en demande un
@@ -1590,9 +1608,9 @@
     return etat.mode || etat.fiche;
   }
 
-  /* Les étapes, dans l'ordre : Diagnostic, Image, Fiche.
+  /* Les étapes, dans l'ordre : Diagnostic, Image, Texture, Couleur, Fiche (Texture et Couleur si demandées).
      Chaque étape est une donnée complète, prête pour la V2 (CLAUDE.md, section 14) :
-       id      : 'diagnostic' | 'image' | 'fiche'
+       id      : 'diagnostic' | 'image' | 'texture' | 'couleur' | 'fiche'
        texte   : le prompt final, sans marqueur
        joindre : les photos à envoyer avec, dans l'ordre ('selfie', 'reference', 'image-generee')
      En V1, l'écran les affiche ; en V2, l'appli les enverra elle-même (generateImage). */
@@ -1610,10 +1628,16 @@
       etapes.push({
         id: 'image', titre: 'Image',
         consigne: P.consignes.image + (seule ? ' ' + P.consignes.barbeSeule : ''),
-        texte: P.image(descAnglaise(x, !!couleurDemandee(x)), seule, changementDemande(x)), joindre: ['selfie'], apres: P.consignes.apresImage
+        texte: P.image(descAnglaise(x, !!couleurDemandee(x), !!textureDemandee(x)), seule, /^barbe/.test(changementDemande(x) || '') ? 'barbe' : null),
+        joindre: ['selfie'], apres: P.consignes.apresImage
       });
     }
-    /* Coupe + couleur = 2 étapes : l'image ne décrit que la coupe, la couleur vient ensuite. */
+    /* Changement de texture puis couleur : chacun son étape, sur la dernière image générée.
+       Ordre : Image → Texture → Couleur (série contrôle, 16 novembre). */
+    var texture = textureDemandee(x);
+    if (texture) {
+      etapes.push({ id: 'texture', titre: 'Texture', consigne: P.consignes.texture, texte: P.texture(texture), joindre: ['image-generee'] });
+    }
     var couleur = couleurDemandee(x);
     if (couleur) {
       etapes.push({ id: 'couleur', titre: 'Couleur', consigne: P.consignes.couleur, texte: P.couleur(couleur), joindre: ['image-generee'] });
@@ -2143,6 +2167,7 @@
     changementDemande: changementDemande,
     alertesResultat: alertesResultat,
     couleurDemandee: couleurDemandee,
+    textureDemandee: textureDemandee,
     decolorationNecessaire: decolorationNecessaire,
     coupePourDiagnostic: coupePourDiagnostic,
     reglagesParDefaut: reglagesParDefaut,

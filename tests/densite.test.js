@@ -1,6 +1,7 @@
 /* Tests série 3 d'Antoine (15 novembre) : densité, tête chauve ou rasée, décoloration.
    1. Profil : « Clairsemés » et « Chauve / rasé » dans la question densité (barber et salon).
-   2. Golfes marqués, clairsemés ou chauve : [COUPE] finit toujours par la ligne Density.
+   2. Golfes marqués, clairsemés ou chauve : ligne Density juste après le nom de la coupe (série contrôle),
+      Front forcé sans frange, longueur du dessus « kept at the current length, no added volume ».
    3. Chauve / rasé : seules les coupes sans longueur (buzz cut) et les caractéristiques de barbe ;
       le reste est grisé avec « Impossible sans cheveux ».
    4. Couleur fantaisie ou fort éclaircissement : avertissement de décoloration.
@@ -37,14 +38,15 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   await page.click('#action-accueil');
   verifier('salon', await options(), 'Normale · Golfes légers · Golfes marqués · Clairsemés · Chauve / rasé · Cheveux fins');
 
-  console.log('2. Ligne Density à la fin de [COUPE]');
+  console.log('2. Ligne Density juste après le nom de la coupe');
   const densites = await page.evaluate((D) => {
     const A = window.CoupeStudio;
     const vide = { texture: null, visage: null, front: null, longueur: null, lunettes: null };
     const fin = (front, id, reglages, k) => {
       const c = id ? A.coupeDuCatalogue(id) : null;
       const d = A.descAnglaise({ coupe: c, reglages: c ? Object.assign(A.reglagesParDefaut(c), reglages || {}) : null, caracteristiques: k || [], couleurLibre: '', profil: Object.assign({}, vide, { front }) });
-      return d.endsWith('. ' + D) || d === D ? 'oui' : 'non';
+      const morceaux = d.split('. ');
+      return morceaux[1] === D || (morceaux[0].startsWith('Beard:') && d.endsWith('. ' + D)) ? 'oui' : 'non';
     };
     return ['normale', 'golfes-legers', 'golfes-marques', 'clairsemes', 'chauve', 'fins'].map((f) => fin(f, 'skin-fade')).join(' ') +
       ' | salon ' + fin('clairsemes', 'long-droit') + ' | sans coupe ' + fin('golfes-marques', null, {}, ['balayage']) +
@@ -56,7 +58,35 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
     const c = A.coupeDuCatalogue('buzz-cut');
     return A.descAnglaise({ coupe: c, reglages: A.reglagesParDefaut(c), caracteristiques: [], couleurLibre: '', profil: { front: 'chauve' } });
   });
-  verifier('texte exact, sans point final', exemple, 'Buzz cut. Sides: clipper guard 2 (6 mm). Top: clipper guard 2 (6 mm), even all over. Front: no fringe, no bangs, no curtain bangs, forehead uncovered as in the original. Neckline: natural hairline kept. ' + DENSITE);
+  verifier('buzz cut : texte exact, la tondeuse du dessus est gardée', exemple, 'Buzz cut. ' + DENSITE + '. Sides: clipper guard 2 (6 mm). Top: clipper guard 2 (6 mm), even all over. Front: no fringe, no bangs, no curtain bangs, forehead uncovered as in the original. Neckline: natural hairline kept');
+  const zones = await page.evaluate(() => {
+    const A = window.CoupeStudio;
+    const d = (id, front, k, reglages) => {
+      const c = A.coupeDuCatalogue(id);
+      const desc = A.descAnglaise({ coupe: c, reglages: Object.assign(A.reglagesParDefaut(c), reglages || {}), caracteristiques: k || [], couleurLibre: '', profil: { front } });
+      const z = {}; desc.split('. ').forEach((m) => { const i = m.indexOf(': '); if (i > 0) z[m.slice(0, i)] = m.slice(i + 2); });
+      return z;
+    };
+    return {
+      crop: d('crop-texture', 'golfes-marques'),
+      cropNormal: d('crop-texture', 'normale'),
+      rideau: d('frange-rideau', 'clairsemes', ['frange-rideau', 'meche-cote']),
+      skin: d('skin-fade', 'golfes-marques', [], { dessus: 9 }),
+      releve: d('skin-fade', 'golfes-marques', ['dessus-releve']),
+      butterfly: d('butterfly-cut', 'clairsemes'),
+      carre: d('carre-droit', 'clairsemes')
+    };
+  });
+  const F = 'no fringe, no bangs, no curtain bangs, forehead uncovered as in the original';
+  const T = 'kept at the current length, no added volume';
+  verifier('crop texturé (frange courte) : Front forcé sans frange', zones.crop.Front, F);
+  verifier('…mais gardé sur un profil normal', zones.cropNormal.Front, 'a short straight fringe');
+  verifier('frange rideau + caractéristiques frange et mèche : Front forcé', zones.rideau.Front, F);
+  verifier('crop texturé : Top, longueur remplacée, style gardé', zones.crop.Top, T + ', textured');
+  verifier('skin fade, dessus réglé à 9 cm : remplacé aussi', zones.skin.Top, T + ', textured');
+  verifier('« Dessus relevé » (volume) retiré : pas de contradiction', zones.releve.Top, T);
+  verifier('butterfly : « voluminous blow-dry » retiré', zones.butterfly.Top, T);
+  verifier('carré droit (salon, pas de Top) : Top écrit', zones.carre.Top, T);
 
   console.log('3. Chauve / rasé : seulement le buzz cut et la barbe');
   await page.goto(ADRESSE);

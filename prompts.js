@@ -80,7 +80,17 @@
     ].join('\n'),
 
     exception: [
-      "Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule."
+      "Exception to the rules below: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule."
+    ].join('\n'),
+
+    texture: [
+      "Edit this photo: keep the haircut, length and shape exactly as they are. Texture: [TEXTURE].",
+      "Strict rules:",
+      "- Change ONLY the hair texture. Everything else must stay identical: face, expression, skin, beard, eyebrows, glasses, earrings, clothing (including logos and text), background, framing and lighting.",
+      "- Keep the haircut identical: same length, shape, volume, parting, hairline and hair edges.",
+      "- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.",
+      "- Keep the EXACT original hair color: do not lighten or darken it.",
+      "- Photorealistic result, keep the original image quality and grain."
     ].join('\n'),
 
     couleur: [
@@ -195,10 +205,11 @@
      Reprises de PROMPTS.md, sans la phrase « Remplace [COUPE]… » : l'appli le fait déjà. */
   var CONSIGNES = {
     /* Affichée en tête de l'étape Diagnostic : la photo à prendre. */
-    photo: 'Photo de face, regard caméra, cheveux bien visibles.',
+    photo: 'Tête droite, face à l’objectif. Si elle est tournée, Gemini la redresse.',
     diagnostic: 'À envoyer en premier, avec le modèle 3.1 Pro et le selfie joint.',
     image: 'À envoyer après le diagnostic, avec le selfie joint. Si le diagnostic propose une alternative, remplace la description de la coupe par la sienne.',
-    couleur: 'À envoyer après l’étape Image, en joignant l’image générée.',
+    texture: 'À envoyer après l’étape Image, en joignant l’image générée.',
+    couleur: 'À envoyer après l’étape précédente (Image, ou Texture s’il y en a une), en joignant la dernière image générée.',
     /* Affiché sous le prompt image. */
     apresImage: 'Résultat bizarre (tête tournée, frange en trop) ? Relance la génération.',
     barbeSeule: 'Barbe seule : la ligne qui garde les cheveux intacts est déjà ajoutée à la fin.',
@@ -222,26 +233,27 @@
   }
 
   /* Étape 2 : [COUPE] = description anglaise. `barbeSeule` ajoute la ligne de la variante à la fin. */
-  /* Valeurs de [CHANGEMENT] dans la ligne d'exception (PROMPTS.md, variante exception barbe / texture). */
+  /* Valeurs de [CHANGEMENT] dans la ligne d'exception (PROMPTS.md, variante exception barbe).
+     La texture a son étape à elle (PROMPTS.md, 2a) : plus d'exception texture. */
   var CHANGEMENTS = {
-    barbe: ['a beard change', 'that change'],
-    texture: ['a texture change', 'that change'],
-    'barbe-texture': ['a beard change and a texture change', 'those changes']
+    barbe: ['a beard change', 'that change']
   };
 
-  /* `barbeSeule` ajoute la ligne de la variante barbe seule.
-     `changement` ('barbe', 'texture', 'barbe-texture' ou rien) ajoute la ligne d'exception. */
+  /* `barbeSeule` ajoute la ligne de la variante barbe seule, à la fin.
+     `changement` ('barbe' ou rien) ajoute la ligne d'exception juste avant « Strict rules: »,
+     puisqu'elle parle des « rules below » (série contrôle, 16 novembre). */
   function image(descAnglaise, barbeSeule, changement) {
     var t = remplacer(TEXTES.image, '[COUPE]', descAnglaise);
     if (barbeSeule) return t + '\n' + TEXTES.barbeSeule;
     var c = CHANGEMENTS[changement];
     if (!c) return t;
     var ligne = remplacer(remplacer(TEXTES.exception, '[CHANGEMENT]', c[0]), '[CE_CHANGEMENT]', c[1]);
-    /* Changement de texture : la ligne va juste avant « Strict rules: » (décision du 15 novembre, tests série 4).
-       Barbe seule : elle reste à la fin. */
-    if (changement === 'texture' || changement === 'barbe-texture') return t.replace('\nStrict rules:\n', '\n' + ligne + '\nStrict rules:\n');
-    t += '\n' + ligne;
-    return t;
+    return t.replace('\nStrict rules:\n', '\n' + ligne + '\nStrict rules:\n');
+  }
+
+  /* Étape Texture, sur l'image générée : [TEXTURE] = la texture choisie. */
+  function texture(texteTexture) {
+    return remplacer(TEXTES.texture, '[TEXTURE]', texteTexture);
   }
 
   /* Étape Couleur, sur l'image générée : [COULEUR] = la couleur choisie, sans « change to ». */
@@ -273,7 +285,8 @@
     reference: reference,
     fiche: fiche,
     retouche: retouche,
-    couleur: couleur
+    couleur: couleur,
+    texture: texture
   };
 
   racine.PROMPTS = PROMPTS;

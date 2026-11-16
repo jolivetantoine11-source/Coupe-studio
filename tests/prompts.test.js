@@ -39,20 +39,28 @@ const ref = blocs('PROMPTS.md');
 const refFond = blocs('CLAUDE.md');
 
 console.log('1. Textes de prompts.js comparés à PROMPTS.md');
-if (ref.length !== 9) { console.log('  ÉCHEC   PROMPTS.md doit contenir 9 blocs, trouvé ' + ref.length); echecs++; }
-const NOMS = ['diagnostic', 'diagnosticSalon', 'image', 'barbeSeule', 'exception', 'reference', 'couleur', 'ficheBarber', 'ficheSalon'];
+if (ref.length !== 10) { console.log('  ÉCHEC   PROMPTS.md doit contenir 10 blocs, trouvé ' + ref.length); echecs++; }
+const NOMS = ['diagnostic', 'diagnosticSalon', 'image', 'barbeSeule', 'exception', 'reference', 'texture', 'couleur', 'ficheBarber', 'ficheSalon'];
 NOMS.forEach((nom, i) => {
   verifier(nom, PROMPTS.textes[nom], ref[i]);
 });
-const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_COULEUR, R_FICHE_B, R_FICHE_S] = ref;
+const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_TEXTURE, R_COULEUR, R_FICHE_B, R_FICHE_S] = ref;
 verifier('étape Couleur : première ligne demandée par Antoine', R_COULEUR.split('\n')[0], 'Edit this photo: keep the haircut, length and shape exactly as they are. Color: [COULEUR], subtle and natural.');
+verifier('étape Texture : texte d’Antoine (série contrôle)', R_TEXTURE, [
+  'Edit this photo: keep the haircut, length and shape exactly as they are. Texture: [TEXTURE].',
+  'Strict rules:',
+  '- Change ONLY the hair texture. Everything else must stay identical: face, expression, skin, beard, eyebrows, glasses, earrings, clothing (including logos and text), background, framing and lighting.',
+  '- Keep the haircut identical: same length, shape, volume, parting, hairline and hair edges.',
+  '- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.',
+  '- Keep the EXACT original hair color: do not lighten or darken it.',
+  '- Photorealistic result, keep the original image quality and grain.'].join('\n'));
 verifier('étape Couleur : « Strict rules »', R_COULEUR.split('\n')[1], 'Strict rules:');
 ['- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.',
   '- Do not add a fringe, bangs or any element that is not explicitly requested. Keep jewelry identical.',
   '- If the requested length is longer than the current hair, keep the original hairline exactly; never lower it or fill receding areas.'
 ].forEach((regle) => verifier('règle du 15 novembre dans « Strict rules » : ' + regle.slice(2, 40) + '…', R_IMAGE.split('\n').includes(regle) && PROMPTS.textes.image.split('\n').includes(regle), true));
 verifier('« Strict rules » : 11 règles', R_IMAGE.split('\n').filter((l) => l.startsWith('- ')).length, 11);
-verifier('ligne d’exception demandée par Antoine (avec accord)', R_EXCEPTION, 'Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule.');
+verifier('ligne d’exception demandée par Antoine (« below », série contrôle)', R_EXCEPTION, 'Exception to the rules below: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule.');
 
 console.log('1b. Diagnostic salon = diagnostic barber avec les 4 seuls remplacements validés par Antoine');
 const REMPLACEMENTS = [
@@ -84,22 +92,23 @@ verifier('diagnostic barber assemblé', PROMPTS.diagnostic(COUPE, 'barber'), R_D
 verifier('diagnostic salon assemblé', PROMPTS.diagnostic(COUPE, 'salon'), R_DIAG_SALON.split('[COUPE]').join(COUPE));
 verifier('image assemblée', PROMPTS.image(DESC, false), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('image + barbe seule', PROMPTS.image(DESC, true), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
-[['barbe', 'a beard change', 'that change'], ['texture', 'a texture change', 'that change'], ['barbe-texture', 'a beard change and a texture change', 'those changes']].forEach(([cle, valeur, accord]) => {
-  const ligne = R_EXCEPTION.split('[CHANGEMENT]').join(valeur).split('[CE_CHANGEMENT]').join(accord);
+{
+  const ligne = R_EXCEPTION.split('[CHANGEMENT]').join('a beard change').split('[CE_CHANGEMENT]').join('that change');
   const image = R_IMAGE.split('[COUPE]').join(DESC);
-  const attendu = cle === 'barbe' ? image + '\n' + ligne : image.replace('\nStrict rules:\n', '\n' + ligne + '\nStrict rules:\n');
-  verifier('image + exception ' + cle + ' (« ' + accord + ' », ' + (cle === 'barbe' ? 'à la fin' : 'avant « Strict rules »') + ')', PROMPTS.image(DESC, false, cle), attendu);
-});
+  verifier('image + exception barbe (« that change », avant « Strict rules »)', PROMPTS.image(DESC, false, 'barbe'), image.replace('\nStrict rules:\n', '\n' + ligne + '\nStrict rules:\n'));
+  verifier('texture : plus d’exception dans le prompt image', PROMPTS.image(DESC, false, 'texture'), image);
+}
 verifier('sans barbe ni texture : prompt image inchangé', PROMPTS.image(DESC, false, null), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('barbe seule : pas de ligne d’exception', PROMPTS.image(DESC, true, 'barbe'), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
 verifier('photo de référence', PROMPTS.reference(), R_REF);
+verifier('texture assemblée', PROMPTS.texture('defined curls'), R_TEXTURE.split('[TEXTURE]').join('defined curls'));
 verifier('couleur assemblée', PROMPTS.couleur('blonde highlights'), R_COULEUR.split('[COULEUR]').join('blonde highlights'));
 verifier('fiche barber', PROMPTS.fiche('barber'), R_FICHE_B);
 verifier('fiche salon', PROMPTS.fiche('salon'), R_FICHE_S);
 verifier('retouche assemblée : prompt de fond + règle', PROMPTS.retouche(FOND), refFond[0].split('[FOND]').join(FOND) + '\n' + refFond[1]);
 
 console.log('4. Marqueurs');
-[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['exception', '[CE_CHANGEMENT]', 1], ['couleur', '[COULEUR]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
+[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['exception', '[CE_CHANGEMENT]', 1], ['texture', '[TEXTURE]', 1], ['couleur', '[COULEUR]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
   ['ficheBarber', '[COUPE]', 0], ['ficheSalon', '[COUPE]', 0]].forEach(([nom, marqueur, n]) => {
   const compte = PROMPTS.textes[nom].split(marqueur).length - 1;
   if (compte === n) console.log('  OK      ' + nom + ' contient ' + n + ' fois ' + marqueur);

@@ -102,14 +102,16 @@ Ligne ajoutée à la fin du prompt image :
 Change ONLY the beard as described, keep the hair on top exactly as it is.
 ```
 
-### Variante exception barbe / texture
+### Variante exception barbe
 
-Ajoutée le 16 novembre 2026 à la demande d'Antoine. Ajoutée à la fin du prompt image (sur une nouvelle ligne) quand l'utilisateur a choisi un changement dans la zone Beard (hors barbe seule) ou dans la zone Texture. [CHANGEMENT] vaut « a beard change », « a texture change » ou « a beard change and a texture change ». [CE_CHANGEMENT] s'accorde (mise à jour du 15 novembre) : « that change » pour un seul changement, « those changes » pour deux. Place : à la fin du prompt pour un changement de barbe seul ; juste avant « Strict rules: » dès qu'il y a un changement de texture (décision du 15 novembre, tests série 4 ; dans ce cas [COUPE] finit aussi par « Head pose: keep the exact head tilt and rotation of the original; change only the hair texture »). Seul un choix de l'utilisateur (réglage ou caractéristique) déclenche cette ligne, jamais le texte par défaut d'une coupe (dégradé bouclé, carré bouclé). Sinon le prompt image est inchangé.
+Ajoutée le 16 novembre 2026 à la demande d'Antoine. Placée juste avant « Strict rules: » (sur sa propre ligne) quand l'utilisateur a choisi un changement dans la zone Beard (hors barbe seule). [CHANGEMENT] vaut « a beard change », [CE_CHANGEMENT] « that change ». Seul un choix de l'utilisateur (réglage ou caractéristique) déclenche cette ligne. Sinon le prompt image est inchangé.
 
-Ligne ajoutée à la fin du prompt image :
+Depuis la série contrôle (16 novembre) : « the rules below » au lieu de « above », et la texture n'est plus dans le prompt image : elle a son étape (2a).
+
+Ligne ajoutée avant « Strict rules: » :
 
 ```text
-Exception to the rules above: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule.
+Exception to the rules below: the requested haircut explicitly asks for [CHANGEMENT]. Apply only [CE_CHANGEMENT] as described, and keep every other rule.
 ```
 
 ### Variante photo de référence
@@ -127,13 +129,31 @@ Photorealistic result.
 
 ---
 
+## 2a. Texture (sur l'image générée)
+
+Ajoutée le 16 novembre 2026 à la demande d'Antoine (série contrôle) : un changement de texture choisi par l'utilisateur (lissé, kératine, permanente, défrisage, boucles…) se fait dans une étape à part, comme la couleur. L'étape Image ne contient alors ni la zone Texture ni de ligne d'exception texture. Ordre : Image → Texture → Couleur. [TEXTURE] = le texte anglais de la texture choisie. Le texte par défaut d'une coupe (dégradé bouclé, carré bouclé) reste dans le prompt image.
+
+Consigne : À envoyer après l'étape Image, en joignant l'image générée.
+
+```text
+Edit this photo: keep the haircut, length and shape exactly as they are. Texture: [TEXTURE].
+Strict rules:
+- Change ONLY the hair texture. Everything else must stay identical: face, expression, skin, beard, eyebrows, glasses, earrings, clothing (including logos and text), background, framing and lighting.
+- Keep the haircut identical: same length, shape, volume, parting, hairline and hair edges.
+- Keep the head pose and orientation exactly as in the original: do not rotate, tilt or mirror the head.
+- Keep the EXACT original hair color: do not lighten or darken it.
+- Photorealistic result, keep the original image quality and grain.
+```
+
+---
+
 ## 2b. Couleur (sur l'image générée)
 
 Ajoutée le 15 novembre 2026 à la demande d'Antoine : une coupe avec un changement de couleur se fait en 2 étapes. L'étape Image ne décrit que la coupe (sans la zone Color) ; cette étape applique ensuite la couleur sur l'image générée. [COULEUR] = la couleur choisie (réglage ou caractéristique), sans « change to » (ex. « blonde highlights »). « Poivre et sel gardé » n'est pas un changement : pas d'étape Couleur.
 
 La première phrase est celle d'Antoine. **Les « Strict rules » ont été rédigées par Claude : à valider par Antoine.**
 
-Consigne : À envoyer après l'étape Image, en joignant l'image générée.
+Consigne : À envoyer après l'étape précédente (Image, ou Texture s'il y en a une), en joignant la dernière image générée.
 
 ```text
 Edit this photo: keep the haircut, length and shape exactly as they are. Color: [COULEUR], subtle and natural.

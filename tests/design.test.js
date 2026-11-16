@@ -93,7 +93,11 @@ if (/\sstyle=/.test(html)) echec('index.html contient un attribut style');
 if (/#[0-9a-fA-F]{6}\b/.test(html)) echec('index.html contient une couleur écrite en dur');
 if (/#[0-9a-fA-F]{6}\b|rgba?\(/.test(js)) echec('app.js contient une couleur écrite en dur');
 if (/<script[^>]+src="http/.test(html)) echec('index.html charge un script externe');
-if (/\bfetch\(|XMLHttpRequest|sendBeacon/.test(js)) echec('app.js envoie des données sur le réseau');
+/* V2 : un seul envoi réseau est permis, celui de appelerWorker() vers l'adresse de config.js. */
+if (/XMLHttpRequest|sendBeacon|WebSocket|EventSource/.test(js)) echec('app.js envoie des données sur le réseau autrement que par le Worker');
+const envois = js.match(/\bfetch\(/g) || [];
+if (envois.length !== 1 || !/window\.fetch\(adresse \+ chemin,/.test(js)) echec('app.js doit contenir un seul fetch, vers le Worker (trouvé : ' + envois.length + ')');
+if (/https?:\/\/(?!gemini\.google\.com\/app)[a-z0-9.-]+/i.test(js.replace(/\/\*[\s\S]*?\*\//g, ''))) echec('app.js contient une adresse réseau écrite en dur');
 console.log('    lus.');
 
 /* ---------- 3. Rendu réel ---------- */

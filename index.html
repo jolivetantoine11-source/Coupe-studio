@@ -246,6 +246,33 @@ try {
           </div>
         </div>
         <div class="pile" id="alertes-resultat" aria-live="polite" hidden></div>
+        <!-- V2 : visible seulement si config.js donne l'adresse du Worker. -->
+        <div class="carte pile-large" id="generation" hidden>
+          <h2 class="carte-titre">Génération dans l’appli</h2>
+          <div>
+            <label class="etiquette" for="code-acces">Code d’accès du salon</label>
+            <input class="champ" id="code-acces" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            <p class="legende consigne" id="generation-aide">Saisis le code pour générer ici. Sans code, copie les prompts dans Gemini.</p>
+          </div>
+          <div class="pile-large" id="generation-photos" hidden>
+            <p id="consigne-photo-v2"></p>
+            <div class="photo-jointe">
+              <img class="vignette" id="vignette-selfie" alt="Photo du client" hidden>
+              <button type="button" class="btn-2" id="choisir-selfie">Photo du client</button>
+            </div>
+            <div class="photo-jointe" id="ligne-reference" hidden>
+              <img class="vignette" id="vignette-reference" alt="Photo de référence" hidden>
+              <button type="button" class="btn-2" id="choisir-reference">Photo de référence</button>
+            </div>
+            <label class="accord" for="consentement">
+              <input type="checkbox" id="consentement">
+              <span id="texte-consentement">Le client accepte que sa photo soit envoyée à Google pour l’essai.</span>
+            </label>
+            <p class="alerte" id="message-generation" role="alert" hidden></p>
+          </div>
+          <input type="file" id="fichier-selfie" accept="image/*" hidden>
+          <input type="file" id="fichier-reference" accept="image/*" hidden>
+        </div>
         <div class="blocs" id="etapes"></div>
         <div id="bloc-reference">
           <span class="etiquette" id="etiquette-reference">J’ai une photo de référence</span>
@@ -376,6 +403,7 @@ try {
 <script src="fonds.js"></script>
 <script src="retouche.js"></script>
 <script src="prompts.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

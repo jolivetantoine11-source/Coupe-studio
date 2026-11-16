@@ -1,0 +1,31 @@
+# Coupe Studio — Worker Cloudflare (V2). Installation : docs/V2-installation.md
+name = "coupe-studio"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# Aucun journal conservé chez Cloudflare.
+[observability]
+enabled = false
+
+[vars]
+# Seul ce site peut appeler le Worker. Plusieurs origines : les séparer par des virgules.
+ORIGINE = "https://jolivetantoine11-source.github.io"
+# Modèles Gemini (doc Google AI, lue le 16 novembre 2026). Pour en changer : modifier ici, puis « npx wrangler deploy ».
+#   Image : gemini-nano-banana-2.1 = version stable, recommandée par Google pour les nouveaux projets.
+#   Texte : gemini-4-hydrogen = stable, le moins cher. Plus fin et plus cher : gemini-4-argon.
+MODELE_IMAGE = "gemini-nano-banana-2.1"
+MODELE_TEXTE = "gemini-4-hydrogen"
+# Limites par code d'accès et par jour (heure de Paris).
+QUOTA_IMAGES = "30"
+QUOTA_TEXTES = "60"
+
+# Compteur du quota : une empreinte du code, la date et un nombre. Rien d'autre.
+# Remplace l'id par celui que donne « npx wrangler kv namespace create QUOTAS ».
+[[kv_namespaces]]
+binding = "QUOTAS"
+id = "REMPLACE_PAR_L_ID_DU_KV"
+
+# Les secrets ne sont PAS ici. Ils se règlent avec :
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put ACCES

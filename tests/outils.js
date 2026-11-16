@@ -95,7 +95,17 @@ const VARIANTES = {
   resultat: [
     { nom: 'resultat' },
     { nom: 'resultat-reference', action: async (page) => { await page.click('[data-reference="oui"]'); } },
-    { nom: 'resultat-confirmation', action: async (page) => { await page.click('#ecran-resultat [data-nouveau-client]'); } }
+    { nom: 'resultat-confirmation', action: async (page) => { await page.click('#ecran-resultat [data-nouveau-client]'); } },
+    /* V2 : Worker réglé (adresse factice), code saisi. Images de synthèse, aucun appel réseau réussi. */
+    { nom: 'resultat-v2', action: async (page) => { await activerV2(page, false); } },
+    { nom: 'resultat-v2-resultats', action: async (page) => { await activerV2(page, true); } },
+    { nom: 'resultat-v2-erreur', action: async (page) => {
+      await activerV2(page, true);
+      await page.evaluate(() => {
+        window.CoupeStudio.v2.erreurs.image = 'Google est saturé pour le moment. Attends une minute. Relance ou passe par Gemini (Copier).';
+        document.querySelector('#consentement').dispatchEvent(new Event('change')); // redessine les étapes
+      });
+    } }
   ],
   fond: [
     { nom: 'fond' }
@@ -127,6 +137,36 @@ const VARIANTES = {
     } }
   ]
 };
+/* Met l'écran Résultat en V2 sans Worker réel : adresse factice, code saisi et, si `avecResultats`,
+   une photo de synthèse, l'accord coché et un résultat par étape. */
+async function activerV2(page, avecResultats) {
+  await page.evaluate((remplir) => {
+    window.CONFIG.worker = 'https://worker.invalid';
+    const A = window.CoupeStudio;
+    if (remplir) {
+      const dessin = (fond, forme) => {
+        const c = document.createElement('canvas');
+        c.width = 600; c.height = 800;
+        const x = c.getContext('2d');
+        x.fillStyle = fond; x.fillRect(0, 0, 600, 800);
+        x.fillStyle = forme; x.beginPath(); x.arc(300, 360, 180, 0, 7); x.fill();
+        x.fillRect(180, 560, 240, 240);
+        return c.toDataURL('image/jpeg', 0.9);
+      };
+      A.v2.selfie = dessin('#9aa7b1', '#4b5a66');
+      A.v2.consentement = true;
+      A.etapesResultat().forEach((e) => {
+        A.v2.resultats[e.id] = ['image', 'texture', 'couleur'].indexOf(e.id) >= 0
+          ? { prompt: e.texte, image: dessin('#9aa7b1', '#2f3b45'), envoi: A.v2.selfie, avant: A.v2.selfie }
+          : { prompt: e.texte, texte: 'VERDICT : ✅ FAISABLE MAINTENANT\nRAISON : la longueur du dessus est suffisante, les côtés aussi.' };
+      });
+    }
+    const champ = document.querySelector('#code-acces');
+    champ.value = 'salon-test';
+    champ.dispatchEvent(new Event('input'));
+  }, avecResultats);
+}
+
 const ECRANS = Object.keys(VARIANTES);
 
 async function ouvrir(navigateur, { theme, format, ecran, variante }) {
@@ -317,7 +357,9 @@ function auditDansLaPage() {
 
     /* Zones tactiles : 48 × 48 au moins. */
     if (e.matches('button, a[href], input, textarea, select')) {
-      if (r.width < 47.5 || r.height < 47.5) signaler('zone tactile sous 48 × 48', e, Math.round(r.width) + ' × ' + Math.round(r.height));
+      /* Une case à cocher dans son étiquette : la zone tactile est l'étiquette entière. */
+      const zone = e.matches('input[type="checkbox"]') && e.closest('label') ? e.closest('label').getBoundingClientRect() : r;
+      if (zone.width < 47.5 || zone.height < 47.5) signaler('zone tactile sous 48 × 48', e, Math.round(zone.width) + ' × ' + Math.round(zone.height));
     }
 
     /* Texte : taille dans l'échelle, couleur du thème, contraste 4,5:1, pas de texte coupé. */

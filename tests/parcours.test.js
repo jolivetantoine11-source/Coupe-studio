@@ -724,16 +724,31 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   }));
   await contexte.close();
 
-  /* ============ L. Hook V2 et périmètre ============ */
-  console.log('L. Hook V2 et périmètre V1');
+  /* ============ L. V1 sans Worker : rien de la V2 n'apparaît ============ */
+  console.log('L. V1 intacte quand config.js ne donne pas de Worker');
   ({ contexte, page } = await nouvelle(navigateur));
-  const v2 = await page.evaluate(() => window.CoupeStudio.generateImage(null, 'x').then(() => 'résolue', (e) => e.message));
-  verifier('generateImage renvoie une erreur claire', v2.startsWith('Disponible en V2'));
+  const demandes = [];
+  page.on('request', (r) => { if (!/^(file|data|blob):/.test(r.url()) && !/fonts\.(googleapis|gstatic)\.com/.test(r.url())) demandes.push(r.url()); });
+  verifier('config.js livré sans adresse de Worker', await page.evaluate(() => window.CONFIG.worker), '');
+  const v2 = await page.evaluate(() => window.CoupeStudio.generateImage(['x'], 'x').then(() => 'résolue', (e) => e.code + ' / ' + e.message));
+  verifier('generateImage sans Worker : erreur claire, en français', v2, 'REGLAGE / La génération dans l’appli n’est pas réglée. Relance ou passe par Gemini (Copier).');
+  verifier('V2 inactive', await page.evaluate(() => window.CoupeStudio.v2Active()), false);
+  await page.evaluate(() => { localStorage.setItem('coupe-studio:acces', JSON.stringify('un-code')); });
+  await page.click('#action-accueil');
+  await page.click('#passer-profil');
+  await page.click('#ecran-choix a[href="#catalogue"]');
+  await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
+  await page.click('#action-reglages');
+  verifier('Résultat sans Worker, même avec un code en mémoire : carte de génération cachée', await page.isHidden('#generation'));
+  verifier('…aucun bouton « Générer », chaque étape garde « Copier » et « Ouvrir Gemini »',
+    await page.$$eval('#etapes .carte', (c) => c.map((x) => x.querySelectorAll('[data-generer]').length + ':' + Array.from(x.querySelectorAll('.btn-2')).map((b) => b.textContent).join('+')).join(' | ')),
+    '0:Copier+Ouvrir Gemini | 0:Copier+Ouvrir Gemini | 0:Copier+Ouvrir Gemini');
+  verifier('…sous-titre de la V1', await texte(page, '#sous-titre-resultat'), 'Copie, ouvre Gemini, colle, joins la photo.');
+  verifier('aucune demande réseau hors polices', demandes.join(' | '), '');
   const source = fs.readFileSync(path.join(RACINE, 'app.js'), 'utf8');
-  verifier('aucun bouton n’appelle generateImage (une seule occurrence : sa définition)', (source.match(/generateImage\(/g) || []).length, 1);
   verifier('aucune fenêtre du navigateur (confirm, alert, prompt)', /\b(confirm|alert|prompt)\(/.test(source.replace(/\/\*[\s\S]*?\*\//g, '')), false);
   verifier('aucune photo fournie avec l’appli', await page.evaluate(() => Array.from(document.querySelectorAll('img')).filter((i) => i.getAttribute('src')).length), 0);
-  verifier('les seuls champs de fichier sont ceux du Catalogue fond', (await ids(page, 'input[type="file"]', 'id')).join(), 'fichier-photo,fichier-avant');
+  verifier('champs de fichier : Catalogue fond, et photos de la V2 (cachées sans Worker)', (await ids(page, 'input[type="file"]', 'id')).join(), 'fichier-selfie,fichier-reference,fichier-photo,fichier-avant');
   await contexte.close();
 
   await navigateur.close();

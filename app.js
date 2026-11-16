@@ -21,7 +21,8 @@
     mode: 'coupe-studio:mode',
     enregistrees: 'coupe-studio:recettes', // nom de clé d'origine, gardé pour ne rien perdre
     coupes: 'coupe-studio:coupes',
-    session: 'coupe-studio:session'
+    session: 'coupe-studio:session',
+    acces: 'coupe-studio:acces' // V2 : code d'accès du salon, gardé sur le téléphone
   };
   var MAX_ENREGISTREES = 30;
 
@@ -711,6 +712,7 @@
     for (var k in vide) { if (Object.prototype.hasOwnProperty.call(vide, k)) etat[k] = vide[k]; }
     oublierPhoto('apres');
     oublierPhoto('avant');
+    viderV2();
     memoriser();
   }
 
@@ -1655,23 +1657,33 @@
     m.hidden = !texte;
   }
 
+  /* Bloc de prompt de la V1 : consigne, prompt, « Copier », « Ouvrir Gemini ». */
+  function blocPromptV1(etape, n) {
+    return [
+      etape.photo ? el('p', { 'class': 'consigne carte-titre', texte: etape.photo }) : null,
+      el('p', { 'class': 'consigne', texte: etape.consigne }),
+      el('pre', { 'class': 'prompt', id: 'prompt-' + n, tabindex: '0', role: 'group', 'aria-label': 'Prompt de l’étape ' + n, texte: etape.texte }),
+      el('div', { 'class': 'rangee' }, [
+        el('button', { type: 'button', 'class': 'btn-2', 'data-copier': 'prompt-' + n, texte: 'Copier' }),
+        el('a', { 'class': 'btn-2', href: ADRESSE_GEMINI, target: '_blank', rel: 'noopener', texte: 'Ouvrir Gemini' })
+      ]),
+      etape.apres ? el('p', { 'class': 'consigne discret', texte: etape.apres }) : null,
+      el('p', { 'class': 'alerte consigne', id: 'message-prompt-' + n, role: 'alert', hidden: true })
+    ];
+  }
+
+  /* V1 : chaque carte montre son prompt à copier. V2 (Worker réglé + code saisi) : « Générer ». */
   function construireEtapes() {
     var zone = $('#etapes');
     vider(zone);
-    etapesResultat().forEach(function (etape, i) {
+    var etapes = etapesResultat();
+    var active = v2Active();
+    etapes.forEach(function (etape, i) {
       var n = i + 1;
-      zone.appendChild(el('div', { 'class': 'carte' }, [
-        el('p', { 'class': 'etape', texte: 'Étape ' + n + ' · ' + etape.titre }),
-        etape.photo ? el('p', { 'class': 'consigne carte-titre', texte: etape.photo }) : null,
-        el('p', { 'class': 'consigne', texte: etape.consigne }),
-        el('pre', { 'class': 'prompt', id: 'prompt-' + n, tabindex: '0', role: 'group', 'aria-label': 'Prompt de l’étape ' + n, texte: etape.texte }),
-        el('div', { 'class': 'rangee' }, [
-          el('button', { type: 'button', 'class': 'btn-2', 'data-copier': 'prompt-' + n, texte: 'Copier' }),
-          el('a', { 'class': 'btn-2', href: ADRESSE_GEMINI, target: '_blank', rel: 'noopener', texte: 'Ouvrir Gemini' })
-        ]),
-        etape.apres ? el('p', { 'class': 'consigne discret', texte: etape.apres }) : null,
-        el('p', { 'class': 'alerte consigne', id: 'message-prompt-' + n, role: 'alert', hidden: true })
-      ]));
+      var contenu = active ? blocGenerationV2(etape, etapes, i) : blocPromptV1(etape, n);
+      zone.appendChild(el('div', { 'class': 'carte', 'data-etape': etape.id }, [
+        el('p', { 'class': 'etape', texte: 'Étape ' + n + ' · ' + etape.titre })
+      ].concat(contenu)));
     });
   }
 
@@ -1695,7 +1707,7 @@
     var vide = creationVide(x);
     $('#sous-titre-resultat').textContent = vide
       ? 'Rien à générer pour l’instant. Choisis une coupe ou des caractéristiques.'
-      : 'Copie, ouvre Gemini, colle, joins la photo.';
+      : (v2Active() ? 'Ajoute la photo du client, puis génère chaque étape.' : 'Copie, ouvre Gemini, colle, joins la photo.');
     $('#etapes').hidden = vide;
     $('#bloc-reference').hidden = vide;
     $('#resultat-secondaires').hidden = vide;
@@ -1708,6 +1720,7 @@
     vider(zoneAlertes);
     if (!vide) alertesResultat(x).forEach(function (a) { zoneAlertes.appendChild(alerte(a.titre, a.texte)); });
     zoneAlertes.hidden = !zoneAlertes.firstChild;
+    rendreGeneration(vide);
     if (vide) return;
     construireEtapes();
     tous('#bloc-reference [data-reference]').forEach(function (b) {
@@ -1737,6 +1750,8 @@
       $('#bloc-fiche [data-fiche="' + etat.fiche + '"]').focus();
       return;
     }
+
+    if (clicV2(b)) return;
 
     if (b.id === 'enregistrer') {
       var donnees = versDonnees(true);
@@ -2110,12 +2125,362 @@
   });
 
   /* ===================================================================
-     Hook V2 : génération d'image dans l'appli. Présent mais vide en V1,
-     aucun bouton ne l'appelle.
+     V2, étape 1 : génération dans l'appli (CLAUDE.md, section 14).
+     Active seulement si config.js donne l'adresse du Worker ET si le code d'accès du salon est saisi.
+     Sinon, la V1 est inchangée : prompts à copier dans Gemini.
+
+     - Les photos (client, référence) et les résultats restent en mémoire : jamais stockés.
+     - La photo part au Worker (worker/src/index.js), qui garde la clé Gemini.
+     - Les étapes de etapesResultat() s'enchaînent selon `joindre` :
+       'image-generee' = l'image de l'étape d'image précédente (Image, puis Texture, puis Couleur).
      =================================================================== */
-  function generateImage(photo, prompt) { // eslint-disable-line no-unused-vars
-    return Promise.reject(new Error('Disponible en V2 : en V1, copie le prompt et colle-le dans Gemini.'));
+  var COTE_ENVOI = 1024; // plus grand côté de la photo envoyée, en pixels
+  var DELAI_V2 = 90000;
+  var ETAPES_IMAGE = ['image', 'texture', 'couleur'];
+  var CONSENTEMENT = 'Le client accepte que sa photo soit envoyée à Google pour l’essai.';
+  var SUITE_ERREUR = ' Relance ou passe par Gemini (Copier).';
+  var ERREURS_V2 = {
+    RESEAU: 'Pas de connexion au service. Vérifie le réseau.',
+    DELAI: 'La génération a pris trop de temps.',
+    ACCES: 'Code d’accès refusé. Vérifie le code du salon.',
+    QUOTA_IMAGES: 'Limite du jour atteinte : [N] images par jour.',
+    QUOTA_TEXTES: 'Limite du jour atteinte : [N] textes par jour.',
+    QUOTA_GOOGLE: 'Google est saturé pour le moment. Attends une minute.',
+    REFUS: 'Gemini a refusé cette demande ou n’a rien rendu.',
+    SERVEUR: 'Le service a rencontré un problème.',
+    REGLAGE: 'La génération dans l’appli n’est pas réglée.'
+  };
+
+  /* Tout ce que la V2 garde pour le client en cours. En mémoire seulement. */
+  var v2 = { selfie: null, reference: null, consentement: false, resultats: {}, erreurs: {}, enCours: null, jeton: 0 };
+
+  function viderV2() {
+    v2.selfie = null;
+    v2.reference = null;
+    v2.consentement = false;
+    v2.resultats = {};
+    v2.erreurs = {};
+    v2.enCours = null;
+    v2.jeton++; // une génération en cours pour l'ancien client est ignorée à son retour
   }
+
+  function adresseWorker() {
+    var c = window.CONFIG;
+    return c && typeof c.worker === 'string' ? c.worker.trim().replace(/\/+$/, '') : '';
+  }
+
+  function codeAcces() {
+    var c = lire(CLES.acces, '');
+    return typeof c === 'string' ? c : '';
+  }
+
+  function v2Reglee() { return !!adresseWorker(); }
+  function v2Active() { return v2Reglee() && !!codeAcces(); }
+
+  function erreurV2(code, limite) {
+    var e = new Error((ERREURS_V2[code] || ERREURS_V2.SERVEUR).replace('[N]', String(limite || '')) + SUITE_ERREUR);
+    e.code = code;
+    return e;
+  }
+
+  function sansPrefixe(photo) {
+    var t = String(photo || '');
+    var i = t.indexOf('base64,');
+    return i >= 0 ? t.slice(i + 7) : t;
+  }
+
+  /* Envoie { photos, prompt } au Worker. Promesse : la réponse JSON, ou une erreur en français (e.code). */
+  function appelerWorker(chemin, photos, prompt) {
+    var adresse = adresseWorker();
+    if (!adresse || !codeAcces()) return Promise.reject(erreurV2('REGLAGE'));
+    var controle = typeof AbortController === 'function' ? new AbortController() : null;
+    var minuterie = window.setTimeout(function () { if (controle) controle.abort(); }, DELAI_V2);
+    var fini = function () { window.clearTimeout(minuterie); };
+    return window.fetch(adresse + chemin, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Acces': codeAcces() },
+      body: JSON.stringify({ photos: [].concat(photos || []).map(sansPrefixe), prompt: String(prompt || '') }),
+      signal: controle ? controle.signal : undefined
+    }).then(function (rep) {
+      return rep.json().then(function (j) { return j; }, function () { return null; }).then(function (json) {
+        fini();
+        if (rep.ok && json && !json.erreur) return json;
+        var code = json && typeof json.erreur === 'string' ? json.erreur : 'SERVEUR';
+        if (code === 'QUOTA') code = chemin === '/image' ? 'QUOTA_IMAGES' : 'QUOTA_TEXTES';
+        throw erreurV2(code, json && json.limite);
+      });
+    }, function (e) {
+      fini();
+      throw erreurV2(e && e.name === 'AbortError' ? 'DELAI' : 'RESEAU');
+    });
+  }
+
+  /* Génère une image à partir d'une ou plusieurs photos (base64 ou data URL) et d'un prompt.
+     Promesse : { image: data URL, reste }. */
+  function generateImage(photo, prompt) {
+    return appelerWorker('/image', photo, prompt).then(function (json) {
+      if (typeof json.image !== 'string' || !json.image) throw erreurV2('REFUS');
+      return { image: 'data:' + (json.mime || 'image/jpeg') + ';base64,' + json.image, reste: json.reste };
+    });
+  }
+
+  /* Génère un texte (diagnostic, fiche) à partir de photos et d'un prompt. Promesse : { texte, reste }. */
+  function genererTexte(photosJointes, prompt) {
+    return appelerWorker('/texte', photosJointes, prompt).then(function (json) {
+      if (typeof json.texte !== 'string' || !json.texte) throw erreurV2('REFUS');
+      return { texte: json.texte, reste: json.reste };
+    });
+  }
+
+  /* Réduit une image (fichier ou data URL) à 1024 px au plus grand côté, en JPEG. Promesse : data URL. */
+  function reduire(source) {
+    return new Promise(function (resoudre, rejeter) {
+      var url = null;
+      var liberer = function () { if (url) { try { window.URL.revokeObjectURL(url); } catch (e) { /* sans gravité */ } } };
+      var image = new Image();
+      image.onload = function () {
+        try {
+          var l = image.naturalWidth, h = image.naturalHeight;
+          var echelle = Math.min(1, COTE_ENVOI / Math.max(l, h));
+          var toile = document.createElement('canvas');
+          toile.width = Math.max(1, Math.round(l * echelle));
+          toile.height = Math.max(1, Math.round(h * echelle));
+          toile.getContext('2d').drawImage(image, 0, 0, toile.width, toile.height);
+          var donnees = toile.toDataURL('image/jpeg', 0.9);
+          liberer();
+          resoudre(donnees);
+        } catch (e) { liberer(); rejeter(e); }
+      };
+      image.onerror = function () { liberer(); rejeter(new Error('image illisible')); };
+      if (typeof source === 'string') image.src = source;
+      else { url = window.URL.createObjectURL(source); image.src = url; }
+    });
+  }
+
+  function resultatValide(etape) {
+    var r = v2.resultats[etape.id];
+    return r && !r.perime && r.prompt === etape.texte ? r : null;
+  }
+
+  /* L'étape d'image la plus proche avant l'étape i (Image, Texture ou Couleur). */
+  function etapeImageAvant(etapes, i) {
+    for (var j = i - 1; j >= 0; j--) { if (ETAPES_IMAGE.indexOf(etapes[j].id) >= 0) return etapes[j]; }
+    return null;
+  }
+
+  /* Les photos à joindre à l'étape i, dans l'ordre de `joindre`, ou ce qui manque. */
+  function entreesEtape(etapes, i) {
+    var photosJointes = [];
+    var manque = null;
+    etapes[i].joindre.forEach(function (quoi) {
+      if (manque) return;
+      if (quoi === 'selfie') {
+        if (v2.selfie) photosJointes.push(v2.selfie); else manque = 'Ajoute la photo du client.';
+      } else if (quoi === 'reference') {
+        if (v2.reference) photosJointes.push(v2.reference); else manque = 'Ajoute la photo de référence.';
+      } else if (quoi === 'image-generee') {
+        var avant = etapeImageAvant(etapes, i);
+        var r = avant ? resultatValide(avant) : null;
+        if (r) photosJointes.push(r.envoi); else manque = 'Génère d’abord l’étape ' + (avant ? avant.titre : 'Image') + '.';
+      }
+    });
+    if (!manque && !v2.consentement) manque = 'Coche l’accord du client.';
+    return { photos: photosJointes, manque: manque };
+  }
+
+  /* Contenu d'une carte d'étape en V2 : « Générer », puis le résultat, « Relancer », « Enregistrer ». */
+  function blocGenerationV2(etape, etapes, i) {
+    var n = i + 1;
+    var estImage = ETAPES_IMAGE.indexOf(etape.id) >= 0;
+    var r = v2.resultats[etape.id] || null;
+    var valide = resultatValide(etape);
+    var enCours = v2.enCours === etape.id;
+    var entrees = entreesEtape(etapes, i);
+    var bloque = !!v2.enCours || !!entrees.manque;
+    var bouton = function (libelle) {
+      return el('button', { type: 'button', 'class': 'btn-2', 'data-generer': etape.id, disabled: bloque, 'aria-busy': enCours ? 'true' : null, texte: enCours ? 'Génération…' : libelle });
+    };
+    var noeuds = [];
+    if (r && !valide) {
+      noeuds.push(el('p', { 'class': 'alerte consigne', texte: r.perime ? 'À refaire : l’image d’avant a changé.' : 'À refaire : la coupe a changé.' }));
+    }
+    if (r && estImage) {
+      noeuds.push(el('div', { 'class': 'avant-apres' }, [
+        el('figure', {}, [el('img', { src: r.avant, alt: 'Photo du client, avant' }), el('figcaption', { 'class': 'legende', texte: 'Avant' })]),
+        el('figure', {}, [el('img', { src: r.image, alt: etape.titre + ' générée, après', 'data-image-generee': etape.id }), el('figcaption', { 'class': 'legende', texte: 'Après' })])
+      ]));
+    } else if (r) {
+      noeuds.push(el('pre', { 'class': 'reponse', id: 'reponse-' + n, tabindex: '0', role: 'group', 'aria-label': etape.titre, texte: r.texte }));
+    }
+    if (r && estImage) {
+      noeuds.push(el('div', { 'class': 'rangee' }, [bouton('Relancer'), el('button', { type: 'button', 'class': 'btn-2', 'data-enregistrer-image': etape.id, texte: 'Enregistrer' })]));
+      noeuds.push(el('p', { 'class': 'legende consigne', id: 'aide-image-' + etape.id, hidden: true }));
+    } else if (r) {
+      noeuds.push(el('div', { 'class': 'rangee' }, [el('button', { type: 'button', 'class': 'btn-2', 'data-copier': 'reponse-' + n, texte: 'Copier' }), bouton('Relancer')]));
+      noeuds.push(el('p', { 'class': 'alerte consigne', id: 'message-reponse-' + n, role: 'alert', hidden: true }));
+    } else {
+      noeuds.push(el('div', { 'class': 'consigne' }, [bouton('Générer')]));
+    }
+    if (enCours) noeuds.push(el('p', { 'class': 'legende consigne', role: 'status', texte: 'Génération en cours. Cela peut prendre une minute.' }));
+    else if (entrees.manque && !v2.enCours) noeuds.push(el('p', { 'class': 'legende consigne', 'data-manque': etape.id, texte: entrees.manque }));
+    if (etape.apres && r && estImage && !v2.erreurs[etape.id]) noeuds.push(el('p', { 'class': 'consigne discret', texte: etape.apres }));
+    /* En cas d'erreur : le message, puis le prompt et les boutons de la V1, pour passer par Gemini. */
+    if (v2.erreurs[etape.id]) {
+      noeuds.push(el('p', { 'class': 'alerte consigne', role: 'alert', 'data-erreur': etape.id, texte: v2.erreurs[etape.id] }));
+      noeuds = noeuds.concat(blocPromptV1(etape, n));
+    }
+    return noeuds;
+  }
+
+  /* Carte « Génération dans l'appli » : code d'accès, photos, accord du client. */
+  function rendreGeneration(vide) {
+    var carte = $('#generation');
+    carte.hidden = !!vide || !v2Reglee();
+    if (carte.hidden) return;
+    var champ = $('#code-acces');
+    if (document.activeElement !== champ) champ.value = codeAcces();
+    var active = v2Active();
+    $('#generation-aide').hidden = active;
+    $('#generation-photos').hidden = !active;
+    if (!active) return;
+    $('#consigne-photo-v2').textContent = P.consignes.photo;
+    var photo = function (cle, idVignette, idBouton, sans, avec) {
+      var v = $('#' + idVignette);
+      v.hidden = !v2[cle];
+      if (v2[cle]) v.src = v2[cle]; else v.removeAttribute('src');
+      $('#' + idBouton).textContent = v2[cle] ? avec : sans;
+    };
+    photo('selfie', 'vignette-selfie', 'choisir-selfie', 'Photo du client', 'Changer la photo du client');
+    $('#ligne-reference').hidden = !etat.reference;
+    photo('reference', 'vignette-reference', 'choisir-reference', 'Photo de référence', 'Changer la photo de référence');
+    $('#consentement').checked = v2.consentement;
+    $('#texte-consentement').textContent = CONSENTEMENT;
+  }
+
+  function messageGeneration(texte) {
+    var m = $('#message-generation');
+    m.textContent = texte || '';
+    m.hidden = !texte;
+  }
+
+  /* Après une génération ou un changement de photo : seules les cartes d'étapes sont redessinées. */
+  function redessinerV2(idAFocaliser) {
+    if (etat.ecran !== 'resultat') return;
+    rendreGeneration(false);
+    construireEtapes();
+    if (idAFocaliser) {
+      var b = $('#etapes [data-generer="' + idAFocaliser + '"]');
+      if (b && !b.disabled) b.focus();
+    }
+  }
+
+  function generer(id) {
+    if (v2.enCours) return;
+    var etapes = etapesResultat();
+    var i = -1;
+    etapes.forEach(function (e, k) { if (e.id === id) i = k; });
+    if (i < 0) return;
+    var etape = etapes[i];
+    var entrees = entreesEtape(etapes, i);
+    if (entrees.manque) return;
+    var estImage = ETAPES_IMAGE.indexOf(id) >= 0;
+    var jeton = v2.jeton;
+    v2.enCours = id;
+    delete v2.erreurs[id];
+    redessinerV2();
+    var demande = estImage ? generateImage(entrees.photos, etape.texte) : genererTexte(entrees.photos, etape.texte);
+    demande.then(function (reponse) {
+      if (!estImage) return { prompt: etape.texte, texte: reponse.texte };
+      /* L'image générée servira d'entrée à l'étape suivante : on en garde une copie à 1024 px. */
+      return reduire(reponse.image).then(function (envoi) {
+        return { prompt: etape.texte, image: reponse.image, envoi: envoi, avant: v2.selfie };
+      }, function () { throw erreurV2('REFUS'); });
+    }).then(function (resultat) {
+      if (jeton !== v2.jeton) return;
+      v2.resultats[id] = resultat;
+      /* Une nouvelle image rend « à refaire » les étapes qui partaient de l'ancienne. */
+      if (estImage) {
+        etapes.slice(i + 1).forEach(function (e) {
+          if (v2.resultats[e.id] && e.joindre.indexOf('image-generee') >= 0) v2.resultats[e.id].perime = true;
+        });
+      }
+    }, function (e) {
+      if (jeton !== v2.jeton) return;
+      v2.erreurs[id] = e && e.code ? e.message : erreurV2('SERVEUR').message;
+    }).then(function () {
+      if (jeton !== v2.jeton) return;
+      v2.enCours = null;
+      redessinerV2(id);
+    });
+  }
+
+  function choisirPhotoV2(fichier, cle) {
+    if (!fichier) return;
+    reduire(fichier).then(function (donnees) {
+      v2[cle] = donnees;
+      /* Une autre photo : les résultats d'avant ne valent plus. */
+      v2.resultats = {};
+      v2.erreurs = {};
+      messageGeneration('');
+      redessinerV2();
+    }, function () {
+      messageGeneration('Cette photo ne peut pas être ouverte. Choisis une photo JPEG ou PNG.');
+    });
+  }
+
+  function enregistrerGeneree(id) {
+    var r = v2.resultats[id];
+    if (!r || !r.image) return;
+    var telechargee = false;
+    try {
+      var lien = document.createElement('a');
+      if ('download' in lien) {
+        lien.href = r.image;
+        lien.download = 'coupe-studio-' + id + '.jpg';
+        lien.hidden = true;
+        document.body.appendChild(lien);
+        lien.click();
+        document.body.removeChild(lien);
+        telechargee = true;
+      }
+    } catch (e) { telechargee = false; }
+    var aide = $('#aide-image-' + id);
+    aide.textContent = telechargee
+      ? 'Image envoyée dans tes téléchargements. Si rien ne s’est passé : appui long sur l’image « Après », puis « Enregistrer ».'
+      : 'Appui long sur l’image « Après », puis « Enregistrer ».';
+    aide.hidden = false;
+  }
+
+  /* Clics de la V2 dans l'écran Résultat. Renvoie true si le clic a été traité. */
+  function clicV2(b) {
+    if (b.hasAttribute('data-generer')) { generer(b.getAttribute('data-generer')); return true; }
+    if (b.hasAttribute('data-enregistrer-image')) { enregistrerGeneree(b.getAttribute('data-enregistrer-image')); return true; }
+    if (b.id === 'choisir-selfie') { $('#fichier-selfie').click(); return true; }
+    if (b.id === 'choisir-reference') { $('#fichier-reference').click(); return true; }
+    return false;
+  }
+
+  $('#fichier-selfie').addEventListener('change', function (evenement) {
+    choisirPhotoV2(evenement.target.files && evenement.target.files[0], 'selfie');
+    evenement.target.value = '';
+  });
+
+  $('#fichier-reference').addEventListener('change', function (evenement) {
+    choisirPhotoV2(evenement.target.files && evenement.target.files[0], 'reference');
+    evenement.target.value = '';
+  });
+
+  $('#code-acces').addEventListener('input', function (evenement) {
+    ecrire(CLES.acces, evenement.target.value.trim());
+    v2.erreurs = {};
+    redessinerV2();
+    $('#sous-titre-resultat').textContent = v2Active() ? 'Ajoute la photo du client, puis génère chaque étape.' : 'Copie, ouvre Gemini, colle, joins la photo.';
+  });
+
+  $('#consentement').addEventListener('change', function (evenement) {
+    v2.consentement = evenement.target.checked;
+    redessinerV2();
+  });
 
   /* ===================================================================
      Démarrage
@@ -2159,6 +2524,9 @@
     etat: etat,
     photos: photos,
     generateImage: generateImage,
+    genererTexte: genererTexte,
+    v2: v2,
+    v2Active: v2Active,
     creation: creation,
     composer: composer,
     validerCaracteristiques: validerCaracteristiques,

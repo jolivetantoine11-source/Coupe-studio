@@ -85,12 +85,16 @@ Multiples de 8 uniquement : 8, 16, 24, 32, 48.
 - **Confirmation dans la page** (« Nouveau client ») : la question et deux boutons secondaires remplacent les boutons habituels. Jamais de fenêtre du navigateur.
 - **Bloc de prompt** (écran Résultat) : texte en police à chasse fixe, deux boutons : « Copier » puis « Ouvrir Gemini ». Après « Copier », le bouton affiche « Copié ».
 - **Avertissement** (pousse, lissage, golfes) : bordure gauche 4 px `alerte`, texte `texte`. Jamais de rouge en aplat.
+- **Génération dans l'appli** (V2, écran Résultat, seulement si le Worker est réglé) : une carte avec le champ « Code d'accès du salon », la consigne photo, une **photo jointe** (vignette 48 × 48 à l'arrondi du thème, puis un bouton secondaire « Photo du client » / « Changer la photo du client ») et la case d'accord.
+- **Case d'accord** : une vraie case à cocher de 24 px, couleur `selection`, suivie de sa phrase. La ligne entière est tactile (48 de haut).
+- **Résultat généré** (V2) : dans la carte de l'étape, à la place du bloc de prompt. Texte (diagnostic, fiche) : bloc à bordure 1 px sur `fond`, police courante, lisible en entier, puis « Copier » et « Relancer ». Image : « Avant » et « Après » côte à côte, légende 12 dessous, puis « Relancer » et « Enregistrer ». En cas d'erreur : un avertissement, puis le bloc de prompt habituel.
+- **Bouton secondaire bloqué** : contour en tirets, texte secondaire. Une légende 12 dit ce qui manque (« Ajoute la photo du client. »).
 
 ## 5. Icônes et images
 
 - Icônes au trait, épaisseur 2 px, une seule famille.
 - Pictogrammes des retouches IA et des outils photo : même cadrage, même trait, une couleur (`texte`). Plus de silhouettes de coupes ni de pictogrammes de caractéristiques depuis le 15 novembre 2026 : les catalogues sont en texte.
-- Aucune photo de personne dans l'appli ni dans les démos sans consentement écrit. Seule exception : dans le Catalogue fond, le coiffeur charge sa propre photo. Elle est traitée dans son téléphone, jamais envoyée ni stockée, et n'influence jamais le thème.
+- Aucune photo de personne dans l'appli ni dans les démos sans consentement écrit. Seule exception : dans le Catalogue fond, le coiffeur charge sa propre photo. Elle est traitée dans son téléphone, jamais envoyée ni stockée, et n'influence jamais le thème. En V2, la photo du client part à Google pour l'essai, seulement après la case d'accord ; elle n'est jamais stockée.
 
 ## 6. Ton des textes
 

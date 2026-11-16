@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+Mise à jour V2, étape 1 (16 novembre) : génération dans l'appli par un Worker Cloudflare, seulement si `config.js` donne son adresse et si le code d'accès est saisi. Sans cela, la V1 est inchangée (sections 3, 4.8, 10, 12, 14 ; `docs/V2-installation.md`).
+
 Mise à jour série contrôle (16 novembre) : densité faible (Density après le nom, pas de frange, dessus gardé), étape Texture à part (Image → Texture → Couleur), exception barbe « rules below » avant « Strict rules: », nouvelle consigne photo (sections 4.8, 5, 11, 12).
 
 Mise à jour série 4 (tests d'Antoine) : Front par défaut, ligne Head pose et exception texture avant « Strict rules: », avertissements « Changement de texture » et « Rallongement » sur Résultat (sections 4.8, 5, 12).
@@ -19,7 +21,7 @@ Antoine, étudiant entrepreneur à Lyon, propose aux barbers et aux salons de co
 **Coupe Studio** (nom provisoire) est l'outil du coiffeur. On décrit le client en quelques clics, on choisit une coupe dans un catalogue ou on la compose avec des caractéristiques, et l'appli produit les prompts prêts à copier dans Gemini. Un troisième outil, le Catalogue fond, embellit une photo déjà prise pour Instagram sans toucher aux cheveux.
 
 - **V1** : site statique, sans serveur, sans compte. L'appli fabrique des prompts, l'utilisateur les colle dans l'appli Gemini.
-- **V2 (plus tard)** : voir section 14.
+- **V2, étape 1 (faite le 16 novembre, à activer par Antoine)** : génération dans l'appli, par un Worker Cloudflare qui garde la clé Gemini. Elle ne s'active que si `config.js` donne l'adresse du Worker et si le coiffeur a saisi le code d'accès du salon. Sinon l'appli reste en V1, à l'identique. Voir sections 4.8 et 14.
 
 Utilisateur : un coiffeur, debout en boutique, sur téléphone, à une main, avec un client devant lui. Tout doit se faire en moins d'une minute.
 
@@ -45,14 +47,18 @@ Vocabulaire : le mot « recette » n'apparaît plus nulle part dans l'appli. On 
   - `caracteristiques.js` : les caractéristiques du Catalogue personnalisé et leurs groupes exclusifs (section 13). Facile à compléter.
   - `fonds.js` : les retouches du Catalogue fond (section 8). Facile à compléter.
   - `retouche.js` : les retouches sans IA, calculées sur un canvas
+  - `config.js` : l'adresse du Worker (V2). Vide = V1. Jamais de clé ni de code d'accès ici.
+  - `worker/` : le Worker Cloudflare de la V2 (`src/index.js`, `wrangler.toml`, `test.mjs`). Les secrets `GEMINI_API_KEY` et `ACCES` sont dans Wrangler, jamais dans le dépôt.
+  - `docs/V2-installation.md` : les étapes d'installation pour Antoine
   - `tests/` : tests Playwright (captures, contrastes, comparaison des prompts, parcours, retour arrière, contradictions) et `tests/tableaux.js`, qui écrit et vérifie les tableaux de ce fichier
 - Polices via Google Fonts (Space Grotesk, Fraunces, Oswald, Inter), avec polices de secours.
 - Stockage :
   - `sessionStorage` : l'état du client en cours (profil, coupe, réglages, caractéristiques, retouches).
-  - `localStorage` : le mode, les coupes personnalisées enregistrées et les coupes ajoutées.
+  - `localStorage` : le mode, les coupes personnalisées enregistrées, les coupes ajoutées et, en V2, le code d'accès du salon.
+  - En mémoire seulement (V2) : la photo du client, la photo de référence, l'accord et les résultats générés. Ils survivent au retour arrière, pas au rechargement.
   - Toujours dans un `try/catch`. L'appli doit marcher si le stockage est vide ou bloqué.
 - Hébergement : GitHub Pages (dépôt `jolivetantoine11-source/Coupe-studio`, branche `main`). L'appli doit aussi marcher en ouvrant `index.html` en local.
-- Hook V2 : une fonction `generateImage(photo, prompt)` dans `app.js`, présente mais vide, qui renvoie une erreur claire « Disponible en V2 ». Aucun bouton visible ne l'appelle en V1.
+- V2 : `generateImage(photos, prompt)` et `genererTexte(photos, prompt)` (app.js) appellent le Worker. Sans adresse de Worker, elles renvoient une erreur claire et aucun bouton ne les appelle.
 
 ## 4. Parcours et pages
 
@@ -135,6 +141,18 @@ Au-dessus des étapes, des avertissements (composant alerte) :
 - **Rallongement** (longueur demandée au-dessus de la longueur actuelle du profil) : « Environ 1 cm par mois de pousse. Sinon, extensions. »
 
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
+
+**V2 : génération dans l'appli** (seulement si `config.js` donne l'adresse du Worker) :
+- Une carte « Génération dans l'appli » apparaît au-dessus des étapes : champ « Code d'accès du salon » (gardé dans le téléphone), puis, une fois le code saisi, la consigne photo, « Photo du client », « Photo de référence » si l'option est sur Oui, et la case obligatoire « Le client accepte que sa photo soit envoyée à Google pour l'essai. ».
+- Code saisi : chaque étape montre « Générer » à la place du prompt et de « Copier / Ouvrir Gemini ». Étape par étape seulement, pas de « Tout générer ».
+- Une étape n'est prête que si ce qu'elle joint existe (`joindre`) : la photo du client, la photo de référence, ou `image-generee` = l'image de l'étape d'image juste avant (Image, puis Texture, puis Couleur). Sinon le bouton est bloqué et une légende dit ce qui manque (« Ajoute la photo du client. », « Coche l'accord du client. », « Génère d'abord l'étape Image. »).
+- Résultat d'un texte (diagnostic, fiche) : le texte, « Copier », « Relancer ». Résultat d'une image : « Avant » (la photo du client) et « Après » côte à côte, « Relancer », « Enregistrer » (téléchargement, avec le rappel de l'appui long).
+- Relancer une image, ou changer la coupe, marque les résultats qui en dépendent « À refaire ». Changer de photo efface les résultats.
+- Photos réduites à 1024 px (JPEG) avant l'envoi. Jamais stockées : en mémoire seulement.
+- Erreurs en français (réseau, délai, code refusé, limite du jour, Google saturé, refus de Gemini), toutes suivies de « Relance ou passe par Gemini (Copier). » ; le prompt et les boutons de la V1 reviennent alors sur l'étape.
+- « Nouveau client » efface les photos, l'accord et les résultats. Le code d'accès reste.
+
+Sans adresse de Worker, ou sans code saisi, les cartes sont celles de la V1.
 
 Chaque carte : « Copier » (devient « Copié » 1,5 s, repli si le presse-papiers est refusé : sélectionner le texte) et « Ouvrir Gemini » (lien `https://gemini.google.com/app`, nouvel onglet). L'appli ne peut pas coller le prompt dans Gemini : le geste est Copier, Ouvrir, Coller.
 
@@ -359,6 +377,7 @@ Ce prompt n'a toujours pas été testé : le signaler à Antoine. Les combinaiso
 3. Construire **une page à la fois**, dans l'ordre du parcours : Accueil, Profil client, Que veux-tu faire ?, Catalogue coupe, Réglages, Catalogue personnalisé, Résultat, Catalogue fond, Retouches sans IA, Retouches IA. Ne pas passer à la suivante avant que la page soit conforme.
 4. Après chaque page : captures Playwright à 390 px et 1280 px de large, dans les 3 thèmes. Corriger débordements, espacements, textes coupés.
 5. **Relecture adverse** : avant de déclarer une page finie, une seconde passe (ou un sous-agent) cherche les écarts à `DESIGN.md` : couleur hors liste, espacement hors multiples de 8, taille de texte hors échelle, ombre, dégradé, nouveau style de bouton.
+5b. **Tests de la V2** : `node worker/test.mjs` (le Worker seul : origine, code, quota, erreurs, rien dans les journaux) et `node tests/v2.test.js` (parcours complet dans l'appli avec le vrai code du Worker et un Google simulé). La section L de `tests/parcours.test.js` vérifie que la V1 est intacte sans Worker.
 6. **Test des prompts** : un test compare le texte de `prompts.js` aux blocs de `PROMPTS.md` (dont le diagnostic salon, vérifié comme le diagnostic barber avec les 4 seuls remplacements validés) et de la section 8 (mot pour mot, hors `[COUPE]`/`[FOND]`). Il doit passer avant toute livraison.
 7. **Test de contraste** : un script vérifie que chaque paire texte/fond des 3 thèmes atteint 4,5:1.
 8. **Test des contradictions** : pour chaque paire d'un même groupe exclusif (et chaque réglage remplacé par une caractéristique), le prompt final ne contient qu'une seule des deux consignes.
@@ -367,13 +386,18 @@ Ce prompt n'a toujours pas été testé : le signaler à Antoine. Les combinaiso
 11. Ne jamais dire « c'est corrigé » ou « ça marche » sans la preuve (capture, test qui passe).
 12. Ne jamais modifier le texte d'un prompt de son propre chef. Proposer la modification à Antoine.
 
-## 10. Hors périmètre V1
+## 10. Hors périmètre
 
-Pas de compte, pas de serveur, pas de génération d'image dans l'appli, pas de statistiques, pas de bibliothèque de composants externe, pas de photo de vraie personne fournie avec l'appli (catalogue et démos), pas d'envoi de photo : la photo du client reste dans Gemini, et la photo retouchée dans le Catalogue fond reste dans le téléphone.
+Pas de compte, pas de statistiques, pas de bibliothèque de composants externe, pas de photo de vraie personne fournie avec l'appli (catalogue et démos). La photo retouchée dans le Catalogue fond reste dans le téléphone.
+
+En V1 (pas d'adresse de Worker) : pas de serveur, pas de génération dans l'appli, pas d'envoi de photo ; la photo du client reste dans Gemini. En V2 : la photo du client part au Worker puis à Google, seulement après la case d'accord, et n'est stockée nulle part.
 
 ## 11. Points ouverts à confirmer avec Antoine
 
 - Le nom définitif de l'appli.
+- V2 : le Worker n'a jamais appelé le vrai Gemini (pas de clé ici). Il est écrit d'après la doc Google AI lue le 16 novembre 2026 (API Interactions) et testé avec un Google simulé. Le premier essai d'Antoine est le vrai test.
+- V2 : modèle de texte `gemini-4-hydrogen` choisi par Claude (stable, le moins cher) ; `gemini-4-argon` est plus fin et plus cher. Les consignes de la V1 parlent encore du « modèle 3.1 Pro ».
+- V2 : les alternatives proposées par le diagnostic ne sont pas reprises automatiquement dans le prompt image.
 - Le prompt de fond (section 8) n'a jamais été testé. Trois retouches (« Lumière studio douce », « Corriger le contre-jour », « Retirer les cheveux coupés ») ne sont pas des changements de fond : elles tiennent mal dans la phrase « replace ONLY the background with [FOND] », et « Retirer les cheveux coupés » contredit « Keep the person 100% identical: … clothing ». À tester, et à réécrire si Gemini les ignore.
 - Le prompt image dit de garder la barbe et la texture à l'identique. Un changement de barbe choisi est signalé par la ligne d'exception (avant « Strict rules: ») ; une texture choisie part dans l'étape Texture. Le texte par défaut des coupes bouclées (« natural curls ») reste dans le prompt image, sans exception : à tester sur cheveux lisses.
 - L'étape Texture (PROMPTS.md, 2a) n'a pas encore été testée sur de vraies photos.
@@ -433,7 +457,15 @@ Décidé par Antoine (16 novembre, série contrôle) :
 - Exception barbe : « Exception to the rules below », placée avant « Strict rules: ».
 - Consigne photo : « Tête droite, face à l'objectif. Si elle est tournée, Gemini la redresse. »
 
+Décidé par Antoine (16 novembre, V2 étape 1) :
+- Génération dans l'appli par un Worker Cloudflare ; le mode V1 ne change pas.
+- Modèle d'image : la version stable recommandée par Google, pas une preview (`gemini-nano-banana-2.1`).
+- Quota : 30 images et 60 textes par jour et par code, compté dans Cloudflare KV (empreinte du code, date, nombre ; effacé au bout de 2 jours).
+- Étape par étape seulement, pas de « Tout générer ».
+- Case d'accord obligatoire avant la première génération. Facturation activée sur la clé.
+
 Choix faits par Claude, à confirmer :
+- **V2** : `POST /image` prend un tableau `photos` (la variante photo de référence en envoie 2) ; `GET /etat` donne le quota restant, pour vérifier l'installation ; seules les réponses réussies comptent dans le quota ; `store: false` côté Google ; journaux Cloudflare coupés ; une demande sans en-tête Origin est refusée ; « Avant » montre toujours la photo du client ; l'accord vaut pour un client (remis à zéro par « Nouveau client ») ; délai de 90 s.
 - **Densité faible** : le buzz cut garde sa tondeuse au lieu de « kept at the current length » ; un coiffage du dessus avec volume est retiré ; la ligne Top est écrite aussi en salon. En barbe seule, Density reste après Beard.
 - **Étape Texture** : seulement pour une texture choisie par l'utilisateur ; le texte par défaut du dégradé bouclé et du carré bouclé reste dans le prompt image. Consigne de l'étape Couleur : « À envoyer après l'étape précédente (Image, ou Texture s'il y en a une), en joignant la dernière image générée. »
 - **Kératine et Défrisage** ajoutés aux caractéristiques de texture (groupe exclusif texture), pour couvrir la liste d'Antoine.
@@ -528,21 +560,35 @@ Une seule caractéristique par groupe. En choisir une deuxième ouvre un message
 
 « Barbe seule » sur Oui avec des caractéristiques hors barbe : un message dit qu'elles ne partent pas dans le prompt.
 
-## 14. V2 et V3 (plus tard, NE PAS faire maintenant)
+## 14. V2 et V3
 
-- Génération d'image directe dans l'appli via l'API Gemini, derrière un petit serveur qui garde la clé (hook `generateImage`).
+### V2, étape 1 : faite (16 novembre)
+
+Génération dans l'appli via l'API Gemini, derrière un Worker Cloudflare qui garde la clé. Installation : `docs/V2-installation.md`.
+
+- **Worker** (`worker/src/index.js`) : `POST /image` `{ photos: [base64 JPEG…], prompt }` → `{ image, mime, reste }` ; `POST /texte` `{ photos, prompt }` → `{ texte, reste }` ; `GET /etat` → quota restant. Erreurs : `{ erreur: CODE }` avec ORIGINE, ACCES, QUOTA (+ `limite`), DEMANDE, REFUS, QUOTA_GOOGLE, DELAI, SERVEUR.
+- **Sécurité** : secrets Wrangler `GEMINI_API_KEY` et `ACCES` (codes séparés par des virgules) ; CORS limité à `https://jolivetantoine11-source.github.io` ; en-tête `X-Acces` ; 30 images et 60 textes par jour et par code (heure de Paris).
+- **Rien de stocké** : ni photo, ni prompt, ni réponse ; le KV ne garde que des compteurs ; journaux coupés ; `store: false` chez Google.
+- **API Google** : « Interactions API » (`POST https://generativelanguage.googleapis.com/v1beta/interactions`, en-têtes `x-goog-api-key` et `Api-Revision: 2026-05-20`). Modèles dans `worker/wrangler.toml` : `gemini-nano-banana-2.1` (image, stable, recommandé) et `gemini-4-hydrogen` (texte). Doc lue le 16 novembre 2026 ; à relire avant de changer de modèle.
+- **Appli** : voir section 4.8.
+
+### Plus tard (NE PAS faire maintenant)
+
+- Enchaînement automatique (« Tout générer ») et reprise des alternatives du diagnostic dans le prompt image.
+- Retouches IA du Catalogue fond générées dans l'appli (même forme : un prompt + la photo à joindre).
 - Connexion et comptes.
 - Catalogue propre à chaque coiffeur.
 - Photos de vraies coupes du salon (anciens clients, avec leur consentement écrit) à la place des cartes texte du Catalogue coupe.
-- Pages RGPD et mentions légales.
+- Pages RGPD et mentions légales (plus urgentes depuis que la photo part à Google).
 - Statistiques d'usage, bibliothèque de composants externe.
 
 ### Vision : tout dans l'appli, sans copier-coller
 
 Après les réglages, l'appli ouvre l'appareil photo, on prend la ou les photos, elles partent directement à l'IA et le résultat (diagnostic, image, fiche) revient dans l'appli, sans copier-coller ni quitter l'appli.
 
-Ce que la V1 prépare déjà pour s'y brancher sans tout refaire :
-- `etapesResultat()` (app.js) renvoie les étapes sous forme de données : `{ id, titre, consigne, texte, joindre }`, où `id` vaut `diagnostic`, `image`, `texture`, `couleur` ou `fiche`, `texte` est le prompt final et `joindre` dit quelles photos envoyer, dans l'ordre (`selfie`, `reference`, `image-generee`). La V2 n'a qu'à parcourir cette liste.
-- `generateImage(photo, prompt)` (app.js) est le point d'entrée prévu pour l'étape `image` ; le diagnostic et la fiche demanderont une fonction sœur (texte en sortie).
-- L'affichage du Résultat lit ces mêmes étapes : il suffira d'afficher la réponse de l'IA à la place du bouton « Copier ».
-- Les retouches IA du Catalogue fond suivent la même forme (un prompt + la photo à joindre).
+Ce que la V2, étape 1, utilise déjà :
+- `etapesResultat()` (app.js) renvoie les étapes sous forme de données : `{ id, titre, consigne, texte, joindre }`, où `id` vaut `diagnostic`, `image`, `texture`, `couleur` ou `fiche`, `texte` est le prompt final et `joindre` dit quelles photos envoyer, dans l'ordre (`selfie`, `reference`, `image-generee`). La V2 parcourt cette liste.
+- `generateImage(photos, prompt)` pour les étapes d'image, `genererTexte(photos, prompt)` pour le diagnostic et la fiche.
+- L'affichage du Résultat lit ces mêmes étapes et montre la réponse à la place du prompt.
+
+Reste à faire pour la vision complète : ouvrir l'appareil photo directement après les réglages, enchaîner sans toucher chaque étape, et brancher les retouches IA du Catalogue fond.

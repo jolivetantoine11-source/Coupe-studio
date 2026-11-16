@@ -540,6 +540,79 @@ button.carte {
   overflow-wrap: break-word;
 }
 
+/* V2, génération dans l'appli (DESIGN.md, section 4). */
+/* Réponse générée (diagnostic, fiche) : texte courant, lisible en entier. */
+.reponse {
+  margin: 8px 0 16px;
+  padding: 8px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--fond);
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* Avant / après : les deux images côte à côte. */
+.avant-apres {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.avant-apres figure {
+  margin: 0;
+  min-width: 0;
+}
+
+.avant-apres img {
+  display: block;
+  width: 100%;
+  border-radius: var(--rayon);
+}
+
+.avant-apres figcaption {
+  margin-top: 8px;
+}
+
+/* Photo jointe : vignette, puis le bouton qui la choisit ou la change. */
+.photo-jointe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vignette {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--rayon);
+  object-fit: cover;
+}
+
+/* Case d'accord : une vraie case à cocher, ligne tactile de 48 px. */
+.accord {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+}
+
+.accord input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--selection);
+}
+
+.btn-2:disabled {
+  border-style: dashed;
+  color: var(--texte-2);
+  cursor: not-allowed;
+}
+
 /* Icônes : une famille, au trait, 2 px. */
 .icone {
   flex: none;

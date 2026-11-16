@@ -21,7 +21,7 @@ Antoine, étudiant entrepreneur à Lyon, propose aux barbers et aux salons de co
 **Coupe Studio** (nom provisoire) est l'outil du coiffeur. On décrit le client en quelques clics, on choisit une coupe dans un catalogue ou on la compose avec des caractéristiques, et l'appli produit les prompts prêts à copier dans Gemini. Un troisième outil, le Catalogue fond, embellit une photo déjà prise pour Instagram sans toucher aux cheveux.
 
 - **V1** : site statique, sans serveur, sans compte. L'appli fabrique des prompts, l'utilisateur les colle dans l'appli Gemini.
-- **V2, étape 1 (faite le 16 novembre, à activer par Antoine)** : génération dans l'appli, par un Worker Cloudflare qui garde la clé Gemini. Elle ne s'active que si `config.js` donne l'adresse du Worker et si le coiffeur a saisi le code d'accès du salon. Sinon l'appli reste en V1, à l'identique. Voir sections 4.8 et 14.
+- **V2, étape 1 (faite et activée le 16 novembre : `config.js` pointe sur `https://coupe-studio.coupestudio.workers.dev`)** : génération dans l'appli, par un Worker Cloudflare qui garde la clé Gemini. Elle ne s'active que si `config.js` donne l'adresse du Worker et si le coiffeur a saisi le code d'accès du salon. Sinon l'appli reste en V1, à l'identique. Voir sections 4.8 et 14.
 
 Utilisateur : un coiffeur, debout en boutique, sur téléphone, à une main, avec un client devant lui. Tout doit se faire en moins d'une minute.
 
@@ -47,7 +47,7 @@ Vocabulaire : le mot « recette » n'apparaît plus nulle part dans l'appli. On 
   - `caracteristiques.js` : les caractéristiques du Catalogue personnalisé et leurs groupes exclusifs (section 13). Facile à compléter.
   - `fonds.js` : les retouches du Catalogue fond (section 8). Facile à compléter.
   - `retouche.js` : les retouches sans IA, calculées sur un canvas
-  - `config.js` : l'adresse du Worker (V2). Vide = V1. Jamais de clé ni de code d'accès ici.
+  - `config.js` : l'adresse du Worker (V2), en place depuis le 16 novembre. Vide = retour à la V1. Jamais de clé ni de code d'accès ici.
   - `worker/` : le Worker Cloudflare de la V2 (`src/index.js`, `wrangler.toml`, `test.mjs`). Les secrets `GEMINI_API_KEY` et `ACCES` sont dans Wrangler, jamais dans le dépôt.
   - `docs/V2-installation.md` : les étapes d'installation pour Antoine
   - `tests/` : tests Playwright (captures, contrastes, comparaison des prompts, parcours, retour arrière, contradictions) et `tests/tableaux.js`, qui écrit et vérifie les tableaux de ce fichier

@@ -725,11 +725,16 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await contexte.close();
 
   /* ============ L. V1 sans Worker : rien de la V2 n'apparaît ============ */
-  console.log('L. V1 intacte quand config.js ne donne pas de Worker');
+  console.log('L. V1 intacte sans adresse de Worker');
   ({ contexte, page } = await nouvelle(navigateur));
   const demandes = [];
   page.on('request', (r) => { if (!/^(file|data|blob):/.test(r.url()) && !/fonts\.(googleapis|gstatic)\.com/.test(r.url())) demandes.push(r.url()); });
-  verifier('config.js livré sans adresse de Worker', await page.evaluate(() => window.CONFIG.worker), '');
+  const config = fs.readFileSync(path.join(RACINE, 'config.js'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  verifier('config.js : seulement l’adresse du Worker (vide ou https), ni clé ni code', /^\s*window\.CONFIG = \{\s*worker: '(https:\/\/[a-z0-9.-]+)?'\s*\};\s*$/.test(config));
+  /* Cette section simule un site sans Worker, quelle que soit l'adresse livrée dans config.js. */
+  await contexte.addInitScript(() => { Object.defineProperty(window, 'CONFIG', { get() { return { worker: '' }; }, set() { /* config.js ignoré */ } }); });
+  await page.reload();
+  verifier('sans adresse de Worker', await page.evaluate(() => window.CONFIG.worker), '');
   const v2 = await page.evaluate(() => window.CoupeStudio.generateImage(['x'], 'x').then(() => 'résolue', (e) => e.code + ' / ' + e.message));
   verifier('generateImage sans Worker : erreur claire, en français', v2, 'REGLAGE / La génération dans l’appli n’est pas réglée. Relance ou passe par Gemini (Copier).');
   verifier('V2 inactive', await page.evaluate(() => window.CoupeStudio.v2Active()), false);

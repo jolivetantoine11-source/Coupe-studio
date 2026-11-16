@@ -24,7 +24,7 @@ QUOTA_TEXTES = "60"
 # Remplace l'id par celui que donne « npx wrangler kv namespace create QUOTAS ».
 [[kv_namespaces]]
 binding = "QUOTAS"
-id = "REMPLACE_PAR_L_ID_DU_KV"
+id = "42a7ad86b2ec48f08ad99bd6f40468e9"
 
 # Les secrets ne sont PAS ici. Ils se règlent avec :
 #   npx wrangler secret put GEMINI_API_KEY

@@ -4,5 +4,5 @@
    Vide = V1 : l'appli fabrique seulement les prompts à copier dans Gemini.
    Ce fichier ne contient jamais de clé ni de code d'accès. */
 window.CONFIG = {
-  worker: ''
+  worker: 'https://coupe-studio.coupestudio.workers.dev'
 };

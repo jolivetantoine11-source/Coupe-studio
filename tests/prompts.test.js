@@ -109,7 +109,8 @@ verifier('pré-diagnostic : référentiel rempli, il prend la place du repère',
 PROMPTS.textes.referentiel = '';
 ['- Match the requested change: refresh = close to the current cut; evolve = same base with one new detail; change completely = a clearly different cut.',
   '- Respect the natural hair texture unless the client asks for a texture change.',
-  '- Respect the daily styling time: no cut that needs more styling than the client accepts.'
+  '- Respect the daily styling time: no cut that needs more styling than the client accepts.',
+  '- Prefer haircuts feasible today. At most 1 of the 3 can be "apres_pousse", and only if the client chose Longueur or Changer complètement.'
 ].forEach((regle) => verifier('propositions : règle demandée par Antoine : ' + regle.slice(2, 40) + '…', R_PROPS.split('\n').includes(regle), true));
 verifier('propositions : [RÉFÉRENTIEL] seul sur sa ligne, juste avant « Rules: »', R_PROPS.split('\n')[R_PROPS.split('\n').indexOf('Rules:') - 1], '[RÉFÉRENTIEL]');
 const REP = { mode: 'barbershop', profil: 'face: round', envies: 'change: refresh the current cut', catalogue: 'skin-fade: Skin fade — Fondu à blanc', impossibles: 'none' };

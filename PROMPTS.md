@@ -296,7 +296,7 @@ Repères remplis par l'appli :
 - [IMPOSSIBLES] : tête chauve ou rasée → `bald or shaved head: only a buzz cut or a beard-only change` ; golfes marqués ou clairsemés → `thin hair or receding hairline: no fringe, no added volume, keep the current top length` ; sinon `none`.
 - [RÉFÉRENTIEL] : emplacement réservé au référentiel de l'associé d'Antoine, vide pour l'instant ; tant qu'il est vide, sa ligne est retirée (`TEXTES.referentielPropositions` dans `prompts.js`).
 
-Réponse attendue : un tableau JSON de 3 objets `{ id, nom, ligne, description_en, pourquoi }`. `id` = une coupe du catalogue, sinon `null` : la coupe devient alors une coupe personnalisée (nom, ligne, description anglaise), comme « Ajouter ma coupe ».
+Réponse attendue : un tableau JSON de 3 objets `{ id, nom, ligne, description_en, pourquoi, verdict, mois, technique, raison }`. Le verdict de faisabilité (ajouté le 19 novembre, « 3 appels par client ») remplace le diagnostic de Résultat pour la coupe choisie : l'étape Diagnostic est préremplie (« VERDICT : … / RAISON : … ») tant que la coupe n'a pas changé. Il n'est gardé que si la photo du client a été envoyée. `id` = une coupe du catalogue, sinon `null` : la coupe devient alors une coupe personnalisée (nom, ligne, description anglaise), comme « Ajouter ma coupe ».
 
 ```text
 You are an expert hairdresser and style consultant working in a [MODE] in France.
@@ -314,6 +314,8 @@ Rules:
 - Match the requested change: refresh = close to the current cut; evolve = same base with one new detail; change completely = a clearly different cut.
 - Respect the natural hair texture unless the client asks for a texture change.
 - Respect the daily styling time: no cut that needs more styling than the client accepts.
+- Never propose a haircut that is not feasible on this client now or after growth.
+- Prefer haircuts feasible today. At most 1 of the 3 can be "apres_pousse", and only if the client chose Longueur or Changer complètement.
 - The 3 haircuts must be clearly different from each other.
 - Do not return images, links or names of real people.
 Reply with a single JSON array of exactly 3 objects and nothing else, each with these keys:
@@ -322,4 +324,8 @@ Reply with a single JSON array of exactly 3 objects and nothing else, each with 
 - "ligne": one short line in French describing the haircut (6 words maximum)
 - "description_en": the haircut described zone by zone in English, only the zones that matter, in this order and format: "Length: … Layers: … Sides: … Top: … Front: … Neckline: … Texture: … Color: … Beard: …"
 - "pourquoi": one short sentence in French for the hairdresser: why this haircut suits this client
+- "verdict": one of "faisable", "apres_pousse", "avec_technique", judged from what you SEE on the photo (current length of each zone, hairline and density, texture, color)
+- "mois": months of growth needed (about 1 cm per month), only if verdict is "apres_pousse", otherwise null
+- "technique": the technique needed in French (lissage, coloration, coiffage…), only if verdict is "avec_technique", otherwise null
+- "raison": one short sentence in French, factual and kind; if more than 10 cm are cut, say it is a radical change
 ```

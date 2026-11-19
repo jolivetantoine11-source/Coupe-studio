@@ -121,6 +121,7 @@ function verifier(nom, obtenu, attendu) {
   verifier('prompt : le catalogue du mode, une ligne par coupe', prompt.includes('skin-fade: Skin fade — Fondu à blanc, dessus court\ncrop-texture: Textured French crop — Frange courte, côtés nets'));
   verifier('prompt : [RÉFÉRENTIEL] vide, sa ligne retirée', !prompt.includes('[RÉFÉRENTIEL]') && prompt.includes('[CATALOGUE]') === false && prompt.includes('nets\n') && prompt.split('\n').some((l, i, t) => l === 'Rules:' && t[i - 1].includes('—')));
   verifier('3 cartes : mulet (catalogue), afro taper (hors catalogue), puis une locale ; id inventé et doublon écartés', await cartes(page), 'Mulet moderne | [hors] Afro taper | Crop texturé');
+  verifier('sans photo envoyée : aucun verdict affiché', await page.$$eval('#liste-propositions [data-verdict]', (b) => b.length), 0);
   verifier('le pourquoi de l’IA est gardé ; le nom du catalogue l’emporte', await page.$eval('[data-proposition="0"]', (c) => c.lastElementChild.textContent), 'Le mulet suit son style décontracté.');
   await page.click('[data-proposition="1"]');
   await page.click('#action-propositions');
@@ -144,6 +145,50 @@ function verifier(nom, obtenu, attendu) {
   await pret(page);
   verifier('une réponse changée : nouvelle demande, nouvelles cartes, rien de choisi', [recues.length, await cartes(page), await page.textContent('#action-propositions')], [n + 1, 'Buzz cut | Crew cut | Skin fade', 'Valider ce choix']);
   verifier('…le prompt suit la nouvelle réponse', recues[recues.length - 1].corps.prompt.includes('daily styling: no styling'));
+  await contexte.close();
+
+  /* ============ 3b. Avec photo : verdict de faisabilité, diagnostic prérempli ============ */
+  console.log('3b. Avec photo : verdict sur les cartes, diagnostic de Résultat prérempli (3 appels par client)');
+  ({ contexte, page } = await ouvrir(true, { v: 2, p: PROFIL, e: { changement: 'changer', transformation: 'longueur', habitudes: null } }));
+  await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 120; c.height = 160;
+    const v2 = window.CoupeStudio.v2;
+    v2.selfie = c.toDataURL('image/jpeg'); v2.selfieN = 1; v2.consentement = true;
+  });
+  reponse = { statut: 200, corps: { texte: JSON.stringify([
+    { id: 'crop-texture', pourquoi: 'Net et moderne.', verdict: 'faisable', mois: 3, technique: 'x', raison: 'La longueur actuelle suffit.' },
+    { id: 'mi-long-flow', pourquoi: 'Suit son envie de longueur.', verdict: 'apres_pousse', mois: 4, raison: 'Il faut laisser pousser le dessus.' },
+    { id: 'slick-back', pourquoi: 'Allure soignée.', verdict: 'avec_technique', technique: 'lissage', raison: 'Ses boucles demandent un lissage.' }
+  ]) } };
+  await page.click('#action-accueil');
+  await page.click('#passer-photo');
+  await page.click('#action-questions');
+  await pret(page);
+  verifier('la photo part avec la demande (accord coché)', recues[recues.length - 1].corps.photos.length, 1);
+  verifier('badges : « Faisable », « Après 4 mois de pousse », « Avec lissage »', await page.$$eval('#liste-propositions [data-verdict]', (b) => b.map((x) => x.className + ':' + x.textContent).join(' | ')),
+    'badge:Faisable | risque:Après 4 mois de pousse | risque:Avec lissage');
+  verifier('« mois » et « technique » ignorés quand ils ne vont pas avec le verdict', await A(page, () => JSON.stringify(window.CoupeStudio.etat.propositions.liste[0].verdict)), JSON.stringify({ verdict: 'faisable', mois: null, technique: '', raison: 'La longueur actuelle suffit.' }));
+  await page.click('[data-proposition="1"]');
+  await page.click('#action-propositions');
+  verifier('carte agrandie : badge et raison du verdict', await page.$eval('#proposition-choisie', (c) => c.querySelector('[data-verdict]').textContent + ' / ' + Array.from(c.querySelectorAll('p.discret')).map((p) => p.textContent).join(' / ')),
+    'Après 4 mois de pousse / Il faut laisser pousser le dessus. / Détails : Mi-long flow, dessus 12 cm');
+  const appelsAvant = recues.length;
+  await page.click('#essayer-client');
+  const diag = '#etapes [data-etape="diagnostic"]';
+  verifier('Résultat : le diagnostic est déjà là, sans nouvel appel', [await page.textContent(diag + ' .reponse'), await page.textContent(diag + ' .legende'), recues.length],
+    ['VERDICT : ⏳ FAISABLE APRÈS POUSSE (4 mois)\nRAISON : Il faut laisser pousser le dessus.', 'Diagnostic fait avec les propositions.', appelsAvant]);
+  verifier('…« Copier » et « Relancer », et l’étape Image est prête', [await page.$$eval(diag + ' .btn-2', (b) => b.map((x) => x.textContent).join(' + ')), await page.$eval('#etapes [data-etape="image"] [data-generer]', (b) => b.disabled)], ['Copier + Relancer', false]);
+  await page.reload();
+  await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 120; c.height = 160; const v2 = window.CoupeStudio.v2; v2.selfie = c.toDataURL('image/jpeg'); v2.selfieN = 1; v2.consentement = true; window.CoupeStudio.rendre(); });
+  verifier('après un rechargement : le diagnostic des propositions est gardé', await page.textContent(diag + ' .reponse'), 'VERDICT : ⏳ FAISABLE APRÈS POUSSE (4 mois)\nRAISON : Il faut laisser pousser le dessus.');
+  await page.goBack();
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran !== 'resultat');
+  await page.goto(ADRESSE + '#reglages');
+  await page.click('[data-reglage="sabot"][data-valeur="0.5"]');
+  await page.click('#action-reglages');
+  await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 120; c.height = 160; const v2 = window.CoupeStudio.v2; v2.selfie = c.toDataURL('image/jpeg'); v2.selfieN = 1; v2.consentement = true; window.CoupeStudio.rendre(); });
+  verifier('coupe modifiée (sabot) : le diagnostic est « À refaire », « Relancer » le regénère', [await page.textContent(diag + ' .alerte'), await page.$eval(diag + ' [data-generer]', (b) => b.textContent + (b.disabled ? ' (bloqué)' : ''))],
+    ['À refaire : la coupe a changé.', 'Relancer']);
   await contexte.close();
 
   /* ============ 4. Tête chauve, densité faible ============ */

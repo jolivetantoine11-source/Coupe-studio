@@ -103,7 +103,7 @@
       profil: profilVide(),
       profilIa: false,        // le profil vient du pré-diagnostic de la photo (résumé modifiable)
       envies: enviesVides(),  // les 3 réponses de « Diagnostic · Questions »
-      propositions: { cle: '', source: null, liste: [], erreur: '', choisie: null, validee: false }, // « Diagnostic · Propositions »
+      propositions: { cle: '', source: null, liste: [], erreur: '', choisie: null, validee: false, diagnostic: null }, // « Diagnostic · Propositions »
       coupe: null,            // la coupe choisie (catalogue ou coupe ajoutée)
       reglages: null,         // ses réglages
       reglagesParCoupe: {},   // les réglages de chaque coupe déjà réglée pour ce client
@@ -1173,7 +1173,7 @@
   var propsJeton = 0;
 
   function propositionsVides() {
-    return { cle: '', source: null, liste: [], erreur: '', choisie: null, validee: false };
+    return { cle: '', source: null, liste: [], erreur: '', choisie: null, validee: false, diagnostic: null };
   }
 
   function decrire(table, valeurs) {
@@ -1226,10 +1226,40 @@
     return { id: coupe.id, nom: coupe.fr, ligne: coupe.ligne, en: null, pourquoi: pourquoi || pourquoiLocal(coupe) };
   }
 
+  /* Verdict de faisabilité d'une proposition (PROMPTS.md, 0b), ou null. Il remplace le diagnostic de
+     Résultat pour la coupe choisie : il n'a de sens que si la photo du client a été envoyée. */
+  var VERDICTS = ['faisable', 'apres_pousse', 'avec_technique'];
+
+  function lireVerdict(o) {
+    if (!o || VERDICTS.indexOf(o.verdict) < 0) return null;
+    var v = { verdict: o.verdict, mois: null, technique: '', raison: texteCourt(o.raison, 200) };
+    if (o.verdict === 'apres_pousse') {
+      var mois = Math.round(Number(o.mois));
+      v.mois = mois >= 1 && mois <= 36 ? mois : null;
+    }
+    if (o.verdict === 'avec_technique') v.technique = texteCourt(o.technique, 60);
+    return v;
+  }
+
+  /* Badge court de la carte : « Faisable », « Après 3 mois de pousse », « Avec lissage ». */
+  function badgeVerdict(v) {
+    if (v.verdict === 'faisable') return { texte: 'Faisable', alerte: false };
+    if (v.verdict === 'apres_pousse') return { texte: v.mois ? 'Après ' + v.mois + ' mois de pousse' : 'Après pousse', alerte: true };
+    return { texte: v.technique ? 'Avec ' + v.technique : 'Avec technique', alerte: true };
+  }
+
+  /* Le verdict au format du diagnostic (PROMPTS.md, 1) : « VERDICT : … », « RAISON : … ». */
+  function texteVerdict(v) {
+    var ligne = v.verdict === 'faisable' ? '✅ FAISABLE MAINTENANT'
+      : (v.verdict === 'apres_pousse' ? '⏳ FAISABLE APRÈS POUSSE' + (v.mois ? ' (' + v.mois + ' mois)' : '')
+        : '⚠️ FAISABLE AVEC TECHNIQUE' + (v.technique ? ' (' + v.technique + ')' : ''));
+    return 'VERDICT : ' + ligne + (v.raison ? '\nRAISON : ' + v.raison : '');
+  }
+
   /* Lit le tableau JSON de l'IA. Garde seulement ce qui est possible pour ce client :
      un id du catalogue du mode, ou une coupe hors catalogue complète (nom, description anglaise).
      Tête chauve ou rasée : seulement les coupes sans longueur du catalogue (buzz cut). */
-  function lirePropositionsIa(texte) {
+  function lirePropositionsIa(texte, avecPhoto) {
     var t = String(texte || '');
     var debut = t.indexOf('[');
     var fin = t.lastIndexOf(']');
@@ -1255,6 +1285,8 @@
         if (!nom || !en || tete) return;
         item = { id: null, nom: nom, ligne: texteCourt(o.ligne, 60) || nom, en: en, pourquoi: pourquoi };
       }
+      var verdict = avecPhoto ? lireVerdict(o) : null;
+      if (verdict) item.verdict = verdict;
       var cle = (item.id || item.nom).toLowerCase();
       if (vus[cle]) return;
       vus[cle] = true;
@@ -1272,8 +1304,15 @@
     return liste;
   }
 
+  /* Le verdict sur la carte : « Faisable » en badge, sinon en avertissement court (comme « Pousse nécessaire »). */
+  function badgeDe(item) {
+    if (!item.verdict) return null;
+    var b = badgeVerdict(item.verdict);
+    return el('span', { 'class': b.alerte ? 'risque' : 'badge', 'data-verdict': item.verdict.verdict, texte: b.texte });
+  }
+
   function poserPropositions(cle, source, liste, erreur) {
-    etat.propositions = { cle: cle, source: source, liste: liste, erreur: erreur || '', choisie: null, validee: false };
+    etat.propositions = { cle: cle, source: source, liste: liste, erreur: erreur || '', choisie: null, validee: false, diagnostic: null };
     memoriser();
   }
 
@@ -1287,7 +1326,7 @@
     var jeton = ++propsJeton;
     var photosJointes = v2.selfie && v2.consentement ? [v2.selfie] : []; // la photo ne part qu'avec l'accord
     genererTexte(photosJointes, P.propositions(reperesPropositions()), { json: true, recherche: true }).then(function (reponse) {
-      var liste = lirePropositionsIa(reponse.texte);
+      var liste = lirePropositionsIa(reponse.texte, photosJointes.length > 0);
       if (!liste || !liste.length) throw erreurV2('REFUS');
       return liste;
     }).then(function (liste) {
@@ -1328,6 +1367,13 @@
       if (typeof o.idPerso === 'string' && /^perso-[a-z0-9]{1,20}$/.test(o.idPerso)) item.idPerso = o.idPerso;
       return item;
     }).filter(Boolean);
+    /* Le verdict de chaque proposition (gardé tel quel s'il est valide). */
+    d.liste.slice(0, 3).forEach(function (o, i) {
+      var v = o && o.verdict ? lireVerdict(o.verdict) : null;
+      if (v && propre.liste[i]) propre.liste[i].verdict = v;
+    });
+    var dg = d.diagnostic;
+    propre.diagnostic = dg && typeof dg.prompt === 'string' && typeof dg.texte === 'string' ? { prompt: dg.prompt, texte: dg.texte.slice(0, 400) } : null;
     propre.choisie = typeof d.choisie === 'number' && d.choisie >= 0 && d.choisie < propre.liste.length ? d.choisie : null;
     propre.validee = propre.choisie !== null && d.validee === true;
     return propre;
@@ -1356,7 +1402,8 @@
           item.id ? null : el('span', { 'class': 'badge', texte: 'Hors catalogue' }),
           el('span', { 'class': 'coupe-nom', texte: item.nom }),
           el('span', { 'class': 'coupe-ligne', texte: item.ligne }),
-          item.pourquoi ? el('span', { texte: item.pourquoi }) : null
+          item.pourquoi ? el('span', { texte: item.pourquoi }) : null,
+          badgeDe(item)
         ]));
       });
       return;
@@ -1369,6 +1416,8 @@
         el('h2', { id: 'titre-proposition', tabindex: '-1', texte: choisie.nom }),
         el('span', { 'class': 'coupe-ligne', texte: choisie.ligne }),
         choisie.pourquoi ? el('p', { texte: choisie.pourquoi }) : null,
+        badgeDe(choisie),
+        choisie.verdict && choisie.verdict.raison ? el('p', { 'class': 'discret', texte: choisie.verdict.raison }) : null,
         details ? el('p', { 'class': 'discret', texte: 'Détails : ' + details }) : null
       ]),
       el('div', { 'class': 'pile' }, [
@@ -1416,6 +1465,11 @@
     if (!coupe) return;
     choisirCoupe(coupe);
     pr.validee = true;
+    /* « 3 appels par client » : le verdict de la proposition sert de diagnostic dans Résultat, tant que
+       le prompt du diagnostic (donc la coupe, ses réglages et ses caractéristiques) ne change pas. */
+    var item = pr.liste[pr.choisie];
+    var diag = etapesResultat().filter(function (e) { return e.id === 'diagnostic'; })[0];
+    pr.diagnostic = item.verdict && diag ? { prompt: diag.texte, texte: texteVerdict(item.verdict) } : null;
     memoriser();
     RENDUS.propositions();
     $('#titre-proposition').focus();
@@ -2658,8 +2712,15 @@
     });
   }
 
+  /* Le résultat d'une étape : celui généré ici, sinon, pour le diagnostic, le verdict des propositions. */
+  function resultatDe(etape) {
+    if (v2.resultats[etape.id]) return v2.resultats[etape.id];
+    var dg = etat.propositions && etat.propositions.diagnostic;
+    return etape.id === 'diagnostic' && dg ? { prompt: dg.prompt, texte: dg.texte, propositions: true } : null;
+  }
+
   function resultatValide(etape) {
-    var r = v2.resultats[etape.id];
+    var r = resultatDe(etape);
     return r && !r.perime && r.prompt === etape.texte ? r : null;
   }
 
@@ -2693,7 +2754,7 @@
   function blocGenerationV2(etape, etapes, i) {
     var n = i + 1;
     var estImage = ETAPES_IMAGE.indexOf(etape.id) >= 0;
-    var r = v2.resultats[etape.id] || null;
+    var r = resultatDe(etape);
     var valide = resultatValide(etape);
     var enCours = v2.enCours === etape.id;
     var entrees = entreesEtape(etapes, i);
@@ -2722,6 +2783,7 @@
     } else {
       noeuds.push(el('div', { 'class': 'consigne' }, [bouton('Générer')]));
     }
+    if (r && r.propositions && valide) noeuds.push(el('p', { 'class': 'legende consigne', texte: 'Diagnostic fait avec les propositions.' }));
     if (enCours) noeuds.push(el('p', { 'class': 'legende consigne', role: 'status', texte: 'Génération en cours. Cela peut prendre une minute.' }));
     else if (entrees.manque && !v2.enCours) noeuds.push(el('p', { 'class': 'legende consigne', 'data-manque': etape.id, texte: entrees.manque }));
     if (etape.apres && r && estImage && !v2.erreurs[etape.id]) noeuds.push(el('p', { 'class': 'consigne discret', texte: etape.apres }));
@@ -2819,7 +2881,11 @@
     if (!fichier) return;
     reduire(fichier).then(function (donnees) {
       v2[cle] = donnees;
-      if (cle === 'selfie') { v2.selfieN++; v2.messagePhoto = ''; }
+      if (cle === 'selfie') {
+        v2.selfieN++;
+        v2.messagePhoto = '';
+        if (etat.propositions.diagnostic) { etat.propositions.diagnostic = null; memoriser(); } // jugé sur l'ancienne photo
+      }
       /* Une autre photo : les résultats d'avant ne valent plus. */
       v2.resultats = {};
       v2.erreurs = {};

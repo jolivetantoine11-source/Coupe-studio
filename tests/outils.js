@@ -197,14 +197,19 @@ async function propositionsV2(page, cas) {
     if (cas === 'erreur') return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ texte: 'Désolé.' }) });
     if (cas === 'attente') return undefined; // pas de réponse : l'écran reste en attente
     return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ texte: JSON.stringify([
-      { id: 'skin-fade', pourquoi: 'Net et facile à entretenir, il suit son allure sportive.' },
-      { id: null, nom: 'Afro taper', ligne: 'Boucles hautes, tempes nettes', description_en: 'Sides: low taper. Top: natural defined curls', pourquoi: 'Garde ses boucles et donne de la hauteur au visage.' },
-      { id: 'crop-texture', pourquoi: 'Une frange courte qui adoucit les traits.' }
+      { id: 'skin-fade', pourquoi: 'Net et facile à entretenir, il suit son allure sportive.', verdict: 'faisable', raison: 'La longueur actuelle suffit.' },
+      { id: null, nom: 'Afro taper', ligne: 'Boucles hautes, tempes nettes', description_en: 'Sides: low taper. Top: natural defined curls', pourquoi: 'Garde ses boucles et donne de la hauteur au visage.', verdict: 'apres_pousse', mois: 3, raison: 'Le dessus doit pousser.' },
+      { id: 'crop-texture', pourquoi: 'Une frange courte qui adoucit les traits.', verdict: 'avec_technique', technique: 'coiffage', raison: 'La frange demande un coiffage.' }
     ]) }) });
   });
   await page.evaluate(() => {
     window.CONFIG.worker = 'https://worker.invalid';
     try { localStorage.setItem('coupe-studio:acces', JSON.stringify('salon-test')); } catch (e) { /* bloqué */ }
+    /* Une photo de synthèse et l'accord : le verdict de faisabilité est gardé. */
+    const c = document.createElement('canvas');
+    c.width = 60; c.height = 80;
+    const v2 = window.CoupeStudio.v2;
+    v2.selfie = c.toDataURL('image/jpeg'); v2.selfieN = 1; v2.consentement = true;
     window.CoupeStudio.rendre();
   });
   if (cas !== 'attente') await page.waitForFunction(() => document.querySelector('#etat-propositions').hidden);

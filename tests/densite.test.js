@@ -96,7 +96,7 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   await page.click('#action-accueil');
   await page.click('#passer-photo');
   await page.click('[data-question="front"][data-valeur="chauve"]');
-  await page.click('#ecran-client .btn');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   const etats = await page.$$eval('#ecran-catalogue [data-coupe]', (c) => c.map((x) => x.getAttribute('data-coupe') + (x.disabled ? ':grisée' : ':active')));
   verifier('conseillées : seulement le buzz cut', (await page.$$eval('#conseillees [data-coupe]', (c) => c.map((x) => x.getAttribute('data-coupe')))).join(), 'buzz-cut');
@@ -123,14 +123,14 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   await p2.goto(ADRESSE);
   await p2.click('#action-accueil');
   await p2.click('#passer-photo');
-  await p2.click('#passer-profil');
+  await p2.click('#vers-catalogues');
   await p2.click('#ecran-choix a[href="#catalogue"]');
   await p2.click('#ecran-catalogue [data-coupe="skin-fade"]');
   await p2.goBack();
   await p2.goBack();
   await p2.goBack();
   await p2.click('[data-question="front"][data-valeur="chauve"]');
-  verifier('coupe choisie avant de passer en « chauve » : gardée (on n’efface jamais)', await p2.evaluate(() => window.CoupeStudio.etat.coupe.id + ' / ' + window.CoupeStudio.etat.ecran), 'skin-fade / client');
+  verifier('coupe choisie avant de passer en « chauve » : gardée (on n’efface jamais)', await p2.evaluate(() => window.CoupeStudio.etat.coupe.id + ' / ' + window.CoupeStudio.etat.ecran), 'skin-fade / questions');
   await p2.close();
   const alertes = await page.evaluate(() => {
     const A = window.CoupeStudio;
@@ -158,7 +158,7 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   await page.click('#ecran-accueil [data-nouveau-client]');
   await page.click('#ecran-accueil [data-confirmer-nouveau]');
   await page.click('#passer-photo');
-  await page.click('#passer-profil');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   await page.click('#vers-caracteristiques');

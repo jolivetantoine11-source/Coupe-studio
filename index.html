@@ -119,21 +119,32 @@ try {
     </div>
   </section>
 
-  <!-- ===== Profil client (pont temporaire jusqu'à l'étape 2 : Diagnostic · Questions) ===== -->
-  <section class="ecran" id="ecran-client" aria-labelledby="titre-client" hidden>
+  <!-- ===== Diagnostic · Questions ===== -->
+  <section class="ecran" id="ecran-questions" aria-labelledby="titre-questions" hidden>
     <div class="defile">
       <div class="colonne">
         <header>
-          <h1 id="titre-client" tabindex="-1">Profil client</h1>
-          <p class="sous-titre">5 réponses, pas plus. Elles servent à conseiller les coupes.</p>
+          <p class="etape">Diagnostic</p>
+          <h1 id="titre-questions" tabindex="-1">Ce que veut le client</h1>
+          <p class="sous-titre">3 questions pour trouver les bonnes coupes.</p>
         </header>
-        <div class="blocs" id="questions"></div>
+        <div class="blocs">
+          <div class="carte pile" id="profil-ia" hidden>
+            <h2>D’après la photo</h2>
+            <p class="legende">Touche une ligne pour la corriger.</p>
+            <div class="pile" id="lignes-profil"></div>
+            <p class="discret" id="style-ia" hidden></p>
+            <p id="remarque-ia" hidden></p>
+          </div>
+          <div class="blocs" id="questions-profil"></div>
+          <div class="blocs" id="envies"></div>
+        </div>
       </div>
     </div>
     <div class="actions">
       <div class="colonne">
-        <a class="btn" href="#choix">Continuer</a>
-        <a class="btn-2" href="#choix" id="passer-profil">Passer</a>
+        <a class="btn" href="#catalogue" id="action-questions">Voir les propositions</a>
+        <a class="btn-2" href="#choix" id="vers-catalogues">Voir les catalogues</a>
       </div>
     </div>
   </section>

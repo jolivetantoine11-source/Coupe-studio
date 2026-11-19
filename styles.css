@@ -498,6 +498,28 @@ button.carte {
   user-select: none;
 }
 
+/* Ligne du résumé du pré-diagnostic (Diagnostic · Questions) : le nom à gauche, la réponse à droite.
+   Un toucher l'ouvre pour corriger la réponse. */
+.ligne-profil {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 16px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: transparent;
+  color: var(--texte);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ligne-profil[aria-expanded="true"] {
+  border-color: var(--selection);
+}
+
 /* Aperçu de la photo du client (Diagnostic · Photo) : plus bas, pour garder l'accord et les messages en vue. */
 .apercu-diagnostic {
   max-height: 32vh;

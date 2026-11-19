@@ -88,7 +88,7 @@ const PROFIL_VIDE = { texture: null, visage: null, front: null, longueur: null, 
   verifier('« Prendre la photo » ouvre l’appareil photo ou la galerie', !!(await choix));
   await photo(page);
   await page.click('#action-photo');
-  verifier('« Continuer » sans Worker : profil, sans IA', [await ecran(page), await profil(page)], ['client', PROFIL_VIDE]);
+  verifier('« Continuer » sans Worker : profil, sans IA', [await ecran(page), await profil(page)], ['questions', PROFIL_VIDE]);
   verifier('aucune demande réseau', reseau.join(), '');
   await page.goBack();
   verifier('retour arrière : la photo est toujours là', [await ecran(page), await page.isVisible('#apercu-client'), await page.textContent('#action-photo')], ['photo', true, 'Continuer']);
@@ -106,13 +106,15 @@ const PROFIL_VIDE = { texture: null, visage: null, front: null, longueur: null, 
   reponse = { statut: 200, corps: { texte: 'Voici :\n```json\n' + JSON.stringify({ visage: 'coeur', texture: 'ondules', front: 'fins', longueur: 'moyenne', lunettes: 'oui', peau: 'violette', yeux: 'clairs', style: 'Veste en jean. '.repeat(30), remarque: null, age: 40 }) + '\n```' } };
   await analyser(page);
   const p1 = await profil(page);
-  verifier('JSON lu même entouré de texte ; « coeur » accepté', [await ecran(page), p1.visage, p1.texture, p1.longueur, p1.lunettes, p1.yeux], ['client', 'coeur', 'ondules', 'moyenne', 'oui', 'clairs']);
+  verifier('JSON lu même entouré de texte ; « coeur » accepté', [await ecran(page), p1.visage, p1.texture, p1.longueur, p1.lunettes, p1.yeux], ['questions', 'coeur', 'ondules', 'moyenne', 'oui', 'clairs']);
   verifier('« fins » ignoré en barber, valeur inconnue ignorée, champ en trop ignoré', [p1.front, p1.peau, p1.age], [null, null, undefined]);
   verifier('phrases coupées à 200 caractères ; null laisse vide', [p1.style.length, p1.remarque], [200, null]);
   verifier('demande : code, photo à 1024 px, prompt du pré-diagnostic, json: true',
     [recues[0].chemin, recues[0].acces, recues[0].corps.photos.length, recues[0].corps.json, recues[0].corps.prompt === await A(page, () => window.PROMPTS.preDiagnostic())], ['/texte', 'salon-test', 1, true, true]);
-  verifier('« Cœur » proposé dans les réponses du profil', await page.textContent('#questions [data-question="visage"][data-valeur="coeur"]'), 'Cœur');
+  verifier('profil venu de la photo : résumé en lignes, questions compactes cachées', [await page.isVisible('#profil-ia'), await page.isVisible('#questions-profil')], [true, false]);
+  verifier('ligne Visage : « Cœur »', await page.textContent('[data-ligne="visage"] .carte-titre'), 'Cœur');
   /* Une réponse donnée à la main n'est pas effacée par un null de l'IA. */
+  await page.click('[data-ligne="front"]');
   await page.click('[data-question="front"][data-valeur="normale"]');
   await page.goBack();
   await photo(page);
@@ -146,7 +148,7 @@ const PROFIL_VIDE = { texture: null, visage: null, front: null, longueur: null, 
   }));
   verifier('après les erreurs, le profil est vide', await profil(page), PROFIL_VIDE);
   await page.click('#passer-photo');
-  verifier('« Passer » après une erreur : profil, sans IA', await ecran(page), 'client');
+  verifier('« Passer » après une erreur : profil, sans IA', await ecran(page), 'questions');
   await contexte.close();
 
   /* ============ 4. « Passer » pendant l'analyse, accord, code ============ */
@@ -169,7 +171,7 @@ const PROFIL_VIDE = { texture: null, visage: null, front: null, longueur: null, 
   verifier('analyse en cours : bouton et message', [await page.textContent('#action-photo'), await page.textContent('#etat-analyse'), await page.getAttribute('#action-photo', 'aria-busy')],
     ['Analyse en cours…', 'Analyse de la photo… Cela peut prendre 30 secondes.', 'true']);
   await page.click('#passer-photo');
-  verifier('« Passer » pendant l’analyse : on avance tout de suite', await ecran(page), 'client');
+  verifier('« Passer » pendant l’analyse : on avance tout de suite', await ecran(page), 'questions');
   await page.waitForTimeout(2000);
   verifier('…et la réponse arrivée après est ignorée', (await profil(page)).visage, null);
   attente = 0;
@@ -196,7 +198,7 @@ const PROFIL_VIDE = { texture: null, visage: null, front: null, longueur: null, 
   verifier('code corrigé, gardé dans le téléphone', await A(page, () => JSON.parse(localStorage.getItem('coupe-studio:acces'))), 'salon-test');
   reponse = { statut: 200, corps: { texte: JSON.stringify({ visage: 'rond' }) } };
   await analyser(page);
-  verifier('code accepté : on avance, le profil est rempli', [await ecran(page), (await profil(page)).visage], ['client', 'rond']);
+  verifier('code accepté : on avance, le profil est rempli', [await ecran(page), (await profil(page)).visage], ['questions', 'rond']);
   await page.goBack();
   verifier('de retour sur l’écran : le code accepté n’est plus demandé', await champCode(), false);
 

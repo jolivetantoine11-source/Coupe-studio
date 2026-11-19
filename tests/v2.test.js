@@ -126,7 +126,7 @@ function tailleJpeg(base64) {
   verifier('« Commencer » ouvre Diagnostic · Photo', await A(() => window.CoupeStudio.etat.ecran), 'photo');
   verifier('Worker réglé, pas de code : champ du code et case d’accord affichés', [await page.isVisible('#bloc-code-photo'), await page.isVisible('#accord-photo')], [true, true]);
   await page.click('#passer-photo');
-  await page.click('#passer-profil');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   await page.click('#vers-caracteristiques');
@@ -166,17 +166,17 @@ function tailleJpeg(base64) {
   await page.fill('#code-acces-photo', 'salon-test');
   verifier('nouveau code : le message disparaît', await page.isVisible('#message-photo'), false);
   await page.click('#action-photo');
-  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'client');
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'questions');
   verifier('pré-diagnostic : /texte, avec la photo, réponse JSON demandée', [recues[recues.length - 1].chemin, dernier().photos, dernier().format], ['/texte', ['1024x683'], { type: 'text', mime_type: 'application/json' }]);
   verifier('pré-diagnostic : prompt de PROMPTS.md, sans la ligne [RÉFÉRENTIEL]', dernier().prompt, await A(() => window.PROMPTS.preDiagnostic()));
   verifier('le JSON remplit le profil (« long » → « allonge »)', await A(() => window.CoupeStudio.etat.profil),
     { texture: 'boucles', visage: 'allonge', front: 'golfes-marques', longueur: 'courte', lunettes: 'non', peau: 'mate', yeux: 'fonces', style: 'Sweat à capuche, allure décontractée.', remarque: 'Golfes marqués : éviter de dégager le front.' });
-  verifier('le profil s’affiche dans les réponses', await page.$$eval('#questions [aria-pressed="true"]', (b) => b.map((x) => x.textContent).join(', ')), 'Bouclés, Allongé, Golfes marqués, Courte, Non');
+  verifier('le profil s’affiche dans le résumé', await page.$$eval('#lignes-profil [data-ligne] .carte-titre', (b) => b.map((x) => x.textContent).join(', ')), 'Bouclés, Allongé, Golfes marqués, Courte, Non, Mate, Foncés');
   verifier('les règles suivent le profil (densité faible : ligne Density)', await A(() => window.CoupeStudio.descAnglaise(window.CoupeStudio.creation()).includes('Density: use only the existing hair')));
   await page.goBack();
   await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'photo');
   await page.click('#action-photo');
-  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'client');
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'questions');
   verifier('même photo : pas de 2e analyse', google.appels.length, 1);
   await page.goBack();
   await page.goBack();

@@ -99,7 +99,7 @@ const FRONT = 'Front: no fringe, no bangs, no curtain bangs, forehead uncovered 
   await page.click('#action-accueil');
   await page.click('#passer-photo');
   await page.click('[data-question="longueur"][data-valeur="courte"]');
-  await page.click('#ecran-client .btn');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="long-droit"]');
   await page.click('#vers-caracteristiques');

@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+Mise à jour « Diagnostic d'abord », étape 2 (19 novembre) : l'écran Profil client est remplacé par « Diagnostic · Questions » (résumé du pré-diagnostic modifiable ou profil compact, puis 3 questions). En attendant l'étape 3, « Voir les propositions » ouvre le Catalogue coupe (sections 4, 7, 12).
+
 Mise à jour « Diagnostic d'abord », étape 1 (19 novembre) : nouvel écran « Diagnostic · Photo » après l'Accueil (photo, accord, code si besoin, pré-diagnostic par l'IA qui remplit le profil). Le Profil client reste en pont temporaire jusqu'à l'étape 2 (sections 3, 4, 7, 11, 12 ; PROMPTS.md, 0).
 
 Mise à jour V2, étape 1 (16 novembre) : génération dans l'appli par un Worker Cloudflare, seulement si `config.js` donne son adresse et si le code d'accès est saisi. Sans cela, la V1 est inchangée (sections 3, 4.8, 10, 12, 14 ; `docs/V2-installation.md`).
@@ -67,15 +69,16 @@ Vocabulaire : le mot « recette » n'apparaît plus nulle part dans l'appli. On 
 Il n'y a plus de barre d'onglets. L'appli est un parcours page par page, comme une appli native.
 
 Parcours visé (« Diagnostic d'abord », décision d'Antoine du 19 novembre), construit une étape à la fois :
-Accueil → Diagnostic · Photo → Diagnostic · Questions → Diagnostic · Propositions → (Réglages ou Résultat). « Que veux-tu faire ? » reste accessible par « Voir les catalogues » sur l'écran Propositions. L'étape 1 (Photo) est faite ; en attendant l'étape 2, l'écran Profil client sert de pont.
+Accueil → Diagnostic · Photo → Diagnostic · Questions → Diagnostic · Propositions → (Réglages ou Résultat). « Que veux-tu faire ? » reste accessible par « Voir les catalogues » sur l'écran Propositions. Les étapes 1 (Photo) et 2 (Questions) sont faites ; l'écran Profil client a disparu. En attendant l'étape 3, « Voir les propositions » ouvre le Catalogue coupe, dont les « Conseillées pour ce client » jouent ce rôle.
 
 Parcours actuel :
 
 ```
 Accueil
   → Diagnostic · Photo (bouton « Passer » possible)
-  → Profil client, prérempli par le pré-diagnostic (pont temporaire, bouton « Passer » possible)
-    → Que veux-tu faire ?
+  → Diagnostic · Questions
+      • « Voir les propositions » → Catalogue coupe (pont jusqu'à l'étape 3)
+      • « Voir les catalogues » → Que veux-tu faire ?
         • Catalogue coupe → Réglages → Résultat
         • Catalogue personnalisé → Résultat
         • Catalogue fond → Retouches sans IA / Retouches IA
@@ -110,9 +113,17 @@ Depuis Réglages, le lien « Ajouter des caractéristiques » ouvre le Catalogue
 - Sans Worker, ou avec « Passer » : pas d'IA, le profil se remplit à la main.
 - « Nouveau client » efface la photo, l'accord et le profil, et ramène à cet écran.
 
-### 4.2 Profil client (pont temporaire jusqu'à l'étape 2)
-- 5 questions maximum, en boutons à bascule (section 7). Retoucher une réponse la retire.
-- Bouton principal « Continuer », bouton secondaire « Passer ». Les deux ouvrent « Que veux-tu faire ? ».
+### 4.2 Diagnostic · Questions (étape 2, 19 novembre ; remplace le Profil client)
+- Libellé « Diagnostic », titre « Ce que veut le client », sous-titre « 3 questions pour trouver les bonnes coupes. ».
+- En haut, le profil du client (section 7) :
+  - après un pré-diagnostic de la photo : carte « D'après la photo », une ligne par réponse (Texture, Visage, Ligne frontale et densité, Longueur actuelle, Lunettes, Peau, Yeux ; « À préciser » si l'IA n'a rien vu), puis le style et la remarque de l'IA. Toucher une ligne ouvre ses réponses en boutons à bascule ; en choisir une corrige la ligne et la referme ; retoucher la réponse actuelle la retire ;
+  - sans pré-diagnostic (pas de photo, « Passer », pas de Worker, erreur) : « Le client » et les 5 questions de l'ancien profil en boutons à bascule.
+- Dessous, « Ce qu'il veut » : 3 questions, une réponse chacune, en boutons à bascule (retoucher une réponse la retire) :
+  1. Changement : Rafraîchir · Faire évoluer · Changer complètement
+  2. Transformation : Longueur · Forme et volume · Couleur
+  3. Habitudes : Aucun coiffage · 5 min · Plus de 10 min
+- Les 3 réponses sont gardées dans l'état du client (`etat.envies`, sessionStorage), pour les propositions de l'étape 3. Aucune règle ne s'en sert encore.
+- Bouton principal « Voir les propositions » : en attendant l'étape 3, il ouvre le Catalogue coupe. Lien secondaire « Voir les catalogues » : Que veux-tu faire ? (il passera sur l'écran Propositions à l'étape 3).
 
 ### 4.3 Que veux-tu faire ?
 Trois gros boutons : « Catalogue coupe », « Catalogue personnalisé », « Catalogue fond », chacun avec une ligne d'explication.
@@ -299,7 +310,7 @@ Le diagnostic reçoit `[COUPE]` = nom français + résumé français (ex. « Ski
 
 ## 7. Profil client, coupes conseillées, avertissements
 
-Le profil se remplit en premier, mais reste facultatif : par le pré-diagnostic de la photo (page 4.1b) ou à la main (page 4.2). Le pré-diagnostic ajoute peau, yeux, style et remarque, qui ne servent encore à aucune règle (ils serviront aux questions et aux propositions des étapes 2 et 3).
+Le profil se remplit en premier, mais reste facultatif : par le pré-diagnostic de la photo (page 4.1b), corrigeable d'un toucher, ou à la main (page 4.2). Le pré-diagnostic ajoute peau, yeux, style et remarque, qui ne servent encore à aucune règle (ils serviront aux questions et aux propositions des étapes 2 et 3).
 
 Questions (une ligne chacune, boutons à bascule) :
 - Texture : Lisses · Ondulés · Bouclés · Crépus
@@ -396,7 +407,7 @@ Ce prompt n'a toujours pas été testé : le signaler à Antoine. Les combinaiso
 3. Construire **une page à la fois**, dans l'ordre du parcours : Accueil, Profil client, Que veux-tu faire ?, Catalogue coupe, Réglages, Catalogue personnalisé, Résultat, Catalogue fond, Retouches sans IA, Retouches IA. Ne pas passer à la suivante avant que la page soit conforme.
 4. Après chaque page : captures Playwright à 390 px et 1280 px de large, dans les 3 thèmes. Corriger débordements, espacements, textes coupés.
 5. **Relecture adverse** : avant de déclarer une page finie, une seconde passe (ou un sous-agent) cherche les écarts à `DESIGN.md` : couleur hors liste, espacement hors multiples de 8, taille de texte hors échelle, ombre, dégradé, nouveau style de bouton.
-5b. **Tests de la V2** : `node tests/photo.test.js` (écran Diagnostic · Photo, pré-diagnostic, erreurs, « Passer », sans Worker), `node worker/test.mjs` (le Worker seul : origine, code, quota, erreurs, rien dans les journaux) et `node tests/v2.test.js` (parcours complet dans l'appli avec le vrai code du Worker et un Google simulé). La section L de `tests/parcours.test.js` vérifie que la V1 est intacte sans Worker.
+5b. **Tests du parcours « Diagnostic d'abord » et de la V2** : `node tests/questions.test.js` (écran Diagnostic · Questions : profil compact ou résumé corrigeable, 3 questions, sorties, retour, Nouveau client), `node tests/photo.test.js` (écran Diagnostic · Photo, pré-diagnostic, erreurs, « Passer », sans Worker), `node worker/test.mjs` (le Worker seul : origine, code, quota, erreurs, rien dans les journaux) et `node tests/v2.test.js` (parcours complet dans l'appli avec le vrai code du Worker et un Google simulé). La section L de `tests/parcours.test.js` vérifie que la V1 est intacte sans Worker.
 6. **Test des prompts** : un test compare le texte de `prompts.js` aux blocs de `PROMPTS.md` (dont le diagnostic salon, vérifié comme le diagnostic barber avec les 4 seuls remplacements validés) et de la section 8 (mot pour mot, hors `[COUPE]`/`[FOND]`). Il doit passer avant toute livraison.
 7. **Test de contraste** : un script vérifie que chaque paire texte/fond des 3 thèmes atteint 4,5:1.
 8. **Test des contradictions** : pour chaque paire d'un même groupe exclusif (et chaque réglage remplacé par une caractéristique), le prompt final ne contient qu'une seule des deux consignes.
@@ -489,7 +500,11 @@ Décidé par Antoine (19 novembre, « Diagnostic d'abord », étape 1) :
 - Écran Photo : photo, case d'accord (déplacée depuis Résultat), « Passer », code demandé seulement s'il n'est pas enregistré.
 - Pré-diagnostic en JSON qui remplit le profil, sans changer les règles ; prompt validé, avec les lignes « Ignore the background… » et l'emplacement `[RÉFÉRENTIEL]`.
 
+Décidé par Antoine (19 novembre, « Diagnostic d'abord », étape 2) :
+- L'écran Profil client disparaît. Diagnostic · Questions : résumé du pré-diagnostic modifiable d'un toucher (ou, sans photo, les questions de l'ancien profil en boutons compacts), puis 3 questions (Changement, Transformation, Habitudes), bouton « Voir les propositions ».
+
 Choix faits par Claude, à confirmer :
+- **Diagnostic · Questions** : titre « Ce que veut le client » ; une seule réponse par question (Transformation comprise) ; le résumé montre aussi Peau et Yeux, corrigeables ; style et remarque en lecture seule ; « Voir les propositions » ouvre le Catalogue coupe et « Voir les catalogues » est sur cet écran en attendant l'étape 3 ; le Catalogue coupe ouvert sans historique revient à cet écran.
 - **Diagnostic · Photo** : sans Worker, la photo peut être prise mais rien n'est envoyé et l'accord n'est pas demandé ; le bouton principal fait « Prendre la photo » puis « Continuer » (pas de bouton principal bloqué) ; en cas d'erreur on reste sur l'écran ; un `null` de l'IA n'efface pas une réponse donnée à la main ; le pré-diagnostic compte pour 1 texte dans le quota ; aperçu limité à 32 % de la hauteur pour garder l'accord et les messages en vue ; le prompt est placé à la fin de PROMPTS.md (« 0. Pré-diagnostic ») pour ne pas décaler les autres blocs.
 - **V2** : `POST /image` prend un tableau `photos` (la variante photo de référence en envoie 2) ; `GET /etat` donne le quota restant, pour vérifier l'installation ; seules les réponses réussies comptent dans le quota ; `store: false` côté Google ; journaux Cloudflare coupés ; une demande sans en-tête Origin est refusée ; « Avant » montre toujours la photo du client ; l'accord vaut pour un client (remis à zéro par « Nouveau client ») ; délai de 90 s.
 - **Densité faible** : le buzz cut garde sa tondeuse au lieu de « kept at the current length » ; un coiffage du dessus avec volume est retiré ; la ligne Top est écrite aussi en salon. En barbe seule, Density reste après Beard.

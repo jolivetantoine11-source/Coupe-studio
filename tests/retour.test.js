@@ -71,7 +71,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.click('#action-accueil');
   verifier('Accueil → Diagnostic · Photo', await ecran(page), 'photo');
   await page.click('#passer-photo');
-  verifier('Photo → « Passer » → Profil client', await ecran(page), 'client');
+  verifier('Photo → « Passer » → Profil client', await ecran(page), 'questions');
   verifier('flèche retour visible, zone tactile 48 × 48', await page.evaluate(() => {
     const r = document.querySelector('#retour').getBoundingClientRect();
     return r.width >= 48 && r.height >= 48 && r.left >= 0 && r.top >= 0 && r.left < 24;
@@ -81,7 +81,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.click('[data-question="front"][data-valeur="golfes-legers"]');
   await page.click('[data-question="longueur"][data-valeur="moyenne"]');
   await page.click('[data-question="lunettes"][data-valeur="oui"]');
-  await page.click('#ecran-client .btn');
+  await page.click('#vers-catalogues');
   verifier('Profil client → Que veux-tu faire ?', await ecran(page), 'choix');
   await page.click('#ecran-choix a[href="#catalogue"]');
   verifier('→ Catalogue coupe', await ecran(page), 'catalogue');
@@ -107,7 +107,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('retour 2 : Que veux-tu faire ?', await ecran(page), 'choix');
   verifier('rien n’a changé après le retour 2', await choix(page), avant);
   await page.goBack();
-  verifier('retour 3 : Profil client', await ecran(page), 'client');
+  verifier('retour 3 : Profil client', await ecran(page), 'questions');
   verifier('rien n’a changé après le retour 3', await choix(page), avant);
   verifier('le profil est toujours affiché', [
     await presse(page, '[data-question="texture"][data-valeur="ondules"]'),
@@ -235,7 +235,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await autre.click('#retour');
   verifier('la flèche mène à la page précédente du parcours', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'catalogue');
   await autre.click('#retour');
-  await autre.click('#retour');
+  verifier('Catalogue coupe → Diagnostic · Questions (« Voir les propositions » y mène)', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'questions');
   await autre.click('#retour');
   await autre.click('#retour');
   verifier('puis jusqu’à l’Accueil, par Diagnostic · Photo', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'accueil');

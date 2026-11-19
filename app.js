@@ -55,7 +55,7 @@
      Changer de page (en avant ou en arrière) ne le modifie jamais :
      seul « Nouveau client » le remet à zéro.
      =================================================================== */
-  var ECRANS = ['accueil', 'photo', 'client', 'choix', 'catalogue', 'reglages', 'personnalise', 'resultat', 'fond', 'retouche', 'retouche-ia'];
+  var ECRANS = ['accueil', 'photo', 'questions', 'choix', 'catalogue', 'reglages', 'personnalise', 'resultat', 'fond', 'retouche', 'retouche-ia'];
 
   var QUESTIONS = [
     { id: 'texture', nom: 'Texture', options: [['lisses', 'Lisses'], ['ondules', 'Ondulés'], ['boucles', 'Bouclés'], ['crepus', 'Crépus']] },
@@ -64,6 +64,24 @@
     { id: 'front', nom: 'Ligne frontale et densité', options: [['normale', 'Normale'], ['golfes-legers', 'Golfes légers'], ['golfes-marques', 'Golfes marqués'], ['clairsemes', 'Clairsemés'], ['chauve', 'Chauve / rasé'], ['fins', 'Cheveux fins', 'salon']] },
     { id: 'longueur', nom: 'Longueur actuelle', options: [['courte', 'Courte'], ['moyenne', 'Moyenne'], ['longue', 'Longue']] },
     { id: 'lunettes', nom: 'Lunettes', options: [['oui', 'Oui'], ['non', 'Non']] }
+  ];
+
+  /* Diagnostic · Questions : ce que veut le client (3 questions, une réponse chacune).
+     Elles serviront aux propositions (étape 3). */
+  var ENVIES = [
+    { id: 'changement', nom: 'Changement', options: [['rafraichir', 'Rafraîchir'], ['evoluer', 'Faire évoluer'], ['changer', 'Changer complètement']] },
+    { id: 'transformation', nom: 'Transformation', options: [['longueur', 'Longueur'], ['forme', 'Forme et volume'], ['couleur', 'Couleur']] },
+    { id: 'habitudes', nom: 'Habitudes', options: [['aucun', 'Aucun coiffage'], ['cinq', '5 min'], ['dix', 'Plus de 10 min']] }
+  ];
+
+  function enviesVides() {
+    return { changement: null, transformation: null, habitudes: null };
+  }
+
+  /* Lignes du résumé du pré-diagnostic : les questions du profil, puis peau et yeux. */
+  var LIGNES_IA = [
+    { id: 'peau', nom: 'Peau', options: [['claire', 'Claire'], ['mate', 'Mate'], ['foncee', 'Foncée']] },
+    { id: 'yeux', nom: 'Yeux', options: [['clairs', 'Clairs'], ['fonces', 'Foncés']] }
   ];
 
   /* Ce que le pré-diagnostic (photo) ajoute au profil. Aucune règle ne s'en sert encore :
@@ -83,6 +101,8 @@
   function clientVide() {
     return {
       profil: profilVide(),
+      profilIa: false,        // le profil vient du pré-diagnostic de la photo (résumé modifiable)
+      envies: enviesVides(),  // les 3 réponses de « Diagnostic · Questions »
       coupe: null,            // la coupe choisie (catalogue ou coupe ajoutée)
       reglages: null,         // ses réglages
       reglagesParCoupe: {},   // les réglages de chaque coupe déjà réglée pour ce client
@@ -588,6 +608,15 @@
     return propre;
   }
 
+  function validerEnvies(e) {
+    var propre = enviesVides();
+    if (!e || typeof e !== 'object') return propre;
+    ENVIES.forEach(function (q) {
+      q.options.forEach(function (o) { if (e[q.id] === o[0]) propre[q.id] = o[0]; });
+    });
+    return propre;
+  }
+
   function validerRetouche(t) {
     var propre = retoucheVide();
     if (!t || typeof t !== 'object') return propre;
@@ -658,6 +687,8 @@
     ecrire(CLES.session, {
       v: 2,
       p: etat.profil,
+      pi: etat.profilIa,
+      e: etat.envies,
       c: coupeVersDonnees(etat.coupe),
       r: etat.reglages,
       rp: parCoupe,
@@ -675,6 +706,8 @@
     var d = lire(CLES.session, null, true);
     if (!d || typeof d !== 'object') return;
     etat.profil = validerProfil(d.p);
+    etat.profilIa = d.pi === true;
+    etat.envies = validerEnvies(d.e);
     var coupe = d.c ? coupeDepuisDonnees(d.c) : null;
     if (coupe) {
       etat.coupe = coupe;
@@ -700,7 +733,8 @@
   function clientEstVide() {
     var p = etat.profil;
     var t = etat.retouche;
-    var profilRenseigne = QUESTIONS.some(function (q) { return p[q.id] !== null; });
+    var profilRenseigne = QUESTIONS.some(function (q) { return p[q.id] !== null; }) ||
+      ENVIES.some(function (q) { return etat.envies[q.id] !== null; });
     var retouche = t.luminosite || t.contraste || t.chaleur || t.nb || t.montage || t.format !== 'original';
     return !profilRenseigne && !etat.coupe && etat.caracteristiques.length === 0 && !etat.couleurLibre &&
       !retouche && etat.retoucheIa.choix.length === 0 && !photos.apres && !photos.avant && !v2.selfie;
@@ -775,8 +809,9 @@
     var x = creation();
     switch (ecran) {
       case 'photo': return 'accueil';
-      case 'client': return 'photo';
-      case 'choix': return 'client';
+      case 'questions': return 'photo';
+      case 'choix': return 'questions';
+      case 'catalogue': return 'questions';
       case 'reglages': return 'catalogue';
       case 'resultat': return x.coupe ? 'reglages' : 'personnalise';
       case 'retouche':
@@ -1013,35 +1048,97 @@
     return QUESTIONS.some(function (q) { return etat.profil[q.id] !== null; });
   }
 
-  function synchroniserClient() {
-    tous('#questions [data-question]').forEach(function (b) {
-      b.setAttribute('aria-pressed', String(etat.profil[b.getAttribute('data-question')] === b.getAttribute('data-valeur')));
+  /* ===================================================================
+     Diagnostic · Questions (parcours « Diagnostic d'abord », étape 2)
+     En haut, le profil : résumé du pré-diagnostic (une ligne par réponse, un toucher pour la
+     corriger) ou, sans pré-diagnostic, les questions de l'ancien profil en boutons compacts.
+     Dessous, les 3 questions sur ce que veut le client.
+     =================================================================== */
+  var ligneOuverte = null; // la ligne du résumé ouverte pour correction
+
+  /* Les questions du profil à montrer : « Cheveux fins » seulement en salon (ou déjà choisi). */
+  function optionsVisibles(q) {
+    return q.options.filter(function (o) { return !(o[2] && etat.mode === 'barber' && etat.profil[q.id] !== o[0]); });
+  }
+
+  function boutonsQuestion(q, source) {
+    return optionsVisibles(q).map(function (o) {
+      return boutonChoix(o[1], { 'data-question': q.id, 'data-valeur': o[0], 'aria-pressed': String(source[q.id] === o[0]) });
     });
   }
 
-  RENDUS.client = function () {
-    var zone = $('#questions');
-    vider(zone);
-    QUESTIONS.forEach(function (q) {
-      var boutons = [];
-      q.options.forEach(function (o) {
-        /* « Cheveux fins » : salon seulement. Une réponse déjà donnée reste affichée. */
-        if (o[2] && etat.mode === 'barber' && etat.profil[q.id] !== o[0]) return;
-        boutons.push(boutonChoix(o[1], { 'data-question': q.id, 'data-valeur': o[0] }));
+  function libelleValeur(q, valeur) {
+    var o = q.options.filter(function (x) { return x[0] === valeur; })[0];
+    return o ? o[1] : 'À préciser';
+  }
+
+  RENDUS.questions = function () {
+    var resume = $('#profil-ia');
+    var compact = $('#questions-profil');
+    resume.hidden = !etat.profilIa;
+    compact.hidden = etat.profilIa;
+    vider(compact);
+    var lignes = $('#lignes-profil');
+    vider(lignes);
+    if (etat.profilIa) {
+      QUESTIONS.concat(LIGNES_IA).forEach(function (q) {
+        var ouverte = ligneOuverte === q.id;
+        lignes.appendChild(el('button', { type: 'button', 'class': 'ligne-profil', 'data-ligne': q.id, 'aria-expanded': String(ouverte), 'aria-controls': 'options-' + q.id }, [
+          el('span', { 'class': 'discret', texte: q.nom }),
+          el('span', { 'class': 'carte-titre', texte: libelleValeur(q, etat.profil[q.id]) })
+        ]));
+        if (ouverte) lignes.appendChild(el('div', { 'class': 'groupe', id: 'options-' + q.id, role: 'group', 'aria-label': q.nom }, boutonsQuestion(q, etat.profil)));
       });
-      zone.appendChild(blocChoix('question-' + q.id, q.nom, boutons));
+      var style = etat.profil.style;
+      var remarque = etat.profil.remarque;
+      $('#style-ia').hidden = !style;
+      $('#style-ia').textContent = style ? 'Style : ' + style : '';
+      $('#remarque-ia').hidden = !remarque;
+      $('#remarque-ia').textContent = remarque || '';
+    } else {
+      compact.appendChild(el('h2', { texte: 'Le client' }));
+      QUESTIONS.forEach(function (q) { compact.appendChild(blocChoix('question-' + q.id, q.nom, boutonsQuestion(q, etat.profil))); });
+    }
+    var envies = $('#envies');
+    vider(envies);
+    envies.appendChild(el('h2', { texte: 'Ce qu’il veut' }));
+    ENVIES.forEach(function (q) {
+      envies.appendChild(blocChoix('envie-' + q.id, q.nom, q.options.map(function (o) {
+        return boutonChoix(o[1], { 'data-envie': q.id, 'data-valeur': o[0], 'aria-pressed': String(etat.envies[q.id] === o[0]) });
+      })));
     });
-    synchroniserClient();
   };
 
-  $('#questions').addEventListener('click', function (evenement) {
-    var b = evenement.target.closest('[data-question]');
+  $('#ecran-questions').addEventListener('click', function (evenement) {
+    var b = evenement.target.closest('button');
     if (!b) return;
-    var id = b.getAttribute('data-question');
     var valeur = b.getAttribute('data-valeur');
-    etat.profil[id] = etat.profil[id] === valeur ? null : valeur; // retoucher une réponse la retire
-    memoriser();
-    synchroniserClient();
+    var id;
+    if (b.hasAttribute('data-ligne')) {
+      id = b.getAttribute('data-ligne');
+      ligneOuverte = ligneOuverte === id ? null : id;
+      RENDUS.questions();
+      $('#ecran-questions [data-ligne="' + id + '"]').focus();
+      return;
+    }
+    if (b.hasAttribute('data-question')) {
+      id = b.getAttribute('data-question');
+      etat.profil[id] = etat.profil[id] === valeur ? null : valeur; // retoucher une réponse la retire
+      var depuisResume = ligneOuverte === id;
+      if (depuisResume) ligneOuverte = null; // corrigée : la ligne se referme
+      memoriser();
+      RENDUS.questions();
+      var cible = depuisResume ? $('#ecran-questions [data-ligne="' + id + '"]') : $('#ecran-questions [data-question="' + id + '"][data-valeur="' + valeur + '"]');
+      if (cible) cible.focus();
+      return;
+    }
+    if (b.hasAttribute('data-envie')) {
+      id = b.getAttribute('data-envie');
+      etat.envies[id] = etat.envies[id] === valeur ? null : valeur;
+      memoriser();
+      RENDUS.questions();
+      $('#ecran-questions [data-envie="' + id + '"][data-valeur="' + valeur + '"]').focus();
+    }
   });
 
   /* ---- Avertissements (CLAUDE.md, section 7) ---- */
@@ -2608,10 +2705,10 @@
     if (v2.analyse) return;
     if (!v2.selfie) { $('#fichier-selfie').click(); return; }
     /* Sans Worker : pas d'IA, la photo est gardée pour la suite. */
-    if (!v2Reglee()) { aller('client'); return; }
+    if (!v2Reglee()) { aller('questions'); return; }
     if (!v2.consentement) { messagePhoto('Coche l’accord du client, ou touche « Passer ».'); return; }
     if (!codeAcces()) { messagePhoto('Saisis le code d’accès du salon, ou touche « Passer ».'); $('#code-acces-photo').focus(); return; }
-    if (v2.analysee === v2.selfieN) { aller('client'); return; } // cette photo est déjà analysée
+    if (v2.analysee === v2.selfieN) { aller('questions'); return; } // cette photo est déjà analysée
     var jeton = ++v2.analyseJeton;
     var n = v2.selfieN;
     v2.analyse = true;
@@ -2623,13 +2720,14 @@
       return o;
     }).then(function (o) {
       if (jeton !== v2.analyseJeton || n !== v2.selfieN) return;
-      appliquerProfilIa(o);
+      if (appliquerProfilIa(o) > 0) etat.profilIa = true;
+      ligneOuverte = null;
       memoriser();
       v2.analyse = false;
       v2.analysee = n;
       v2.codeRefuse = false;
       v2.codeAffiche = false; // code accepté : on ne le redemande plus
-      if (etat.ecran === 'photo') aller('client');
+      if (etat.ecran === 'photo') aller('questions');
     }, function (e) {
       if (jeton !== v2.analyseJeton) return;
       v2.analyse = false;
@@ -2649,7 +2747,7 @@
   $('#passer-photo').addEventListener('click', function () {
     if (v2.analyse) { v2.analyse = false; v2.analyseJeton++; }
     v2.messagePhoto = '';
-    aller('client');
+    aller('questions');
   });
 
   $('#code-acces-photo').addEventListener('input', function (evenement) {
@@ -2703,6 +2801,7 @@
     genererTexte: genererTexte,
     v2: v2,
     v2Active: v2Active,
+    ENVIES: ENVIES,
     lireProfilIa: lireProfilIa,
     appliquerProfilIa: appliquerProfilIa,
     rendre: function () { if (RENDUS[etat.ecran]) RENDUS[etat.ecran](); },

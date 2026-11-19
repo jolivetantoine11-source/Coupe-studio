@@ -51,7 +51,7 @@ const occurrences = (texte, morceau) => texte.split(morceau).length - 1;
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
   await page.click('#passer-photo');
-  await page.click('#passer-profil');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#personnalise"]');
   await page.evaluate((t) => { window.CoupeStudio.etat.couleurLibre = t; }, COULEUR_LIBRE);
   const desc = () => page.evaluate(() => window.CoupeStudio.descAnglaise(window.CoupeStudio.creation()));

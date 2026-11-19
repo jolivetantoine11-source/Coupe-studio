@@ -68,8 +68,12 @@ const VARIANTES = {
     { nom: 'photo-analyse', action: async (page) => { await photoV2(page, { photo: true, analyse: true }); } },
     { nom: 'photo-erreur', action: async (page) => { await photoV2(page, { photo: true, erreur: true }); } }
   ],
-  client: [
-    { nom: 'client' }
+  /* Diagnostic · Questions : profil à la main (graine), puis résumé du pré-diagnostic, puis une ligne ouverte. */
+  questions: [
+    { nom: 'questions' },
+    { nom: 'questions-vide', graine: (g) => { g.session = {}; } },
+    { nom: 'questions-ia', graine: (g) => { questionsIa(g); } },
+    { nom: 'questions-ia-ouverte', graine: (g) => { questionsIa(g); }, action: async (page) => { await page.click('[data-ligne="visage"]'); } }
   ],
   choix: [
     { nom: 'choix' }
@@ -173,6 +177,14 @@ async function activerV2(page, avecResultats) {
     champ.value = 'salon-test';
     champ.dispatchEvent(new Event('input'));
   }, avecResultats);
+}
+
+/* Profil venu du pré-diagnostic, avec les 3 réponses. */
+function questionsIa(g) {
+  const s = g.session['coupe-studio:session'];
+  s.pi = true;
+  Object.assign(s.p, { peau: 'mate', yeux: 'fonces', style: 'Veste en jean et baskets blanches, allure décontractée.', remarque: 'Golfes marqués : garder du volume devant plutôt que dégager le front.' });
+  s.e = { changement: 'evoluer', transformation: 'forme', habitudes: 'cinq' };
 }
 
 /* Met l'écran « Diagnostic · Photo » dans l'état voulu : Worker factice, code (ou non), photo de synthèse,

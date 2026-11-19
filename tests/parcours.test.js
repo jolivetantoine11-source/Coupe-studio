@@ -69,7 +69,7 @@ const modesDe = (page, liste) => page.evaluate((l) => l.map((id) => window.Coupe
 async function jusquAuCatalogue(page) {
   await page.click('#action-accueil');
   await page.click('#passer-photo');
-  await page.click('#passer-profil');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
 }
 const pixel = (page, x, y) => page.evaluate(([px, py]) => {
@@ -97,8 +97,8 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('#action-accueil');
   verifier('« Commencer » ouvre « Diagnostic · Photo »', await ecran(page), 'photo');
   await page.click('#passer-photo');
-  verifier('« Passer » ouvre le profil (pont temporaire)', await ecran(page), 'client');
-  await page.click('#passer-profil');
+  verifier('« Passer » ouvre le profil (pont temporaire)', await ecran(page), 'questions');
+  await page.click('#vers-catalogues');
   verifier('« Passer » ouvre « Que veux-tu faire ? »', await ecran(page), 'choix');
   verifier('3 gros boutons', (await page.$$eval('#ecran-choix .carte-grand-titre', (t) => t.map((x) => x.textContent))).join(' | '), 'Catalogue coupe | Catalogue personnalisé | Catalogue fond');
   await page.click('#ecran-choix a[href="#catalogue"]');
@@ -115,13 +115,13 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
   await page.click('#passer-photo');
-  verifier('5 questions', (await page.$$('#questions .groupe')).length, 5);
+  verifier('5 questions', (await page.$$('#questions-profil .groupe')).length, 5);
   verifier('« Cheveux fins » absent en barber', (await page.$$('[data-question="front"][data-valeur="fins"]')).length, 0);
   await page.click('[data-question="texture"][data-valeur="boucles"]');
   await page.click('[data-question="front"][data-valeur="golfes-marques"]');
   await page.click('[data-question="longueur"][data-valeur="courte"]');
   await page.click('[data-question="lunettes"][data-valeur="oui"]');
-  await page.click('#ecran-client .btn');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   liste = await ids(page, '#ecran-catalogue [data-coupe]', 'data-coupe');
   modes = await modesDe(page, liste);
@@ -449,7 +449,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('« Cheveux fins » proposé en salon', (await page.$$('[data-question="front"][data-valeur="fins"]')).length, 1);
   await page.click('[data-question="front"][data-valeur="fins"]');
   await page.click('[data-question="visage"][data-valeur="carre"]');
-  await page.click('#ecran-client .btn');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   liste = await ids(page, '#ecran-catalogue [data-coupe]', 'data-coupe');
   modes = await modesDe(page, liste);
@@ -483,7 +483,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   ({ contexte, page } = await nouvelle(navigateur));
   await page.click('#action-accueil');
   await page.click('#passer-photo');
-  await page.click('#passer-profil');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#personnalise"]');
   verifier('sans coupe choisie : pas de « Coupe de départ »', await page.isHidden('#bloc-base'));
   verifier('rien de choisi', await texte(page, '#resume-personnalise'), 'Aucune caractéristique choisie.');
@@ -537,7 +537,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   page.on('request', (r) => requetes.push(r.url()));
   await page.click('#action-accueil');
   await page.click('#passer-photo');
-  await page.click('#passer-profil');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#fond"]');
   verifier('deux familles, clairement séparées', (await page.$$eval('#ecran-fond .carte-grand-titre', (t) => t.map((x) => x.textContent))).join(' | '), 'Retouches sans IA | Retouches IA');
   verifier('famille sans IA : la liste', await texte(page, '#liste-sans-ia'), 'Luminosité, contraste, chaleur, noir et blanc, recadrage, montage avant/après.');
@@ -748,7 +748,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.evaluate(() => { localStorage.setItem('coupe-studio:acces', JSON.stringify('un-code')); });
   await page.click('#action-accueil');
   await page.click('#passer-photo');
-  await page.click('#passer-profil');
+  await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
   await page.click('#action-reglages');

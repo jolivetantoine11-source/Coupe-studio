@@ -55,7 +55,7 @@
      Changer de page (en avant ou en arrière) ne le modifie jamais :
      seul « Nouveau client » le remet à zéro.
      =================================================================== */
-  var ECRANS = ['accueil', 'photo', 'questions', 'choix', 'catalogue', 'reglages', 'personnalise', 'resultat', 'fond', 'retouche', 'retouche-ia'];
+  var ECRANS = ['accueil', 'photo', 'questions', 'propositions', 'choix', 'catalogue', 'reglages', 'personnalise', 'resultat', 'fond', 'retouche', 'retouche-ia'];
 
   var QUESTIONS = [
     { id: 'texture', nom: 'Texture', options: [['lisses', 'Lisses'], ['ondules', 'Ondulés'], ['boucles', 'Bouclés'], ['crepus', 'Crépus']] },
@@ -103,6 +103,7 @@
       profil: profilVide(),
       profilIa: false,        // le profil vient du pré-diagnostic de la photo (résumé modifiable)
       envies: enviesVides(),  // les 3 réponses de « Diagnostic · Questions »
+      propositions: { cle: '', source: null, liste: [], erreur: '', choisie: null, validee: false }, // « Diagnostic · Propositions »
       coupe: null,            // la coupe choisie (catalogue ou coupe ajoutée)
       reglages: null,         // ses réglages
       reglagesParCoupe: {},   // les réglages de chaque coupe déjà réglée pour ce client
@@ -215,7 +216,7 @@
     if (!nom || !ligne) return null;
     if (o.mode !== 'barber' && o.mode !== 'salon') return null;
     var id = typeof o.id === 'string' && /^perso-[a-z0-9]{1,20}$/.test(o.id) ? o.id : 'perso-partagee';
-    return { id: id, perso: true, mode: o.mode, fr: nom, ligne: ligne, desc: texteCourt(o.en, 200), sil: 'perso', recette: {} };
+    return { id: id, perso: true, mode: o.mode, fr: nom, ligne: ligne, desc: texteCourt(o.en, 400), sil: 'perso', recette: {} };
   }
 
   function coupesPerso() {
@@ -689,6 +690,7 @@
       p: etat.profil,
       pi: etat.profilIa,
       e: etat.envies,
+      pr: etat.propositions,
       c: coupeVersDonnees(etat.coupe),
       r: etat.reglages,
       rp: parCoupe,
@@ -708,6 +710,7 @@
     etat.profil = validerProfil(d.p);
     etat.profilIa = d.pi === true;
     etat.envies = validerEnvies(d.e);
+    etat.propositions = validerPropositions(d.pr);
     var coupe = d.c ? coupeDepuisDonnees(d.c) : null;
     if (coupe) {
       etat.coupe = coupe;
@@ -810,8 +813,8 @@
     switch (ecran) {
       case 'photo': return 'accueil';
       case 'questions': return 'photo';
-      case 'choix': return 'questions';
-      case 'catalogue': return 'questions';
+      case 'propositions': return 'questions';
+      case 'choix': return 'propositions';
       case 'reglages': return 'catalogue';
       case 'resultat': return x.coupe ? 'reglages' : 'personnalise';
       case 'retouche':
@@ -1139,6 +1142,283 @@
       RENDUS.questions();
       $('#ecran-questions [data-envie="' + id + '"][data-valeur="' + valeur + '"]').focus();
     }
+  });
+
+  /* ===================================================================
+     Diagnostic · Propositions (parcours « Diagnostic d'abord », étape 3)
+     Avec le Worker et le code : l'IA propose 3 coupes (PROMPTS.md, 0b), du catalogue ou non.
+     Sinon, ou en cas d'erreur : les 3 coupes conseillées par les règles de l'appli (section 7).
+     Une proposition choisie et validée devient la coupe du client (catalogue ou coupe personnalisée).
+     =================================================================== */
+  var EN_PROFIL = {
+    visage: ['face', { ovale: 'oval', rond: 'round', carre: 'square', allonge: 'long', coeur: 'heart-shaped' }],
+    texture: ['hair texture', { lisses: 'straight', ondules: 'wavy', boucles: 'curly', crepus: 'coily' }],
+    front: ['hairline and density', { normale: 'normal', 'golfes-legers': 'slightly receding temples', 'golfes-marques': 'strongly receding temples', clairsemes: 'thinning hair', chauve: 'bald or shaved head', fins: 'fine hair' }],
+    longueur: ['current length', { courte: 'short', moyenne: 'medium', longue: 'long' }],
+    lunettes: ['glasses', { oui: 'yes', non: 'no' }],
+    peau: ['skin', { claire: 'fair', mate: 'tan', foncee: 'dark' }],
+    yeux: ['eyes', { clairs: 'light', fonces: 'dark' }]
+  };
+  var EN_ENVIES = {
+    changement: ['change', { rafraichir: 'refresh the current cut', evoluer: 'evolve the current cut', changer: 'change completely' }],
+    transformation: ['transformation', { longueur: 'length', forme: 'shape and volume', couleur: 'color' }],
+    habitudes: ['daily styling', { aucun: 'no styling', cinq: '5 minutes', dix: 'more than 10 minutes' }]
+  };
+  var IMPOSSIBLES = {
+    chauve: 'bald or shaved head: only a buzz cut or a beard-only change',
+    densite: 'thin hair or receding hairline: no fringe, no added volume, keep the current top length'
+  };
+  var ATTENTE_PROPOSITIONS = 'Recherche des propositions… Cela peut prendre 30 secondes.';
+  var propsEnCours = null; // la clé des propositions demandées à l'IA, pendant la demande
+  var propsJeton = 0;
+
+  function propositionsVides() {
+    return { cle: '', source: null, liste: [], erreur: '', choisie: null, validee: false };
+  }
+
+  function decrire(table, valeurs) {
+    var morceaux = [];
+    Object.keys(table).forEach(function (k) {
+      var v = valeurs[k];
+      if (v && table[k][1][v]) morceaux.push(table[k][0] + ': ' + table[k][1][v]);
+    });
+    return morceaux;
+  }
+
+  /* Le texte de chaque repère du prompt « propositions ». */
+  function reperesPropositions() {
+    var p = etat.profil;
+    var profil = decrire(EN_PROFIL, p);
+    if (p.style) profil.push('style (in French): ' + p.style);
+    if (p.remarque) profil.push('note (in French): ' + p.remarque);
+    var envies = decrire(EN_ENVIES, etat.envies);
+    return {
+      mode: etat.mode === 'barber' ? 'barbershop' : (etat.mode === 'salon' ? 'hair salon' : 'hair salon or barbershop'),
+      profil: profil.join('; ') || 'not specified',
+      envies: envies.join('; ') || 'not specified',
+      catalogue: coupesDuMode().map(function (c) { return c.id + ': ' + c.en + ' — ' + c.ligne; }).join('\n'),
+      impossibles: chauve(p) ? IMPOSSIBLES.chauve : (densiteFaible(p) ? IMPOSSIBLES.densite : 'none')
+    };
+  }
+
+  /* Ce qui fait changer les propositions : le mode, le profil, les 3 réponses, la V2 active ou non. */
+  function clePropositions() {
+    var p = etat.profil;
+    return JSON.stringify([etat.mode, QUESTIONS.concat(LIGNES_IA).map(function (q) { return p[q.id]; }), p.style, p.remarque,
+      ENVIES.map(function (q) { return etat.envies[q.id]; }), v2Active()]);
+  }
+
+  /* Pourquoi une coupe locale est proposée : les règles qui la favorisent pour ce client. */
+  function pourquoiLocal(coupe) {
+    var p = etat.profil;
+    var raisons = [];
+    REGLES.forEach(function (regle) {
+      if (regle.favorise.indexOf(coupe.id) < 0 || regle.reponses.indexOf(p[regle.question]) < 0) return;
+      var q = QUESTIONS.filter(function (x) { return x.id === regle.question; })[0];
+      var mot = libelleValeur(q, p[regle.question]).toLowerCase();
+      var raison = regle.question === 'visage' ? 'visage ' + mot : (regle.question === 'texture' ? 'cheveux ' + mot : mot);
+      if (raisons.indexOf(raison) < 0) raisons.push(raison);
+    });
+    return raisons.length ? 'Convient à : ' + raisons.join(', ') + '.' : 'Parmi les coupes les plus demandées.';
+  }
+
+  function propositionCatalogue(coupe, pourquoi) {
+    return { id: coupe.id, nom: coupe.fr, ligne: coupe.ligne, en: null, pourquoi: pourquoi || pourquoiLocal(coupe) };
+  }
+
+  /* Lit le tableau JSON de l'IA. Garde seulement ce qui est possible pour ce client :
+     un id du catalogue du mode, ou une coupe hors catalogue complète (nom, description anglaise).
+     Tête chauve ou rasée : seulement les coupes sans longueur du catalogue (buzz cut). */
+  function lirePropositionsIa(texte) {
+    var t = String(texte || '');
+    var debut = t.indexOf('[');
+    var fin = t.lastIndexOf(']');
+    if (debut < 0 || fin <= debut) return null;
+    var brut;
+    try { brut = JSON.parse(t.slice(debut, fin + 1)); } catch (e) { return null; }
+    if (!Array.isArray(brut)) return null;
+    var ids = coupesDuMode().map(function (c) { return c.id; });
+    var tete = chauve(etat.profil);
+    var vus = {};
+    var liste = [];
+    brut.forEach(function (o) {
+      if (!o || typeof o !== 'object' || liste.length >= 3) return;
+      var pourquoi = texteCourt(o.pourquoi, 200);
+      var item = null;
+      if (typeof o.id === 'string' && ids.indexOf(o.id) >= 0) {
+        var c = coupeDuCatalogue(o.id);
+        if (tete && !c.sansLongueur) return;
+        item = propositionCatalogue(c, pourquoi);
+      } else {
+        var nom = texteCourt(o.nom, 40);
+        var en = sansPointFinal(texteCourt(o.description_en, 400));
+        if (!nom || !en || tete) return;
+        item = { id: null, nom: nom, ligne: texteCourt(o.ligne, 60) || nom, en: en, pourquoi: pourquoi };
+      }
+      var cle = (item.id || item.nom).toLowerCase();
+      if (vus[cle]) return;
+      vus[cle] = true;
+      liste.push(item);
+    });
+    return liste;
+  }
+
+  /* Complète jusqu'à 3 avec les propositions locales, sans doublon. */
+  function completerPropositions(liste) {
+    var dejaLa = liste.map(function (x) { return x.id; });
+    propositions(etat.profil).forEach(function (c) {
+      if (liste.length < 3 && dejaLa.indexOf(c.id) < 0) liste.push(propositionCatalogue(c));
+    });
+    return liste;
+  }
+
+  function poserPropositions(cle, source, liste, erreur) {
+    etat.propositions = { cle: cle, source: source, liste: liste, erreur: erreur || '', choisie: null, validee: false };
+    memoriser();
+  }
+
+  /* Demande les propositions si elles ne correspondent plus au client (ou n'existent pas encore). */
+  function preparerPropositions() {
+    var cle = clePropositions();
+    if (etat.propositions.cle === cle && etat.propositions.liste.length) return;
+    if (propsEnCours === cle) return;
+    if (!v2Active()) { poserPropositions(cle, 'local', completerPropositions([]), ''); return; }
+    propsEnCours = cle;
+    var jeton = ++propsJeton;
+    var photosJointes = v2.selfie && v2.consentement ? [v2.selfie] : []; // la photo ne part qu'avec l'accord
+    genererTexte(photosJointes, P.propositions(reperesPropositions()), { json: true, recherche: true }).then(function (reponse) {
+      var liste = lirePropositionsIa(reponse.texte);
+      if (!liste || !liste.length) throw erreurV2('REFUS');
+      return liste;
+    }).then(function (liste) {
+      if (jeton !== propsJeton) return;
+      propsEnCours = null;
+      poserPropositions(cle, 'ia', completerPropositions(liste), '');
+    }, function (e) {
+      if (jeton !== propsJeton) return;
+      propsEnCours = null;
+      var raison = e && e.code ? e.message.replace(SUITE_ERREUR, '') : ERREURS_V2.SERVEUR;
+      if (e && e.code === 'REFUS') raison = 'L’IA n’a rien proposé d’utilisable.';
+      poserPropositions(cle, 'local', completerPropositions([]), 'Propositions de l’IA indisponibles : ' + raison + ' Voici les conseils de l’appli.');
+    }).then(function () {
+      if (etat.ecran === 'propositions') RENDUS.propositions();
+    });
+  }
+
+  /* La coupe d'une proposition : celle du catalogue, ou une coupe personnalisée (comme « Ajouter ma coupe »). */
+  function coupeDeProposition(item, i) {
+    if (item.id) return coupeDuCatalogue(item.id);
+    if (!item.idPerso) item.idPerso = 'perso-ia' + i + Date.now().toString(36).slice(-8);
+    return validerCoupePerso({ id: item.idPerso, nom: item.nom, ligne: item.ligne, en: item.en, mode: etat.mode || etat.fiche });
+  }
+
+  function validerPropositions(d) {
+    var propre = propositionsVides();
+    if (!d || typeof d !== 'object' || !Array.isArray(d.liste)) return propre;
+    propre.cle = typeof d.cle === 'string' ? d.cle : '';
+    propre.source = d.source === 'ia' ? 'ia' : 'local';
+    propre.erreur = texteCourt(d.erreur, 300);
+    propre.liste = d.liste.slice(0, 3).map(function (o) {
+      if (!o || typeof o !== 'object') return null;
+      if (typeof o.id === 'string') { var c = coupeDuCatalogue(o.id); return c ? propositionCatalogue(c, texteCourt(o.pourquoi, 200)) : null; }
+      var nom = texteCourt(o.nom, 40);
+      var en = texteCourt(o.en, 400);
+      if (!nom || !en) return null;
+      var item = { id: null, nom: nom, ligne: texteCourt(o.ligne, 60) || nom, en: en, pourquoi: texteCourt(o.pourquoi, 200) };
+      if (typeof o.idPerso === 'string' && /^perso-[a-z0-9]{1,20}$/.test(o.idPerso)) item.idPerso = o.idPerso;
+      return item;
+    }).filter(Boolean);
+    propre.choisie = typeof d.choisie === 'number' && d.choisie >= 0 && d.choisie < propre.liste.length ? d.choisie : null;
+    propre.validee = propre.choisie !== null && d.validee === true;
+    return propre;
+  }
+
+  RENDUS.propositions = function () {
+    preparerPropositions();
+    var pr = etat.propositions;
+    var attente = propsEnCours === clePropositions();
+    var etatAttente = $('#etat-propositions');
+    etatAttente.hidden = !attente;
+    etatAttente.textContent = attente ? ATTENTE_PROPOSITIONS : '';
+    var m = $('#message-propositions');
+    m.hidden = attente || !pr.erreur;
+    m.textContent = pr.erreur;
+    $('#aide-propositions').hidden = true;
+    var zone = $('#liste-propositions');
+    vider(zone);
+    var b = $('#action-propositions');
+    b.textContent = pr.validee ? 'Variantes' : 'Valider ce choix';
+    if (attente) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+    if (attente) return;
+    if (!pr.validee) {
+      pr.liste.forEach(function (item, i) {
+        zone.appendChild(el('button', { type: 'button', 'class': 'carte coupe', 'data-proposition': String(i), 'aria-pressed': String(pr.choisie === i) }, [
+          item.id ? null : el('span', { 'class': 'badge', texte: 'Hors catalogue' }),
+          el('span', { 'class': 'coupe-nom', texte: item.nom }),
+          el('span', { 'class': 'coupe-ligne', texte: item.ligne }),
+          item.pourquoi ? el('span', { texte: item.pourquoi }) : null
+        ]));
+      });
+      return;
+    }
+    var choisie = pr.liste[pr.choisie];
+    var details = etat.coupe ? resume(creation()) : '';
+    zone.appendChild(el('div', { 'class': 'carte pile-large', id: 'proposition-choisie' }, [
+      el('div', { 'class': 'pile' }, [
+        choisie.id ? null : el('span', { 'class': 'badge', texte: 'Hors catalogue' }),
+        el('h2', { id: 'titre-proposition', tabindex: '-1', texte: choisie.nom }),
+        el('span', { 'class': 'coupe-ligne', texte: choisie.ligne }),
+        choisie.pourquoi ? el('p', { texte: choisie.pourquoi }) : null,
+        details ? el('p', { 'class': 'discret', texte: 'Détails : ' + details }) : null
+      ]),
+      el('div', { 'class': 'pile' }, [
+        el('button', { type: 'button', 'class': 'btn-2', id: 'croquis', disabled: true, 'aria-describedby': 'bientot-croquis', texte: 'Croquis' }),
+        el('p', { 'class': 'legende', id: 'bientot-croquis', texte: 'Bientôt' })
+      ]),
+      el('a', { 'class': 'btn-2', href: '#resultat', id: 'essayer-client', texte: 'Essayer sur le client' })
+    ]));
+    pr.liste.forEach(function (item, i) {
+      if (i === pr.choisie) return;
+      zone.appendChild(el('button', { type: 'button', 'class': 'ligne-profil', 'data-changer': String(i) }, [
+        el('span', { 'class': 'carte-titre', texte: item.nom }),
+        el('span', { 'class': 'discret', texte: 'Changer' })
+      ]));
+    });
+  };
+
+  $('#ecran-propositions').addEventListener('click', function (evenement) {
+    var b = evenement.target.closest('button');
+    if (!b) return;
+    var pr = etat.propositions;
+    if (b.hasAttribute('data-proposition')) {
+      pr.choisie = parseInt(b.getAttribute('data-proposition'), 10);
+      memoriser();
+      RENDUS.propositions();
+      $('#ecran-propositions [data-proposition="' + pr.choisie + '"]').focus();
+      return;
+    }
+    if (b.hasAttribute('data-changer')) {
+      pr.validee = false;
+      pr.choisie = parseInt(b.getAttribute('data-changer'), 10);
+      memoriser();
+      RENDUS.propositions();
+      $('#ecran-propositions [data-proposition="' + pr.choisie + '"]').focus();
+      return;
+    }
+    if (b.id !== 'action-propositions' || propsEnCours) return;
+    if (pr.validee) { aller('reglages'); return; } // « Variantes » : Réglages, coupe déjà choisie
+    if (pr.choisie === null) {
+      $('#aide-propositions').textContent = 'Choisis une proposition.';
+      $('#aide-propositions').hidden = false;
+      return;
+    }
+    var coupe = coupeDeProposition(pr.liste[pr.choisie], pr.choisie);
+    if (!coupe) return;
+    choisirCoupe(coupe);
+    pr.validee = true;
+    memoriser();
+    RENDUS.propositions();
+    $('#titre-proposition').focus();
   });
 
   /* ---- Avertissements (CLAUDE.md, section 7) ---- */
@@ -2344,7 +2624,9 @@
 
   /* Génère un texte (diagnostic, fiche) à partir de photos et d'un prompt. Promesse : { texte, reste }. */
   function genererTexte(photosJointes, prompt, options) {
-    var enPlus = options && options.json ? { json: true } : null; // réponse JSON seule (pré-diagnostic)
+    var enPlus = {};
+    if (options && options.json) enPlus.json = true; // réponse JSON seule (pré-diagnostic, propositions)
+    if (options && options.recherche) enPlus.recherche = true; // recherche web de Gemini (propositions)
     return appelerWorker('/texte', photosJointes, prompt, enPlus).then(function (json) {
       if (typeof json.texte !== 'string' || !json.texte) throw erreurV2('REFUS');
       return { texte: json.texte, reste: json.reste };
@@ -2802,6 +3084,8 @@
     v2: v2,
     v2Active: v2Active,
     ENVIES: ENVIES,
+    lirePropositionsIa: lirePropositionsIa,
+    reperesPropositions: reperesPropositions,
     lireProfilIa: lireProfilIa,
     appliquerProfilIa: appliquerProfilIa,
     rendre: function () { if (RENDUS[etat.ecran]) RENDUS[etat.ecran](); },

@@ -75,6 +75,15 @@ const VARIANTES = {
     { nom: 'questions-ia', graine: (g) => { questionsIa(g); } },
     { nom: 'questions-ia-ouverte', graine: (g) => { questionsIa(g); }, action: async (page) => { await page.click('[data-ligne="visage"]'); } }
   ],
+  /* Diagnostic · Propositions : locales (sans Worker), choisie et agrandie, puis avec un Worker simulé
+     (attente, réponse de l'IA avec une coupe hors catalogue, erreur réseau et repli). */
+  propositions: [
+    { nom: 'propositions' },
+    { nom: 'propositions-choisie', action: async (page) => { await page.click('[data-proposition="1"]'); await page.click('#action-propositions'); } },
+    { nom: 'propositions-attente', action: async (page) => { await propositionsV2(page, 'attente'); } },
+    { nom: 'propositions-ia', action: async (page) => { await propositionsV2(page, 'ia'); } },
+    { nom: 'propositions-erreur', action: async (page) => { await propositionsV2(page, 'erreur'); } }
+  ],
   choix: [
     { nom: 'choix' }
   ],
@@ -177,6 +186,28 @@ async function activerV2(page, avecResultats) {
     champ.value = 'salon-test';
     champ.dispatchEvent(new Event('input'));
   }, avecResultats);
+}
+
+/* Propositions avec un Worker factice : la demande reste en attente, reçoit une réponse de l'IA, ou échoue. */
+async function propositionsV2(page, cas) {
+  await page.route('https://worker.invalid/**', (route) => {
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' };
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    /* Réponse illisible : l'écran affiche le message et les conseils de l'appli (sans erreur réseau dans la console). */
+    if (cas === 'erreur') return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ texte: 'Désolé.' }) });
+    if (cas === 'attente') return undefined; // pas de réponse : l'écran reste en attente
+    return route.fulfill({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({ texte: JSON.stringify([
+      { id: 'skin-fade', pourquoi: 'Net et facile à entretenir, il suit son allure sportive.' },
+      { id: null, nom: 'Afro taper', ligne: 'Boucles hautes, tempes nettes', description_en: 'Sides: low taper. Top: natural defined curls', pourquoi: 'Garde ses boucles et donne de la hauteur au visage.' },
+      { id: 'crop-texture', pourquoi: 'Une frange courte qui adoucit les traits.' }
+    ]) }) });
+  });
+  await page.evaluate(() => {
+    window.CONFIG.worker = 'https://worker.invalid';
+    try { localStorage.setItem('coupe-studio:acces', JSON.stringify('salon-test')); } catch (e) { /* bloqué */ }
+    window.CoupeStudio.rendre();
+  });
+  if (cas !== 'attente') await page.waitForFunction(() => document.querySelector('#etat-propositions').hidden);
 }
 
 /* Profil venu du pré-diagnostic, avec les 3 réponses. */

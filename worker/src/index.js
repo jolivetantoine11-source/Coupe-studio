@@ -1,7 +1,8 @@
 /* Coupe Studio — Worker Cloudflare (V2, étape 1).
    Garde la clé Gemini côté serveur et relaie deux demandes de l'appli :
      POST /image  { photos: [base64 JPEG…], prompt }  →  { image: base64, mime, reste }
-     POST /texte  { photos: [base64 JPEG…], prompt, json? }  →  { texte, reste }  (json: true = réponse JSON seule)
+     POST /texte  { photos: [base64 JPEG…], prompt, json?, recherche? }  →  { texte, reste }
+                  (json: true = réponse JSON seule ; recherche: true = recherche web de Gemini)
      Erreur : { erreur: CODE } avec CODE = ORIGINE, ACCES, QUOTA (+ limite), DEMANDE, REFUS, QUOTA_GOOGLE, DELAI, SERVEUR.
      GET  /etat                                        →  { ok, images, textes } (quota restant, pour vérifier l'installation)
 
@@ -100,7 +101,7 @@ function base64Valide(texte) {
 }
 
 /* Lit et vérifie { photos, prompt }. Renvoie null si la demande est mal formée. */
-async function lireDemande(requete) {
+async function lireDemande(requete, type) {
   if (parseInt(requete.headers.get('Content-Length') || '0', 10) > TAILLE_CORPS_MAX) return null;
   const brut = await requete.text();
   if (!brut || brut.length > TAILLE_CORPS_MAX) return null;
@@ -110,12 +111,16 @@ async function lireDemande(requete) {
   const prompt = corps.prompt.trim();
   if (!prompt || prompt.length > TAILLE_PROMPT_MAX) return null;
   const photos = Array.isArray(corps.photos) ? corps.photos : [];
-  if (photos.length < 1 || photos.length > PHOTOS_MAX || !photos.every(base64Valide)) return null;
-  return { prompt, photos, json: corps.json === true };
+  /* Une image part toujours d'une photo ; un texte peut s'en passer (propositions sans photo). */
+  if (photos.length < (type === 'image' ? 1 : 0) || photos.length > PHOTOS_MAX || !photos.every(base64Valide)) return null;
+  return { prompt, photos, json: corps.json === true, recherche: corps.recherche === true };
 }
 
 /* Appelle Gemini. Renvoie { image, mime } ou { texte }, ou { erreur: code }. */
-async function appelerGemini(env, type, demande) {
+/* Codes de Google qui veulent dire « cette option n'est pas acceptée » : on retente sans recherche web. */
+const OPTION_REFUSEE = ['invalid_request', 'parameter_unknown', 'unimplemented', 'failed_precondition'];
+
+async function appelerGemini(env, type, demande, sansRecherche) {
   const corps = {
     model: type === 'image' ? env.MODELE_IMAGE : env.MODELE_TEXTE,
     input: [{ type: 'text', text: demande.prompt }].concat(demande.photos.map((data) => ({ type: 'image', mime_type: 'image/jpeg', data }))),
@@ -124,6 +129,9 @@ async function appelerGemini(env, type, demande) {
   if (type === 'image') corps.response_format = { type: 'image', mime_type: 'image/jpeg' };
   /* Texte en JSON (pré-diagnostic) : Google renvoie un JSON seul. */
   else if (demande.json) corps.response_format = { type: 'text', mime_type: 'application/json' };
+  /* Recherche web (propositions) : « Grounding with Google Search », texte seulement. */
+  const recherche = type === 'texte' && demande.recherche && !sansRecherche;
+  if (recherche) corps.tools = [{ type: 'google_search' }];
 
   const controle = new AbortController();
   const minuterie = setTimeout(() => controle.abort(), DELAI_MS);
@@ -147,6 +155,9 @@ async function appelerGemini(env, type, demande) {
   if (!rep.ok || codeGoogle) {
     /* Journal : le statut et le code de Google seulement. Jamais le message (il peut citer la demande). */
     console.error('gemini', rep.status, codeGoogle || 'sans-code');
+    /* La recherche web avec une réponse JSON est encore en préversion chez Google : si l'option est
+       refusée, on refait la même demande sans recherche web plutôt que d'échouer. */
+    if (recherche && rep.status === 400 && OPTION_REFUSEE.indexOf(codeGoogle) >= 0) return appelerGemini(env, type, demande, true);
     if (REFUS_GOOGLE.indexOf(codeGoogle) >= 0) return { erreur: 'REFUS' };
     if (rep.status === 429 || rep.status === 503 || SATURATION_GOOGLE.indexOf(codeGoogle) >= 0) return { erreur: 'QUOTA_GOOGLE' };
     if (rep.status === 504 || codeGoogle === 'deadline_exceeded') return { erreur: 'DELAI' };
@@ -193,7 +204,7 @@ export default {
     const deja = await compte(env, idCode, type);
     if (deja >= limite(env, type)) return reponse(429, { erreur: 'QUOTA', limite: limite(env, type) }, origine);
 
-    const demande = await lireDemande(requete);
+    const demande = await lireDemande(requete, type);
     if (!demande) return erreur(400, 'DEMANDE', origine);
 
     const resultat = await appelerGemini(env, type, demande);

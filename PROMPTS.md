@@ -281,3 +281,45 @@ Reply with a single JSON object and nothing else, with exactly these keys:
 - "remarque": one short sentence in French for the hairdresser: what matters most when choosing a haircut for this person
 If a value cannot be seen on the photo, use null. Do not guess age, origin or anything not listed.
 ```
+
+---
+
+## 0b. Propositions (après les questions)
+
+Ajouté le 19 novembre 2026 à la demande d'Antoine (parcours « Diagnostic d'abord », étape 3). Envoyé par l'appli au Worker (`/texte`, réponse JSON et recherche web demandées) quand le Worker est réglé et le code saisi ; la photo du client est jointe seulement si l'accord est coché. Sans Worker, ou en cas d'erreur : les propositions locales de l'appli (règles de la section 7 de CLAUDE.md).
+
+Repères remplis par l'appli :
+- [MODE] : `barbershop` (barber), `hair salon` (salon), `hair salon or barbershop` (thème neutre).
+- [PROFIL] : le profil en anglais (face, hair texture, hairline and density, current length, glasses, skin, eyes), puis le style et la remarque du pré-diagnostic en français ; `not specified` s'il est vide.
+- [ENVIES] : les 3 réponses de l'écran Questions en anglais (change, transformation, daily styling) ; `not specified` si aucune.
+- [CATALOGUE] : une ligne par coupe du mode, « id: nom anglais — ligne française ».
+- [IMPOSSIBLES] : tête chauve ou rasée → `bald or shaved head: only a buzz cut or a beard-only change` ; golfes marqués ou clairsemés → `thin hair or receding hairline: no fringe, no added volume, keep the current top length` ; sinon `none`.
+- [RÉFÉRENTIEL] : emplacement réservé au référentiel de l'associé d'Antoine, vide pour l'instant ; tant qu'il est vide, sa ligne est retirée (`TEXTES.referentielPropositions` dans `prompts.js`).
+
+Réponse attendue : un tableau JSON de 3 objets `{ id, nom, ligne, description_en, pourquoi }`. `id` = une coupe du catalogue, sinon `null` : la coupe devient alors une coupe personnalisée (nom, ligne, description anglaise), comme « Ajouter ma coupe ».
+
+```text
+You are an expert hairdresser and style consultant working in a [MODE] in France.
+Analyze the client's personal style from the attached photo, if there is one (clothing, accessories, overall look), and from the information below.
+Then propose the 3 haircuts that would suit this client best, inspired by current haircut trends and by what people with a similar style wear. You may search the web for current trends.
+Client profile: [PROFIL]
+What the client wants: [ENVIES]
+Haircut catalogue (id: name — description):
+[CATALOGUE]
+[RÉFÉRENTIEL]
+Rules:
+- If a haircut of the catalogue fits, use its id. Otherwise use null and describe a new haircut.
+- Never propose a haircut that is impossible for this client: [IMPOSSIBLES]
+- Never propose a haircut that needs more hair or a lower hairline than the client has.
+- Match the requested change: refresh = close to the current cut; evolve = same base with one new detail; change completely = a clearly different cut.
+- Respect the natural hair texture unless the client asks for a texture change.
+- Respect the daily styling time: no cut that needs more styling than the client accepts.
+- The 3 haircuts must be clearly different from each other.
+- Do not return images, links or names of real people.
+Reply with a single JSON array of exactly 3 objects and nothing else, each with these keys:
+- "id": the catalogue id, or null
+- "nom": the haircut name in French
+- "ligne": one short line in French describing the haircut (6 words maximum)
+- "description_en": the haircut described zone by zone in English, only the zones that matter, in this order and format: "Length: … Layers: … Sides: … Top: … Front: … Neckline: … Texture: … Color: … Beard: …"
+- "pourquoi": one short sentence in French for the hairdresser: why this haircut suits this client
+```

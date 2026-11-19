@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+Mise à jour « Diagnostic d'abord », étape 3 (19 novembre) : nouvel écran « Diagnostic · Propositions » (3 coupes de l'IA, du catalogue ou non, ou à défaut les conseils de l'appli ; choisir, valider, Variantes / Croquis / Essayer sur le client). Le parcours « Diagnostic d'abord » est complet (sections 4, 11, 12, 14 ; PROMPTS.md, 0b).
+
 Mise à jour « Diagnostic d'abord », étape 2 (19 novembre) : l'écran Profil client est remplacé par « Diagnostic · Questions » (résumé du pré-diagnostic modifiable ou profil compact, puis 3 questions). En attendant l'étape 3, « Voir les propositions » ouvre le Catalogue coupe (sections 4, 7, 12).
 
 Mise à jour « Diagnostic d'abord », étape 1 (19 novembre) : nouvel écran « Diagnostic · Photo » après l'Accueil (photo, accord, code si besoin, pré-diagnostic par l'IA qui remplit le profil). Le Profil client reste en pont temporaire jusqu'à l'étape 2 (sections 3, 4, 7, 11, 12 ; PROMPTS.md, 0).
@@ -69,7 +71,7 @@ Vocabulaire : le mot « recette » n'apparaît plus nulle part dans l'appli. On 
 Il n'y a plus de barre d'onglets. L'appli est un parcours page par page, comme une appli native.
 
 Parcours visé (« Diagnostic d'abord », décision d'Antoine du 19 novembre), construit une étape à la fois :
-Accueil → Diagnostic · Photo → Diagnostic · Questions → Diagnostic · Propositions → (Réglages ou Résultat). « Que veux-tu faire ? » reste accessible par « Voir les catalogues » sur l'écran Propositions. Les étapes 1 (Photo) et 2 (Questions) sont faites ; l'écran Profil client a disparu. En attendant l'étape 3, « Voir les propositions » ouvre le Catalogue coupe, dont les « Conseillées pour ce client » jouent ce rôle.
+Accueil → Diagnostic · Photo → Diagnostic · Questions → Diagnostic · Propositions → (Réglages ou Résultat). « Que veux-tu faire ? » reste accessible par « Voir les catalogues » sur l'écran Propositions. Les 3 étapes sont faites (19 novembre) ; l'écran Profil client a disparu.
 
 Parcours actuel :
 
@@ -77,7 +79,9 @@ Parcours actuel :
 Accueil
   → Diagnostic · Photo (bouton « Passer » possible)
   → Diagnostic · Questions
-      • « Voir les propositions » → Catalogue coupe (pont jusqu'à l'étape 3)
+  → Diagnostic · Propositions
+      • « Valider ce choix », puis « Variantes » → Réglages (coupe choisie) → Résultat
+      • « Essayer sur le client » → Résultat
       • « Voir les catalogues » → Que veux-tu faire ?
         • Catalogue coupe → Réglages → Résultat
         • Catalogue personnalisé → Résultat
@@ -123,7 +127,17 @@ Depuis Réglages, le lien « Ajouter des caractéristiques » ouvre le Catalogue
   2. Transformation : Longueur · Forme et volume · Couleur
   3. Habitudes : Aucun coiffage · 5 min · Plus de 10 min
 - Les 3 réponses sont gardées dans l'état du client (`etat.envies`, sessionStorage), pour les propositions de l'étape 3. Aucune règle ne s'en sert encore.
-- Bouton principal « Voir les propositions » : en attendant l'étape 3, il ouvre le Catalogue coupe. Lien secondaire « Voir les catalogues » : Que veux-tu faire ? (il passera sur l'écran Propositions à l'étape 3).
+- Bouton principal « Voir les propositions » : Diagnostic · Propositions.
+
+### 4.2b Diagnostic · Propositions (étape 3, 19 novembre)
+- Libellé « Diagnostic », titre « Propositions », sous-titre « 3 coupes pour ce client. Choisis-en une. ».
+- **Avec le Worker et le code** : prompt « propositions » (PROMPTS.md, 0b) envoyé à `/texte` avec `json: true` et `recherche: true` (recherche web de Gemini). La photo du client part seulement si l'accord est coché. Pendant la demande : « Recherche des propositions… Cela peut prendre 30 secondes. », pas de cartes, « Valider ce choix » ne fait rien.
+- **Réponse de l'IA** : 3 objets `{ id, nom, ligne, description_en, pourquoi }`. Un `id` du catalogue du mode garde le nom et la ligne du catalogue et le « pourquoi » de l'IA ; `id: null` avec nom et description anglaise devient une coupe hors catalogue (badge « Hors catalogue »), gérée comme une coupe ajoutée (`perso`, mode de l'accueil ou de la fiche), sans être ajoutée au catalogue du téléphone. Un id inventé, une coupe incomplète ou un doublon sont écartés ; tête chauve ou rasée : seules les coupes du catalogue sans longueur (buzz cut) sont gardées. Il manque des coupes : complétées par les conseils de l'appli.
+- **Sans Worker, ou en cas d'erreur, de quota ou de réponse illisible** : les 3 coupes conseillées par les règles de l'appli (section 7), chacune avec « Convient à : visage rond, cheveux bouclés. » (les règles qui la favorisent) ou « Parmi les coupes les plus demandées. ». En cas d'erreur, un avertissement au-dessus : « Propositions de l'IA indisponibles : <raison>. Voici les conseils de l'appli. ».
+- Les propositions sont gardées dans l'état du client (sessionStorage) : retour arrière et rechargement ne les redemandent pas. Elles sont redemandées si le mode, le profil, les 3 réponses ou la V2 (Worker et code) changent ; le choix repart alors de zéro, mais la coupe déjà choisie n'est jamais effacée.
+- **3 cartes** (carte de coupe : badge, nom, ligne, pourquoi), une seule sélectionnable (bordure `selection`). Bouton principal « Valider ce choix » (sans choix : « Choisis une proposition. »).
+- **Après validation** : la proposition devient la coupe du client. Sa carte s'agrandit (nom, ligne, pourquoi, « Détails : » = le résumé de la coupe), avec « Croquis » (désactivé, « Bientôt ») et le lien « Essayer sur le client » (Résultat). Les 2 autres se replient en lignes avec « Changer » (retour aux 3 cartes, celle-ci choisie). Le bouton principal devient « Variantes » : Réglages, coupe déjà choisie.
+- Bouton secondaire « Voir les catalogues » : Que veux-tu faire ? (Catalogue coupe, Catalogue personnalisé, Catalogue fond).
 
 ### 4.3 Que veux-tu faire ?
 Trois gros boutons : « Catalogue coupe », « Catalogue personnalisé », « Catalogue fond », chacun avec une ligne d'explication.
@@ -407,7 +421,7 @@ Ce prompt n'a toujours pas été testé : le signaler à Antoine. Les combinaiso
 3. Construire **une page à la fois**, dans l'ordre du parcours : Accueil, Profil client, Que veux-tu faire ?, Catalogue coupe, Réglages, Catalogue personnalisé, Résultat, Catalogue fond, Retouches sans IA, Retouches IA. Ne pas passer à la suivante avant que la page soit conforme.
 4. Après chaque page : captures Playwright à 390 px et 1280 px de large, dans les 3 thèmes. Corriger débordements, espacements, textes coupés.
 5. **Relecture adverse** : avant de déclarer une page finie, une seconde passe (ou un sous-agent) cherche les écarts à `DESIGN.md` : couleur hors liste, espacement hors multiples de 8, taille de texte hors échelle, ombre, dégradé, nouveau style de bouton.
-5b. **Tests du parcours « Diagnostic d'abord » et de la V2** : `node tests/questions.test.js` (écran Diagnostic · Questions : profil compact ou résumé corrigeable, 3 questions, sorties, retour, Nouveau client), `node tests/photo.test.js` (écran Diagnostic · Photo, pré-diagnostic, erreurs, « Passer », sans Worker), `node worker/test.mjs` (le Worker seul : origine, code, quota, erreurs, rien dans les journaux) et `node tests/v2.test.js` (parcours complet dans l'appli avec le vrai code du Worker et un Google simulé). La section L de `tests/parcours.test.js` vérifie que la V1 est intacte sans Worker.
+5b. **Tests du parcours « Diagnostic d'abord » et de la V2** : `node tests/propositions.test.js` (écran Propositions : demande à l'IA, coupe hors catalogue, coupes impossibles, erreurs et repli local, choix, agrandissement, « Changer », les 3 sorties, retour, rechargement), `node tests/questions.test.js` (écran Diagnostic · Questions : profil compact ou résumé corrigeable, 3 questions, sorties, retour, Nouveau client), `node tests/photo.test.js` (écran Diagnostic · Photo, pré-diagnostic, erreurs, « Passer », sans Worker), `node worker/test.mjs` (le Worker seul : origine, code, quota, erreurs, rien dans les journaux) et `node tests/v2.test.js` (parcours complet dans l'appli avec le vrai code du Worker et un Google simulé). La section L de `tests/parcours.test.js` vérifie que la V1 est intacte sans Worker.
 6. **Test des prompts** : un test compare le texte de `prompts.js` aux blocs de `PROMPTS.md` (dont le diagnostic salon, vérifié comme le diagnostic barber avec les 4 seuls remplacements validés) et de la section 8 (mot pour mot, hors `[COUPE]`/`[FOND]`). Il doit passer avant toute livraison.
 7. **Test de contraste** : un script vérifie que chaque paire texte/fond des 3 thèmes atteint 4,5:1.
 8. **Test des contradictions** : pour chaque paire d'un même groupe exclusif (et chaque réglage remplacé par une caractéristique), le prompt final ne contient qu'une seule des deux consignes.
@@ -425,6 +439,7 @@ En V1 (pas d'adresse de Worker) : pas de serveur, pas de génération dans l'app
 ## 11. Points ouverts à confirmer avec Antoine
 
 - Le nom définitif de l'appli.
+- Propositions : prompt validé par Antoine (19 novembre), jamais essayé sur le vrai Gemini. La recherche web avec une réponse JSON est en préversion chez Google (doc lue le 19 novembre) ; recherche web : 5 000 gratuites par mois, puis 14 $ les 1 000. Il faut relancer `npx wrangler deploy` pour la recherche web et les textes sans photo.
 - Pré-diagnostic : prompt validé par Antoine (19 novembre), jamais essayé sur le vrai Gemini. `[RÉFÉRENTIEL]` est vide en attendant le référentiel de son associé. Il faut relancer `npx wrangler deploy` pour que le Worker demande une réponse JSON à Google (sans cela, l'appli lit quand même le JSON dans le texte).
 - V2 : le Worker n'a jamais appelé le vrai Gemini (pas de clé ici). Il est écrit d'après la doc Google AI lue le 16 novembre 2026 (API Interactions) et testé avec un Google simulé. Le premier essai d'Antoine est le vrai test.
 - V2 : modèle de texte `gemini-4-hydrogen` choisi par Claude (stable, le moins cher) ; `gemini-4-argon` est plus fin et plus cher. Les consignes de la V1 parlent encore du « modèle 3.1 Pro ».
@@ -503,7 +518,12 @@ Décidé par Antoine (19 novembre, « Diagnostic d'abord », étape 1) :
 Décidé par Antoine (19 novembre, « Diagnostic d'abord », étape 2) :
 - L'écran Profil client disparaît. Diagnostic · Questions : résumé du pré-diagnostic modifiable d'un toucher (ou, sans photo, les questions de l'ancien profil en boutons compacts), puis 3 questions (Changement, Transformation, Habitudes), bouton « Voir les propositions ».
 
+Décidé par Antoine (19 novembre, « Diagnostic d'abord », étape 3) :
+- Écran Propositions : 3 propositions de l'IA, du catalogue ou hors catalogue (coupe personnalisée), en s'inspirant du style du client et des tendances, avec la recherche web de Gemini ; repli sur les propositions locales ; choix, agrandissement, « Changer », « Variantes », « Croquis » (bientôt), « Essayer sur le client » ; « Voir les catalogues » sur cet écran.
+- Prompt « propositions » validé, avec la clé « ligne », les 3 règles (changement, texture naturelle, temps de coiffage) et l'emplacement `[RÉFÉRENTIEL]`.
+
 Choix faits par Claude, à confirmer :
+- **Diagnostic · Propositions** : la validation choisit déjà la coupe (pour « Essayer sur le client ») ; « Valider ce choix » reste actif sans choix et le demande ; les propositions incomplètes sont complétées par les conseils locaux ; un référentiel à part pour les propositions (`TEXTES.referentielPropositions`), vide ; le profil et les réponses partent en anglais, le style et la remarque en français ; le Worker accepte un `/texte` sans photo ; si Google refuse la recherche web avec une réponse JSON (préversion), le Worker refait la demande sans recherche ; les liens et sources de la recherche web ne sont jamais affichés.
 - **Diagnostic · Questions** : titre « Ce que veut le client » ; une seule réponse par question (Transformation comprise) ; le résumé montre aussi Peau et Yeux, corrigeables ; style et remarque en lecture seule ; « Voir les propositions » ouvre le Catalogue coupe et « Voir les catalogues » est sur cet écran en attendant l'étape 3 ; le Catalogue coupe ouvert sans historique revient à cet écran.
 - **Diagnostic · Photo** : sans Worker, la photo peut être prise mais rien n'est envoyé et l'accord n'est pas demandé ; le bouton principal fait « Prendre la photo » puis « Continuer » (pas de bouton principal bloqué) ; en cas d'erreur on reste sur l'écran ; un `null` de l'IA n'efface pas une réponse donnée à la main ; le pré-diagnostic compte pour 1 texte dans le quota ; aperçu limité à 32 % de la hauteur pour garder l'accord et les messages en vue ; le prompt est placé à la fin de PROMPTS.md (« 0. Pré-diagnostic ») pour ne pas décaler les autres blocs.
 - **V2** : `POST /image` prend un tableau `photos` (la variante photo de référence en envoie 2) ; `GET /etat` donne le quota restant, pour vérifier l'installation ; seules les réponses réussies comptent dans le quota ; `store: false` côté Google ; journaux Cloudflare coupés ; une demande sans en-tête Origin est refusée ; « Avant » montre toujours la photo du client ; l'accord vaut pour un client (remis à zéro par « Nouveau client ») ; délai de 90 s.
@@ -607,7 +627,7 @@ Une seule caractéristique par groupe. En choisir une deuxième ouvre un message
 
 Génération dans l'appli via l'API Gemini, derrière un Worker Cloudflare qui garde la clé. Installation : `docs/V2-installation.md`.
 
-- **Worker** (`worker/src/index.js`) : `POST /image` `{ photos: [base64 JPEG…], prompt }` → `{ image, mime, reste }` ; `POST /texte` `{ photos, prompt }` → `{ texte, reste }` ; `GET /etat` → quota restant. Erreurs : `{ erreur: CODE }` avec ORIGINE, ACCES, QUOTA (+ `limite`), DEMANDE, REFUS, QUOTA_GOOGLE, DELAI, SERVEUR.
+- **Worker** (`worker/src/index.js`) : `POST /image` `{ photos: [base64 JPEG…], prompt }` → `{ image, mime, reste }` ; `POST /texte` `{ photos (0 à 3), prompt, json?, recherche? }` → `{ texte, reste }` (`json` : réponse JSON seule ; `recherche` : recherche web de Gemini, outil `google_search`, refaite sans recherche si Google la refuse) ; `GET /etat` → quota restant. Erreurs : `{ erreur: CODE }` avec ORIGINE, ACCES, QUOTA (+ `limite`), DEMANDE, REFUS, QUOTA_GOOGLE, DELAI, SERVEUR.
 - **Sécurité** : secrets Wrangler `GEMINI_API_KEY` et `ACCES` (codes séparés par des virgules) ; CORS limité à `https://jolivetantoine11-source.github.io` ; en-tête `X-Acces` ; 30 images et 60 textes par jour et par code (heure de Paris).
 - **Rien de stocké** : ni photo, ni prompt, ni réponse ; le KV ne garde que des compteurs ; journaux coupés ; `store: false` chez Google.
 - **API Google** : « Interactions API » (`POST https://generativelanguage.googleapis.com/v1beta/interactions`, en-têtes `x-goog-api-key` et `Api-Revision: 2026-05-20`). Modèles dans `worker/wrangler.toml` : `gemini-nano-banana-2.1` (image, stable, recommandé) et `gemini-4-hydrogen` (texte). Doc lue le 16 novembre 2026 ; à relire avant de changer de modèle.

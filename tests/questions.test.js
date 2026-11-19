@@ -43,7 +43,7 @@ function verifier(nom, obtenu, attendu) {
   verifier('« Cheveux fins » caché en barber', await page.$$eval('#questions-profil [data-question="front"]', (b) => b.map((x) => x.textContent).join(', ')), 'Normale, Golfes légers, Golfes marqués, Clairsemés, Chauve / rasé');
   verifier('les 3 questions, 3 réponses chacune', await page.$$eval('#envies .etiquette', (e) => e.map((x) => x.textContent + ' : ' + Array.from(x.parentNode.querySelectorAll('[data-envie]')).map((b) => b.textContent).join(' / ')).join(' | ')),
     'Changement : Rafraîchir / Faire évoluer / Changer complètement | Transformation : Longueur / Forme et volume / Couleur | Habitudes : Aucun coiffage / 5 min / Plus de 10 min');
-  verifier('bouton principal et lien secondaire', [await page.textContent('#action-questions'), await page.textContent('#vers-catalogues')], ['Voir les propositions', 'Voir les catalogues']);
+  verifier('bouton principal « Voir les propositions », plus de lien « Voir les catalogues » ici', [await page.textContent('#action-questions'), await page.isVisible('#vers-catalogues')], ['Voir les propositions', false]);
   await page.click('[data-question="visage"][data-valeur="rond"]');
   await page.click('[data-question="front"][data-valeur="golfes-marques"]');
   await page.click('[data-envie="changement"][data-valeur="evoluer"]');
@@ -57,16 +57,14 @@ function verifier(nom, obtenu, attendu) {
 
   console.log('2. Les deux sorties, le retour arrière, le rechargement');
   await page.click('#action-questions');
-  verifier('« Voir les propositions » : le Catalogue coupe, avec les coupes conseillées (pont jusqu’à l’étape 3)', [await ecran(page), await page.isVisible('#bloc-conseillees')], ['catalogue', true]);
+  verifier('« Voir les propositions » : Diagnostic · Propositions', await ecran(page), 'propositions');
   await page.goBack();
   verifier('retour : les réponses sont toujours là', [await ecran(page), await presses(page, '#questions-profil'), await presses(page, '#envies')], ['questions', 'Rond, Golfes marqués', 'Faire évoluer, Longueur']);
-  await page.click('#vers-catalogues');
-  verifier('« Voir les catalogues » : Que veux-tu faire ?', await ecran(page), 'choix');
-  await page.goBack();
   await page.reload();
   verifier('après un rechargement : tout est gardé', [await ecran(page), await presses(page, '#questions-profil'), await presses(page, '#envies')], ['questions', 'Rond, Golfes marqués', 'Faire évoluer, Longueur']);
   await page.goBack();
   await page.goBack();
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'accueil');
   await page.click('#ecran-accueil [data-nouveau-client]');
   verifier('des réponses données : « Nouveau client » demande confirmation', await page.isVisible('#ecran-accueil [data-confirmer-nouveau]'));
   await page.click('#ecran-accueil [data-confirmer-nouveau]');
@@ -105,6 +103,8 @@ function verifier(nom, obtenu, attendu) {
   await page.click('[data-ligne="front"]');
   await page.click('#options-front [data-valeur="chauve"]');
   await page.click('#action-questions');
+  await page.click('#vers-catalogues');
+  await page.click('#ecran-choix a[href="#catalogue"]');
   verifier('corriger le front en « Chauve / rasé » : les règles suivent (seul le buzz cut reste actif)', await page.$$eval('#ecran-catalogue [data-coupe]:not([disabled])', (c) => c.map((x) => x.getAttribute('data-coupe')).join()), 'buzz-cut');
   await contexte.close();
 

@@ -126,6 +126,7 @@ function tailleJpeg(base64) {
   verifier('« Commencer » ouvre Diagnostic · Photo', await A(() => window.CoupeStudio.etat.ecran), 'photo');
   verifier('Worker réglé, pas de code : champ du code et case d’accord affichés', [await page.isVisible('#bloc-code-photo'), await page.isVisible('#accord-photo')], [true, true]);
   await page.click('#passer-photo');
+  await page.click('#action-questions');
   await page.click('#vers-catalogues');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');

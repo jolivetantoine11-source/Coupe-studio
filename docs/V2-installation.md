@@ -153,6 +153,12 @@ Le code reste dans le téléphone. On ne le saisit qu'une fois.
 npx wrangler secret put ACCES
 ```
 
+**Après une mise à jour du Worker** (par exemple la recherche web des propositions, 19 novembre) : récupère le projet à jour, puis relance :
+
+```bash
+npx wrangler deploy
+```
+
 **Changer les limites.** Dans `worker/wrangler.toml`, modifie `QUOTA_IMAGES` ou `QUOTA_TEXTES`, puis :
 
 ```bash
@@ -176,6 +182,7 @@ Prix de Google au 16 novembre 2026. À revérifier sur https://ai.google.dev/gem
 - Un diagnostic ou une fiche : environ 0,01 à 0,02 $ (cela dépend de la longueur de la réflexion du modèle).
 - Un client complet (diagnostic, image, fiche) : environ 0,06 $. Avec texture et couleur : environ 0,13 $.
 - Au maximum par salon et par jour (30 images, 60 textes) : environ 2 $.
+- Propositions (recherche web de Gemini) : 5 000 recherches gratuites par mois, puis 14 $ les 1 000.
 - Cloudflare : l'offre gratuite suffit pour démarrer. De mémoire, elle s'arrête vers 1 000 générations par jour, tous salons confondus (limite d'écritures du compteur). Au-delà : offre à 5 $ par mois. À vérifier sur le site de Cloudflare.
 
 ## Données et vie privée

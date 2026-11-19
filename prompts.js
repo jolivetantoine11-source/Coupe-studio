@@ -209,6 +209,36 @@
     /* Référentiel de diagnostic de l'associé d'Antoine (PROMPTS.md, 0). Vide pour l'instant. */
     referentiel: '',
 
+    /* Propositions (PROMPTS.md, 0b) : 3 coupes pour ce client, en JSON. */
+    propositions: [
+      "You are an expert hairdresser and style consultant working in a [MODE] in France.",
+      "Analyze the client's personal style from the attached photo, if there is one (clothing, accessories, overall look), and from the information below.",
+      "Then propose the 3 haircuts that would suit this client best, inspired by current haircut trends and by what people with a similar style wear. You may search the web for current trends.",
+      "Client profile: [PROFIL]",
+      "What the client wants: [ENVIES]",
+      "Haircut catalogue (id: name — description):",
+      "[CATALOGUE]",
+      "[RÉFÉRENTIEL]",
+      "Rules:",
+      "- If a haircut of the catalogue fits, use its id. Otherwise use null and describe a new haircut.",
+      "- Never propose a haircut that is impossible for this client: [IMPOSSIBLES]",
+      "- Never propose a haircut that needs more hair or a lower hairline than the client has.",
+      "- Match the requested change: refresh = close to the current cut; evolve = same base with one new detail; change completely = a clearly different cut.",
+      "- Respect the natural hair texture unless the client asks for a texture change.",
+      "- Respect the daily styling time: no cut that needs more styling than the client accepts.",
+      "- The 3 haircuts must be clearly different from each other.",
+      "- Do not return images, links or names of real people.",
+      "Reply with a single JSON array of exactly 3 objects and nothing else, each with these keys:",
+      "- \"id\": the catalogue id, or null",
+      "- \"nom\": the haircut name in French",
+      "- \"ligne\": one short line in French describing the haircut (6 words maximum)",
+      "- \"description_en\": the haircut described zone by zone in English, only the zones that matter, in this order and format: \"Length: … Layers: … Sides: … Top: … Front: … Neckline: … Texture: … Color: … Beard: …\"",
+      "- \"pourquoi\": one short sentence in French for the hairdresser: why this haircut suits this client"
+    ].join('\n'),
+
+    /* Référentiel de l'associé d'Antoine pour les propositions (PROMPTS.md, 0b). Vide pour l'instant. */
+    referentielPropositions: '',
+
     fond: [
       "Edit this photo: replace ONLY the background with [FOND].",
       "Keep the person 100% identical: face, haircut, hair color, hair texture, hairline, beard, glasses, clothing, pose and framing.",
@@ -278,6 +308,14 @@
     return r ? remplacer(TEXTES.preDiagnostic, '[RÉFÉRENTIEL]', r) : TEXTES.preDiagnostic.replace('[RÉFÉRENTIEL]\n', '');
   }
 
+  /* Propositions : chaque repère reçoit son texte ; [RÉFÉRENTIEL] vide, sa ligne est retirée. */
+  function propositions(r) {
+    var t = TEXTES.propositions;
+    ['MODE', 'PROFIL', 'ENVIES', 'CATALOGUE', 'IMPOSSIBLES'].forEach(function (k) { t = remplacer(t, '[' + k + ']', r[k.toLowerCase()]); });
+    var ref = String(TEXTES.referentielPropositions || '').trim();
+    return ref ? remplacer(t, '[RÉFÉRENTIEL]', ref) : t.replace('[RÉFÉRENTIEL]\n', '');
+  }
+
   /* Étape Texture, sur l'image générée : [TEXTURE] = la texture choisie. */
   function texture(texteTexture) {
     return remplacer(TEXTES.texture, '[TEXTURE]', texteTexture);
@@ -314,7 +352,8 @@
     retouche: retouche,
     couleur: couleur,
     texture: texture,
-    preDiagnostic: preDiagnostic
+    preDiagnostic: preDiagnostic,
+    propositions: propositions
   };
 
   racine.PROMPTS = PROMPTS;

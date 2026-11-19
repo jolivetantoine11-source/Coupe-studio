@@ -88,6 +88,27 @@ verifier('réponse : texte assemblé, reste', [r.statut, r.corps], [200, { texte
 verifier('modèle texte, store: false, pas de format image', [appels[1].corps.model, appels[1].corps.store, appels[1].corps.response_format], ['modele-texte', false, undefined]);
 r = await lire(await worker.fetch(requete('/texte', { corps: { photos: [PHOTO], prompt: 'Analyze', json: true } }), e));
 verifier('json: true : Google doit répondre en JSON seul', [r.statut, appels[2].corps.response_format], [200, { type: 'text', mime_type: 'application/json' }]);
+r = await lire(await worker.fetch(requete('/texte', { corps: { photos: [PHOTO], prompt: 'Propose', json: true, recherche: true } }), env({ QUOTA_TEXTES: '9' })));
+verifier('recherche: true : outil google_search et réponse JSON', [r.statut, appels[3].corps.tools, appels[3].corps.response_format], [200, [{ type: 'google_search' }], { type: 'text', mime_type: 'application/json' }]);
+{
+  const e2 = env({ QUOTA_TEXTES: '9' });
+  const avantRecherche = appels.length;
+  let n = 0;
+  const google = globalThis.fetch;
+  globalThis.fetch = async (url, options) => { n++; if (n === 1) { appels.push({ corps: JSON.parse(options.body) }); return new Response(JSON.stringify({ error: { code: 'invalid_request', message: 'x' } }), { status: 400 }); } return google(url, options); };
+  r = await lire(await worker.fetch(requete('/texte', { corps: { photos: [PHOTO], prompt: 'Propose', json: true, recherche: true } }), e2));
+  globalThis.fetch = google;
+  verifier('recherche web refusée par Google : la demande est refaite sans recherche, et réussit',
+    [r.statut, appels.length - avantRecherche, appels[appels.length - 2].corps.tools, appels[appels.length - 1].corps.tools], [200, 2, [{ type: 'google_search' }], undefined]);
+  verifier('…et ne compte qu’une fois dans le quota', r.corps.reste, 8);
+}
+r = await lire(await worker.fetch(requete('/image', { corps: { photos: [PHOTO], prompt: 'Edit', recherche: true } }), env()));
+verifier('image : jamais de recherche web', appels[appels.length - 1].corps.tools, undefined);
+reponseGoogle = TEXTE_OK;
+r = await lire(await worker.fetch(requete('/texte', { corps: { photos: [], prompt: 'Propose' } }), env()));
+verifier('texte sans photo : accepté (propositions sans photo)', [r.statut, appels[appels.length - 1].corps.input.length], [200, 1]);
+r = await lire(await worker.fetch(requete('/image', { corps: { photos: [], prompt: 'Edit' } }), env()));
+verifier('image sans photo : refusée', [r.statut, r.corps], [400, { erreur: 'DEMANDE' }]);
 
 console.log('5. Quota par code et par jour');
 reponseGoogle = IMAGE_OK;

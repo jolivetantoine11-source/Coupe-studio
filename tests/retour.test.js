@@ -81,6 +81,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.click('[data-question="front"][data-valeur="golfes-legers"]');
   await page.click('[data-question="longueur"][data-valeur="moyenne"]');
   await page.click('[data-question="lunettes"][data-valeur="oui"]');
+  await page.click('#action-questions');
   await page.click('#vers-catalogues');
   verifier('Profil client → Que veux-tu faire ?', await ecran(page), 'choix');
   await page.click('#ecran-choix a[href="#catalogue"]');
@@ -96,7 +97,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('réglages changés', await texte(page, '#resume-reglages'), resumeAttendu);
   const avant = await choix(page);
   const sessionAvant = await session(page);
-  verifier('une entrée d’historique par page (6 pages ouvertes)', await page.evaluate(() => window.history.state && window.history.state.rang), 5);
+  verifier('une entrée d’historique par page (7 pages ouvertes)', await page.evaluate(() => window.history.state && window.history.state.rang), 6);
 
   console.log('2. Trois retours en arrière, puis trois pas en avant');
   await page.goBack();
@@ -107,8 +108,10 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('retour 2 : Que veux-tu faire ?', await ecran(page), 'choix');
   verifier('rien n’a changé après le retour 2', await choix(page), avant);
   await page.goBack();
-  verifier('retour 3 : Profil client', await ecran(page), 'questions');
+  verifier('retour 3 : Diagnostic · Propositions', await ecran(page), 'propositions');
   verifier('rien n’a changé après le retour 3', await choix(page), avant);
+  await page.goBack();
+  verifier('retour 4 : Diagnostic · Questions', await ecran(page), 'questions');
   verifier('le profil est toujours affiché', [
     await presse(page, '[data-question="texture"][data-valeur="ondules"]'),
     await presse(page, '[data-question="visage"][data-valeur="rond"]'),
@@ -120,7 +123,8 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await page.goForward();
   await page.goForward();
   await page.goForward();
-  verifier('3 pas en avant : retour sur Réglages', await ecran(page), 'reglages');
+  await page.goForward();
+  verifier('4 pas en avant : retour sur Réglages', await ecran(page), 'reglages');
   verifier('tous les choix sont toujours là', await choix(page), avant);
   verifier('les réglages sont affichés comme avant', [
     await texte(page, '#resume-reglages'),
@@ -235,7 +239,10 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await autre.click('#retour');
   verifier('la flèche mène à la page précédente du parcours', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'catalogue');
   await autre.click('#retour');
-  verifier('Catalogue coupe → Diagnostic · Questions (« Voir les propositions » y mène)', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'questions');
+  verifier('Catalogue coupe → Que veux-tu faire ?', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'choix');
+  await autre.click('#retour');
+  verifier('Que veux-tu faire ? → Diagnostic · Propositions (« Voir les catalogues » y est)', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'propositions');
+  await autre.click('#retour');
   await autre.click('#retour');
   await autre.click('#retour');
   verifier('puis jusqu’à l’Accueil, par Diagnostic · Photo', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'accueil');

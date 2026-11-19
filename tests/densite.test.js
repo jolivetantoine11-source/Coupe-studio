@@ -32,10 +32,12 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   console.log('1. Profil client : deux nouvelles réponses');
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   verifier('barber', await options(), 'Normale · Golfes légers · Golfes marqués · Clairsemés · Chauve / rasé');
   await page.goto(ADRESSE);
   await page.click('[data-mode="salon"]');
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   verifier('salon', await options(), 'Normale · Golfes légers · Golfes marqués · Clairsemés · Chauve / rasé · Cheveux fins');
 
   console.log('2. Ligne Density juste après le nom de la coupe');
@@ -92,6 +94,7 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   await page.goto(ADRESSE);
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   await page.click('[data-question="front"][data-valeur="chauve"]');
   await page.click('#ecran-client .btn');
   await page.click('#ecran-choix a[href="#catalogue"]');
@@ -119,6 +122,7 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   p2.on('pageerror', (e) => erreurs.push(e.message));
   await p2.goto(ADRESSE);
   await p2.click('#action-accueil');
+  await p2.click('#passer-photo');
   await p2.click('#passer-profil');
   await p2.click('#ecran-choix a[href="#catalogue"]');
   await p2.click('#ecran-catalogue [data-coupe="skin-fade"]');
@@ -153,6 +157,7 @@ const DENSITE = 'Density: use only the existing hair; keep the original thin den
   await page.goto(ADRESSE);
   await page.click('#ecran-accueil [data-nouveau-client]');
   await page.click('#ecran-accueil [data-confirmer-nouveau]');
+  await page.click('#passer-photo');
   await page.click('#passer-profil');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');

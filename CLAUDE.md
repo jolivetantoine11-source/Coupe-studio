@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+Mise à jour « Diagnostic d'abord », étape 1 (19 novembre) : nouvel écran « Diagnostic · Photo » après l'Accueil (photo, accord, code si besoin, pré-diagnostic par l'IA qui remplit le profil). Le Profil client reste en pont temporaire jusqu'à l'étape 2 (sections 3, 4, 7, 11, 12 ; PROMPTS.md, 0).
+
 Mise à jour V2, étape 1 (16 novembre) : génération dans l'appli par un Worker Cloudflare, seulement si `config.js` donne son adresse et si le code d'accès est saisi. Sans cela, la V1 est inchangée (sections 3, 4.8, 10, 12, 14 ; `docs/V2-installation.md`).
 
 Mise à jour série contrôle (16 novembre) : densité faible (Density après le nom, pas de frange, dessus gardé), étape Texture à part (Image → Texture → Couleur), exception barbe « rules below » avant « Strict rules: », nouvelle consigne photo (sections 4.8, 5, 11, 12).
@@ -64,9 +66,15 @@ Vocabulaire : le mot « recette » n'apparaît plus nulle part dans l'appli. On 
 
 Il n'y a plus de barre d'onglets. L'appli est un parcours page par page, comme une appli native.
 
+Parcours visé (« Diagnostic d'abord », décision d'Antoine du 19 novembre), construit une étape à la fois :
+Accueil → Diagnostic · Photo → Diagnostic · Questions → Diagnostic · Propositions → (Réglages ou Résultat). « Que veux-tu faire ? » reste accessible par « Voir les catalogues » sur l'écran Propositions. L'étape 1 (Photo) est faite ; en attendant l'étape 2, l'écran Profil client sert de pont.
+
+Parcours actuel :
+
 ```
 Accueil
-  → Profil client (bouton « Passer » possible)
+  → Diagnostic · Photo (bouton « Passer » possible)
+  → Profil client, prérempli par le pré-diagnostic (pont temporaire, bouton « Passer » possible)
     → Que veux-tu faire ?
         • Catalogue coupe → Réglages → Résultat
         • Catalogue personnalisé → Résultat
@@ -88,10 +96,21 @@ Depuis Réglages, le lien « Ajouter des caractéristiques » ouvre le Catalogue
 - Choix du mode : Barber / Salon. Le mode fixe le thème (`barber` ou `salon`) et le catalogue. Avant tout choix, thème `neutre`. Retoucher le mode actif le retire.
 - Le mode choisi est mémorisé (localStorage).
 - « Mes coupes personnalisées » : les coupes enregistrées, la plus récente en haut. En toucher une la recharge et ouvre Réglages (ou le Catalogue personnalisé si elle n'a pas de coupe de départ).
-- Bouton principal : « Commencer » (« Continuer » si un client est en cours) vers Profil client.
+- Bouton principal : « Commencer » (« Continuer » si un client est en cours) vers Diagnostic · Photo.
 - Bouton secondaire : « Nouveau client ».
 
-### 4.2 Profil client
+### 4.1b Diagnostic · Photo (étape 1 du parcours « Diagnostic d'abord », 19 novembre)
+- Libellé « Diagnostic » au-dessus du titre « Photo du client », consigne photo en sous-titre.
+- Bouton principal : « Prendre la photo » (appareil photo ou galerie), puis « Continuer ». Bouton secondaire : « Passer ». « Changer la photo » une fois la photo prise.
+- Photo réduite à 1024 px, gardée en mémoire seulement. C'est la même photo qui sert ensuite à Résultat (V2) : pas de 2e prise.
+- Si le Worker est réglé : case d'accord « Le client accepte que sa photo soit envoyée à Google pour l'essai. » (déplacée depuis la carte V2 de Résultat), et champ « Code d'accès du salon » seulement s'il n'est pas déjà enregistré (ou s'il vient d'être refusé).
+- « Continuer » avec photo, Worker, code et accord : pré-diagnostic (PROMPTS.md, 0) envoyé à `/texte` avec `json: true`. Le JSON reçu remplit `etat.profil` (texture, visage, front, longueur, lunettes, plus peau, yeux, style, remarque). « long » devient « allonge », « fins » n'est gardé qu'en salon, une valeur absente, `null` ou inconnue ne change rien. Les règles (densité, chauve, avertissements…) ne changent pas : elles lisent ce profil comme si le coiffeur avait répondu. Une même photo n'est analysée qu'une fois.
+- Pendant l'analyse : « Analyse en cours… » et une légende. « Passer » abandonne l'analyse.
+- Erreur (code refusé, limite du jour, Google saturé, réponse illisible…) : message en français dans la page, suivi de « Touche « Continuer » pour réessayer, ou « Passer ». » ; on reste sur l'écran.
+- Sans Worker, ou avec « Passer » : pas d'IA, le profil se remplit à la main.
+- « Nouveau client » efface la photo, l'accord et le profil, et ramène à cet écran.
+
+### 4.2 Profil client (pont temporaire jusqu'à l'étape 2)
 - 5 questions maximum, en boutons à bascule (section 7). Retoucher une réponse la retire.
 - Bouton principal « Continuer », bouton secondaire « Passer ». Les deux ouvrent « Que veux-tu faire ? ».
 
@@ -143,7 +162,7 @@ Au-dessus des étapes, des avertissements (composant alerte) :
 Il n'y a plus d'étape Fond : le fond se retouche dans le Catalogue fond, indépendamment de la coupe.
 
 **V2 : génération dans l'appli** (seulement si `config.js` donne l'adresse du Worker) :
-- Une carte « Génération dans l'appli » apparaît au-dessus des étapes : champ « Code d'accès du salon » (gardé dans le téléphone), puis, une fois le code saisi, la consigne photo, « Photo du client », « Photo de référence » si l'option est sur Oui, et la case obligatoire « Le client accepte que sa photo soit envoyée à Google pour l'essai. ».
+- Une carte « Génération dans l'appli » apparaît au-dessus des étapes : champ « Code d'accès du salon » (gardé dans le téléphone), puis, une fois le code saisi, la consigne photo, la photo prise sur l'écran Diagnostic · Photo avec « Changer la photo du client », et « Photo de référence » si l'option est sur Oui. Sans photo ou sans accord, le bouton « Ajouter la photo du client » (ou « Cocher l'accord du client ») ramène à l'écran Diagnostic · Photo. La case d'accord n'est plus sur Résultat (19 novembre).
 - Code saisi : chaque étape montre « Générer » à la place du prompt et de « Copier / Ouvrir Gemini ». Étape par étape seulement, pas de « Tout générer ».
 - Une étape n'est prête que si ce qu'elle joint existe (`joindre`) : la photo du client, la photo de référence, ou `image-generee` = l'image de l'étape d'image juste avant (Image, puis Texture, puis Couleur). Sinon le bouton est bloqué et une légende dit ce qui manque (« Ajoute la photo du client. », « Coche l'accord du client. », « Génère d'abord l'étape Image. »).
 - Résultat d'un texte (diagnostic, fiche) : le texte, « Copier », « Relancer ». Résultat d'une image : « Avant » (la photo du client) et « Après » côte à côte, « Relancer », « Enregistrer » (téléchargement, avec le rappel de l'appui long).
@@ -280,11 +299,11 @@ Le diagnostic reçoit `[COUPE]` = nom français + résumé français (ex. « Ski
 
 ## 7. Profil client, coupes conseillées, avertissements
 
-Le profil se remplit en premier (page 4.2), mais reste facultatif.
+Le profil se remplit en premier, mais reste facultatif : par le pré-diagnostic de la photo (page 4.1b) ou à la main (page 4.2). Le pré-diagnostic ajoute peau, yeux, style et remarque, qui ne servent encore à aucune règle (ils serviront aux questions et aux propositions des étapes 2 et 3).
 
 Questions (une ligne chacune, boutons à bascule) :
 - Texture : Lisses · Ondulés · Bouclés · Crépus
-- Visage : Ovale · Rond · Carré · Allongé
+- Visage : Ovale · Rond · Carré · Allongé · Cœur (Cœur ajouté le 19 novembre pour le pré-diagnostic ; aucune règle de coupes conseillées ne s'en sert encore)
 - Ligne frontale et densité : Normale · Golfes légers · Golfes marqués · Clairsemés · Chauve / rasé · Cheveux fins (salon)
 - Longueur actuelle : Courte · Moyenne · Longue
 - Lunettes : Oui · Non
@@ -377,7 +396,7 @@ Ce prompt n'a toujours pas été testé : le signaler à Antoine. Les combinaiso
 3. Construire **une page à la fois**, dans l'ordre du parcours : Accueil, Profil client, Que veux-tu faire ?, Catalogue coupe, Réglages, Catalogue personnalisé, Résultat, Catalogue fond, Retouches sans IA, Retouches IA. Ne pas passer à la suivante avant que la page soit conforme.
 4. Après chaque page : captures Playwright à 390 px et 1280 px de large, dans les 3 thèmes. Corriger débordements, espacements, textes coupés.
 5. **Relecture adverse** : avant de déclarer une page finie, une seconde passe (ou un sous-agent) cherche les écarts à `DESIGN.md` : couleur hors liste, espacement hors multiples de 8, taille de texte hors échelle, ombre, dégradé, nouveau style de bouton.
-5b. **Tests de la V2** : `node worker/test.mjs` (le Worker seul : origine, code, quota, erreurs, rien dans les journaux) et `node tests/v2.test.js` (parcours complet dans l'appli avec le vrai code du Worker et un Google simulé). La section L de `tests/parcours.test.js` vérifie que la V1 est intacte sans Worker.
+5b. **Tests de la V2** : `node tests/photo.test.js` (écran Diagnostic · Photo, pré-diagnostic, erreurs, « Passer », sans Worker), `node worker/test.mjs` (le Worker seul : origine, code, quota, erreurs, rien dans les journaux) et `node tests/v2.test.js` (parcours complet dans l'appli avec le vrai code du Worker et un Google simulé). La section L de `tests/parcours.test.js` vérifie que la V1 est intacte sans Worker.
 6. **Test des prompts** : un test compare le texte de `prompts.js` aux blocs de `PROMPTS.md` (dont le diagnostic salon, vérifié comme le diagnostic barber avec les 4 seuls remplacements validés) et de la section 8 (mot pour mot, hors `[COUPE]`/`[FOND]`). Il doit passer avant toute livraison.
 7. **Test de contraste** : un script vérifie que chaque paire texte/fond des 3 thèmes atteint 4,5:1.
 8. **Test des contradictions** : pour chaque paire d'un même groupe exclusif (et chaque réglage remplacé par une caractéristique), le prompt final ne contient qu'une seule des deux consignes.
@@ -395,6 +414,7 @@ En V1 (pas d'adresse de Worker) : pas de serveur, pas de génération dans l'app
 ## 11. Points ouverts à confirmer avec Antoine
 
 - Le nom définitif de l'appli.
+- Pré-diagnostic : prompt validé par Antoine (19 novembre), jamais essayé sur le vrai Gemini. `[RÉFÉRENTIEL]` est vide en attendant le référentiel de son associé. Il faut relancer `npx wrangler deploy` pour que le Worker demande une réponse JSON à Google (sans cela, l'appli lit quand même le JSON dans le texte).
 - V2 : le Worker n'a jamais appelé le vrai Gemini (pas de clé ici). Il est écrit d'après la doc Google AI lue le 16 novembre 2026 (API Interactions) et testé avec un Google simulé. Le premier essai d'Antoine est le vrai test.
 - V2 : modèle de texte `gemini-4-hydrogen` choisi par Claude (stable, le moins cher) ; `gemini-4-argon` est plus fin et plus cher. Les consignes de la V1 parlent encore du « modèle 3.1 Pro ».
 - V2 : les alternatives proposées par le diagnostic ne sont pas reprises automatiquement dans le prompt image.
@@ -464,7 +484,13 @@ Décidé par Antoine (16 novembre, V2 étape 1) :
 - Étape par étape seulement, pas de « Tout générer ».
 - Case d'accord obligatoire avant la première génération. Facturation activée sur la clé.
 
+Décidé par Antoine (19 novembre, « Diagnostic d'abord », étape 1) :
+- Parcours Accueil → Diagnostic · Photo → Questions → Propositions ; le Profil client disparaîtra à l'étape 2 (pont temporaire en attendant).
+- Écran Photo : photo, case d'accord (déplacée depuis Résultat), « Passer », code demandé seulement s'il n'est pas enregistré.
+- Pré-diagnostic en JSON qui remplit le profil, sans changer les règles ; prompt validé, avec les lignes « Ignore the background… » et l'emplacement `[RÉFÉRENTIEL]`.
+
 Choix faits par Claude, à confirmer :
+- **Diagnostic · Photo** : sans Worker, la photo peut être prise mais rien n'est envoyé et l'accord n'est pas demandé ; le bouton principal fait « Prendre la photo » puis « Continuer » (pas de bouton principal bloqué) ; en cas d'erreur on reste sur l'écran ; un `null` de l'IA n'efface pas une réponse donnée à la main ; le pré-diagnostic compte pour 1 texte dans le quota ; aperçu limité à 32 % de la hauteur pour garder l'accord et les messages en vue ; le prompt est placé à la fin de PROMPTS.md (« 0. Pré-diagnostic ») pour ne pas décaler les autres blocs.
 - **V2** : `POST /image` prend un tableau `photos` (la variante photo de référence en envoie 2) ; `GET /etat` donne le quota restant, pour vérifier l'installation ; seules les réponses réussies comptent dans le quota ; `store: false` côté Google ; journaux Cloudflare coupés ; une demande sans en-tête Origin est refusée ; « Avant » montre toujours la photo du client ; l'accord vaut pour un client (remis à zéro par « Nouveau client ») ; délai de 90 s.
 - **Densité faible** : le buzz cut garde sa tondeuse au lieu de « kept at the current length » ; un coiffage du dessus avec volume est retiré ; la ligne Top est écrite aussi en salon. En barbe seule, Density reste après Beard.
 - **Étape Texture** : seulement pour une texture choisie par l'utilisateur ; le texte par défaut du dégradé bouclé et du carré bouclé reste dans le prompt image. Consigne de l'étape Couleur : « À envoyer après l'étape précédente (Image, ou Texture s'il y en a une), en joignant la dernière image générée. »

@@ -188,6 +188,27 @@
       "⚠️ À VALIDER EN CONSULTATION : 3 points maximum, du plus important au moins important"
     ].join('\n'),
 
+    /* Pré-diagnostic (PROMPTS.md, 0) : photo du client → profil, en JSON. */
+    preDiagnostic: [
+      "You are an expert hairdresser. Analyze the attached photo of a client and describe only what you SEE.",
+      "Ignore the background and other people. If hair is hidden (cap, hood, scarf), use null for texture, front and longueur.",
+      "[RÉFÉRENTIEL]",
+      "Reply with a single JSON object and nothing else, with exactly these keys:",
+      "- \"visage\": face shape, one of \"ovale\", \"rond\", \"carre\", \"long\", \"coeur\"",
+      "- \"texture\": hair texture, one of \"lisses\", \"ondules\", \"boucles\", \"crepus\"",
+      "- \"front\": hairline and density, one of \"normale\", \"golfes-legers\", \"golfes-marques\", \"clairsemes\", \"chauve\", \"fins\"",
+      "- \"longueur\": current hair length, one of \"courte\", \"moyenne\", \"longue\"",
+      "- \"lunettes\": glasses worn on the photo, \"oui\" or \"non\"",
+      "- \"peau\": skin tone, one of \"claire\", \"mate\", \"foncee\"",
+      "- \"yeux\": eye color, \"clairs\" or \"fonces\"",
+      "- \"style\": one short sentence in French describing the person's overall look (clothing, accessories, attitude)",
+      "- \"remarque\": one short sentence in French for the hairdresser: what matters most when choosing a haircut for this person",
+      "If a value cannot be seen on the photo, use null. Do not guess age, origin or anything not listed."
+    ].join('\n'),
+
+    /* Référentiel de diagnostic de l'associé d'Antoine (PROMPTS.md, 0). Vide pour l'instant. */
+    referentiel: '',
+
     fond: [
       "Edit this photo: replace ONLY the background with [FOND].",
       "Keep the person 100% identical: face, haircut, hair color, hair texture, hairline, beard, glasses, clothing, pose and framing.",
@@ -251,6 +272,12 @@
     return t.replace('\nStrict rules:\n', '\n' + ligne + '\nStrict rules:\n');
   }
 
+  /* Pré-diagnostic : [RÉFÉRENTIEL] reçoit le référentiel ; vide, sa ligne est retirée. */
+  function preDiagnostic() {
+    var r = String(TEXTES.referentiel || '').trim();
+    return r ? remplacer(TEXTES.preDiagnostic, '[RÉFÉRENTIEL]', r) : TEXTES.preDiagnostic.replace('[RÉFÉRENTIEL]\n', '');
+  }
+
   /* Étape Texture, sur l'image générée : [TEXTURE] = la texture choisie. */
   function texture(texteTexture) {
     return remplacer(TEXTES.texture, '[TEXTURE]', texteTexture);
@@ -286,7 +313,8 @@
     fiche: fiche,
     retouche: retouche,
     couleur: couleur,
-    texture: texture
+    texture: texture,
+    preDiagnostic: preDiagnostic
   };
 
   racine.PROMPTS = PROMPTS;

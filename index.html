@@ -69,7 +69,7 @@ try {
     <div class="actions">
       <div class="colonne" data-zone-nouveau>
         <div class="pile" data-nouveau-normal>
-          <a class="btn" id="action-accueil" href="#client">Commencer</a>
+          <a class="btn" id="action-accueil" href="#photo">Commencer</a>
           <button type="button" class="btn-2" data-nouveau-client>Nouveau client</button>
         </div>
         <div class="pile" data-nouveau-confirmation hidden>
@@ -82,6 +82,44 @@ try {
   </section>
 
   <!-- ===== Profil client ===== -->
+  <!-- ===== Diagnostic · Photo ===== -->
+  <section class="ecran" id="ecran-photo" aria-labelledby="titre-photo" hidden>
+    <div class="defile">
+      <div class="colonne">
+        <header>
+          <p class="etape">Diagnostic</p>
+          <h1 id="titre-photo" tabindex="-1">Photo du client</h1>
+          <p class="sous-titre" id="consigne-photo-client"></p>
+        </header>
+        <div class="pile-large">
+          <div class="apercu-zone" id="zone-photo-client" hidden>
+            <img class="apercu apercu-diagnostic" id="apercu-client" alt="Photo du client">
+          </div>
+          <button type="button" class="btn-2" id="changer-photo-client" hidden>Changer la photo</button>
+          <div id="bloc-code-photo" hidden>
+            <label class="etiquette" for="code-acces-photo">Code d’accès du salon</label>
+            <input class="champ" id="code-acces-photo" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+            <p class="legende consigne">Demandé une seule fois : il reste dans ce téléphone.</p>
+          </div>
+          <label class="accord" id="accord-photo" for="consentement" hidden>
+            <input type="checkbox" id="consentement">
+            <span id="texte-consentement">Le client accepte que sa photo soit envoyée à Google pour l’essai.</span>
+          </label>
+          <p class="legende" id="etat-analyse" role="status" hidden></p>
+          <p class="alerte" id="message-photo" role="alert" hidden></p>
+        </div>
+        <input type="file" id="fichier-selfie" accept="image/*" hidden>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="colonne">
+        <button type="button" class="btn" id="action-photo">Prendre la photo</button>
+        <button type="button" class="btn-2" id="passer-photo">Passer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Profil client (pont temporaire jusqu'à l'étape 2 : Diagnostic · Questions) ===== -->
   <section class="ecran" id="ecran-client" aria-labelledby="titre-client" hidden>
     <div class="defile">
       <div class="colonne">
@@ -264,13 +302,8 @@ try {
               <img class="vignette" id="vignette-reference" alt="Photo de référence" hidden>
               <button type="button" class="btn-2" id="choisir-reference">Photo de référence</button>
             </div>
-            <label class="accord" for="consentement">
-              <input type="checkbox" id="consentement">
-              <span id="texte-consentement">Le client accepte que sa photo soit envoyée à Google pour l’essai.</span>
-            </label>
             <p class="alerte" id="message-generation" role="alert" hidden></p>
           </div>
-          <input type="file" id="fichier-selfie" accept="image/*" hidden>
           <input type="file" id="fichier-reference" accept="image/*" hidden>
         </div>
         <div class="blocs" id="etapes"></div>

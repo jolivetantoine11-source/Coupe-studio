@@ -498,6 +498,13 @@ button.carte {
   user-select: none;
 }
 
+/* Aperçu de la photo du client (Diagnostic · Photo) : plus bas, pour garder l'accord et les messages en vue. */
+.apercu-diagnostic {
+  max-height: 32vh;
+  max-height: 32dvh;
+  touch-action: auto;
+}
+
 .image-finale {
   display: block;
   width: 100%;

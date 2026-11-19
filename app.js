@@ -55,19 +55,24 @@
      Changer de page (en avant ou en arrière) ne le modifie jamais :
      seul « Nouveau client » le remet à zéro.
      =================================================================== */
-  var ECRANS = ['accueil', 'client', 'choix', 'catalogue', 'reglages', 'personnalise', 'resultat', 'fond', 'retouche', 'retouche-ia'];
+  var ECRANS = ['accueil', 'photo', 'client', 'choix', 'catalogue', 'reglages', 'personnalise', 'resultat', 'fond', 'retouche', 'retouche-ia'];
 
   var QUESTIONS = [
     { id: 'texture', nom: 'Texture', options: [['lisses', 'Lisses'], ['ondules', 'Ondulés'], ['boucles', 'Bouclés'], ['crepus', 'Crépus']] },
-    { id: 'visage', nom: 'Visage', options: [['ovale', 'Ovale'], ['rond', 'Rond'], ['carre', 'Carré'], ['allonge', 'Allongé']] },
+    { id: 'visage', nom: 'Visage', options: [['ovale', 'Ovale'], ['rond', 'Rond'], ['carre', 'Carré'], ['allonge', 'Allongé'], ['coeur', 'Cœur']] },
     /* « Cheveux fins » n'est proposé qu'en salon. */
     { id: 'front', nom: 'Ligne frontale et densité', options: [['normale', 'Normale'], ['golfes-legers', 'Golfes légers'], ['golfes-marques', 'Golfes marqués'], ['clairsemes', 'Clairsemés'], ['chauve', 'Chauve / rasé'], ['fins', 'Cheveux fins', 'salon']] },
     { id: 'longueur', nom: 'Longueur actuelle', options: [['courte', 'Courte'], ['moyenne', 'Moyenne'], ['longue', 'Longue']] },
     { id: 'lunettes', nom: 'Lunettes', options: [['oui', 'Oui'], ['non', 'Non']] }
   ];
 
+  /* Ce que le pré-diagnostic (photo) ajoute au profil. Aucune règle ne s'en sert encore :
+     ils serviront aux questions et aux propositions (parcours « Diagnostic d'abord »). */
+  var PROFIL_IA = { peau: ['claire', 'mate', 'foncee'], yeux: ['clairs', 'fonces'] };
+  var PHRASE_IA_MAX = 200;
+
   function profilVide() {
-    return { texture: null, visage: null, front: null, longueur: null, lunettes: null };
+    return { texture: null, visage: null, front: null, longueur: null, lunettes: null, peau: null, yeux: null, style: null, remarque: null };
   }
 
   function retoucheVide() {
@@ -578,6 +583,8 @@
     QUESTIONS.forEach(function (q) {
       q.options.forEach(function (o) { if (p[q.id] === o[0]) propre[q.id] = o[0]; });
     });
+    Object.keys(PROFIL_IA).forEach(function (k) { if (PROFIL_IA[k].indexOf(p[k]) >= 0) propre[k] = p[k]; });
+    ['style', 'remarque'].forEach(function (k) { propre[k] = texteCourt(p[k], PHRASE_IA_MAX) || null; });
     return propre;
   }
 
@@ -696,7 +703,7 @@
     var profilRenseigne = QUESTIONS.some(function (q) { return p[q.id] !== null; });
     var retouche = t.luminosite || t.contraste || t.chaleur || t.nb || t.montage || t.format !== 'original';
     return !profilRenseigne && !etat.coupe && etat.caracteristiques.length === 0 && !etat.couleurLibre &&
-      !retouche && etat.retoucheIa.choix.length === 0 && !photos.apres && !photos.avant;
+      !retouche && etat.retoucheIa.choix.length === 0 && !photos.apres && !photos.avant && !v2.selfie;
   }
 
   function oublierPhoto(cle) {
@@ -767,7 +774,8 @@
   function parent(ecran) {
     var x = creation();
     switch (ecran) {
-      case 'client': return 'accueil';
+      case 'photo': return 'accueil';
+      case 'client': return 'photo';
       case 'choix': return 'client';
       case 'reglages': return 'catalogue';
       case 'resultat': return x.coupe ? 'reglages' : 'personnalise';
@@ -884,14 +892,14 @@
     var zone = b.closest('[data-zone-nouveau]');
     if (!zone) return;
     if (b.hasAttribute('data-nouveau-client')) {
-      if (clientEstVide()) { aller('client'); return; }
+      if (clientEstVide()) { aller('photo'); return; }
       $('[data-nouveau-normal]', zone).hidden = true;
       $('[data-nouveau-confirmation]', zone).hidden = false;
       $('[data-confirmer-nouveau]', zone).focus();
     } else if (b.hasAttribute('data-confirmer-nouveau')) {
       nouveauClient();
       fermerConfirmations();
-      aller('client');
+      aller('photo');
     } else if (b.hasAttribute('data-annuler-nouveau')) {
       fermerConfirmations();
       $('[data-nouveau-client]', zone).focus();
@@ -2152,7 +2160,11 @@
   };
 
   /* Tout ce que la V2 garde pour le client en cours. En mémoire seulement. */
-  var v2 = { selfie: null, reference: null, consentement: false, resultats: {}, erreurs: {}, enCours: null, jeton: 0 };
+  var v2 = {
+    selfie: null, reference: null, consentement: false, resultats: {}, erreurs: {}, enCours: null, jeton: 0,
+    /* Écran « Diagnostic · Photo » : n° de la photo, n° de la photo déjà analysée, analyse en cours, message. */
+    selfieN: 0, analysee: 0, analyse: false, analyseJeton: 0, messagePhoto: '', codeRefuse: false
+  };
 
   function viderV2() {
     v2.selfie = null;
@@ -2162,6 +2174,11 @@
     v2.erreurs = {};
     v2.enCours = null;
     v2.jeton++; // une génération en cours pour l'ancien client est ignorée à son retour
+    v2.analysee = 0;
+    v2.analyse = false;
+    v2.analyseJeton++;
+    v2.messagePhoto = '';
+    v2.codeRefuse = false;
   }
 
   function adresseWorker() {
@@ -2190,7 +2207,7 @@
   }
 
   /* Envoie { photos, prompt } au Worker. Promesse : la réponse JSON, ou une erreur en français (e.code). */
-  function appelerWorker(chemin, photos, prompt) {
+  function appelerWorker(chemin, photos, prompt, enPlus) {
     var adresse = adresseWorker();
     if (!adresse || !codeAcces()) return Promise.reject(erreurV2('REGLAGE'));
     var controle = typeof AbortController === 'function' ? new AbortController() : null;
@@ -2199,7 +2216,7 @@
     return window.fetch(adresse + chemin, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Acces': codeAcces() },
-      body: JSON.stringify({ photos: [].concat(photos || []).map(sansPrefixe), prompt: String(prompt || '') }),
+      body: JSON.stringify(Object.assign({ photos: [].concat(photos || []).map(sansPrefixe), prompt: String(prompt || '') }, enPlus || {})),
       signal: controle ? controle.signal : undefined
     }).then(function (rep) {
       return rep.json().then(function (j) { return j; }, function () { return null; }).then(function (json) {
@@ -2225,8 +2242,9 @@
   }
 
   /* Génère un texte (diagnostic, fiche) à partir de photos et d'un prompt. Promesse : { texte, reste }. */
-  function genererTexte(photosJointes, prompt) {
-    return appelerWorker('/texte', photosJointes, prompt).then(function (json) {
+  function genererTexte(photosJointes, prompt, options) {
+    var enPlus = options && options.json ? { json: true } : null; // réponse JSON seule (pré-diagnostic)
+    return appelerWorker('/texte', photosJointes, prompt, enPlus).then(function (json) {
       if (typeof json.texte !== 'string' || !json.texte) throw erreurV2('REFUS');
       return { texte: json.texte, reste: json.reste };
     });
@@ -2350,11 +2368,11 @@
       if (v2[cle]) v.src = v2[cle]; else v.removeAttribute('src');
       $('#' + idBouton).textContent = v2[cle] ? avec : sans;
     };
-    photo('selfie', 'vignette-selfie', 'choisir-selfie', 'Photo du client', 'Changer la photo du client');
+    /* La photo et l'accord se donnent sur l'écran « Diagnostic · Photo » : sans eux, le bouton y ramène. */
+    var pret = !!v2.selfie && v2.consentement;
+    photo('selfie', 'vignette-selfie', 'choisir-selfie', 'Ajouter la photo du client', pret ? 'Changer la photo du client' : 'Cocher l’accord du client');
     $('#ligne-reference').hidden = !etat.reference;
     photo('reference', 'vignette-reference', 'choisir-reference', 'Photo de référence', 'Changer la photo de référence');
-    $('#consentement').checked = v2.consentement;
-    $('#texte-consentement').textContent = CONSENTEMENT;
   }
 
   function messageGeneration(texte) {
@@ -2418,13 +2436,16 @@
     if (!fichier) return;
     reduire(fichier).then(function (donnees) {
       v2[cle] = donnees;
+      if (cle === 'selfie') { v2.selfieN++; v2.messagePhoto = ''; }
       /* Une autre photo : les résultats d'avant ne valent plus. */
       v2.resultats = {};
       v2.erreurs = {};
       messageGeneration('');
+      if (etat.ecran === 'photo') RENDUS.photo();
       redessinerV2();
     }, function () {
-      messageGeneration('Cette photo ne peut pas être ouverte. Choisis une photo JPEG ou PNG.');
+      var m = 'Cette photo ne peut pas être ouverte. Choisis une photo JPEG ou PNG.';
+      if (etat.ecran === 'photo') { v2.messagePhoto = m; RENDUS.photo(); } else messageGeneration(m);
     });
   }
 
@@ -2455,7 +2476,10 @@
   function clicV2(b) {
     if (b.hasAttribute('data-generer')) { generer(b.getAttribute('data-generer')); return true; }
     if (b.hasAttribute('data-enregistrer-image')) { enregistrerGeneree(b.getAttribute('data-enregistrer-image')); return true; }
-    if (b.id === 'choisir-selfie') { $('#fichier-selfie').click(); return true; }
+    if (b.id === 'choisir-selfie') {
+      if (v2.selfie && v2.consentement) $('#fichier-selfie').click(); else aller('photo');
+      return true;
+    }
     if (b.id === 'choisir-reference') { $('#fichier-reference').click(); return true; }
     return false;
   }
@@ -2479,7 +2503,149 @@
 
   $('#consentement').addEventListener('change', function (evenement) {
     v2.consentement = evenement.target.checked;
+    if (v2.consentement) v2.messagePhoto = '';
+    RENDUS.photo();
     redessinerV2();
+  });
+
+  /* ===================================================================
+     Diagnostic · Photo (parcours « Diagnostic d'abord », étape 1)
+     Premier écran après l'Accueil. La photo du client est prise une seule fois :
+     elle sert au pré-diagnostic, puis à l'écran Résultat (V2). En mémoire seulement.
+     Avec le Worker, le code et l'accord : « Continuer » envoie la photo (pré-diagnostic,
+     PROMPTS.md, 0) et le JSON reçu remplit le profil. Sinon, ou avec « Passer » : pas d'IA.
+     =================================================================== */
+  var SUITE_PHOTO = ' Touche « Continuer » pour réessayer, ou « Passer ».';
+  var ANALYSE_EN_COURS = 'Analyse de la photo… Cela peut prendre 30 secondes.';
+
+  /* Valeurs permises de la réponse, et leur valeur dans l'appli (« long » → « allonge »). */
+  function valeurIa(cle, valeur) {
+    if (typeof valeur !== 'string') return null;
+    if (cle === 'visage' && valeur === 'long') return 'allonge';
+    if (cle === 'front' && valeur === 'fins' && etat.mode === 'barber') return null; // « Cheveux fins » : salon seulement
+    if (PROFIL_IA[cle]) return PROFIL_IA[cle].indexOf(valeur) >= 0 ? valeur : null;
+    var q = QUESTIONS.filter(function (x) { return x.id === cle; })[0];
+    return q && q.options.some(function (o) { return o[0] === valeur; }) ? valeur : null;
+  }
+
+  /* Lit le JSON du pré-diagnostic, même entouré de texte. Renvoie un objet ou null. */
+  function lireProfilIa(texte) {
+    var t = String(texte || '');
+    var debut = t.indexOf('{');
+    var fin = t.lastIndexOf('}');
+    if (debut < 0 || fin <= debut) return null;
+    var o;
+    try { o = JSON.parse(t.slice(debut, fin + 1)); } catch (e) { return null; }
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : null;
+  }
+
+  /* Remplit le profil avec les valeurs reconnues. Une valeur absente, null ou inconnue ne change rien.
+     Les règles (densité, chauve…) lisent ce profil comme si le coiffeur avait répondu. */
+  function appliquerProfilIa(o) {
+    var n = 0;
+    QUESTIONS.map(function (q) { return q.id; }).concat(Object.keys(PROFIL_IA)).forEach(function (cle) {
+      var v = valeurIa(cle, o[cle]);
+      if (v) { etat.profil[cle] = v; n++; }
+    });
+    ['style', 'remarque'].forEach(function (cle) {
+      var t = texteCourt(o[cle], PHRASE_IA_MAX);
+      if (t) { etat.profil[cle] = t; n++; }
+    });
+    return n;
+  }
+
+  function demanderCodePhoto() {
+    return v2Reglee() && (!codeAcces() || v2.codeRefuse);
+  }
+
+  RENDUS.photo = function () {
+    var reglee = v2Reglee();
+    $('#consigne-photo-client').textContent = P.consignes.photo;
+    var image = $('#apercu-client');
+    $('#zone-photo-client').hidden = !v2.selfie;
+    if (v2.selfie) image.src = v2.selfie; else image.removeAttribute('src');
+    $('#changer-photo-client').hidden = !v2.selfie || v2.analyse;
+    /* L'accord ne sert que si la photo peut partir à Google (Worker réglé). */
+    $('#accord-photo').hidden = !reglee;
+    $('#consentement').checked = v2.consentement;
+    $('#texte-consentement').textContent = CONSENTEMENT;
+    $('#bloc-code-photo').hidden = !demanderCodePhoto();
+    var champ = $('#code-acces-photo');
+    if (document.activeElement !== champ) champ.value = codeAcces();
+    var b = $('#action-photo');
+    b.textContent = v2.analyse ? 'Analyse en cours…' : (v2.selfie ? 'Continuer' : 'Prendre la photo');
+    if (v2.analyse) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+    var etatAnalyse = $('#etat-analyse');
+    etatAnalyse.hidden = !v2.analyse;
+    etatAnalyse.textContent = v2.analyse ? ANALYSE_EN_COURS : '';
+    var m = $('#message-photo');
+    m.textContent = v2.messagePhoto;
+    m.hidden = !v2.messagePhoto;
+  };
+
+  function messagePhoto(texte) {
+    v2.messagePhoto = texte || '';
+    RENDUS.photo();
+    montrerMessagePhoto();
+  }
+
+  /* Le message doit se voir sans défiler : il peut être sous la photo. */
+  function montrerMessagePhoto() {
+    var m = $('#message-photo');
+    if (!m.hidden && m.scrollIntoView) m.scrollIntoView({ block: 'nearest' });
+  }
+
+  function continuerPhoto() {
+    if (v2.analyse) return;
+    if (!v2.selfie) { $('#fichier-selfie').click(); return; }
+    /* Sans Worker : pas d'IA, la photo est gardée pour la suite. */
+    if (!v2Reglee()) { aller('client'); return; }
+    if (!v2.consentement) { messagePhoto('Coche l’accord du client, ou touche « Passer ».'); return; }
+    if (!codeAcces()) { messagePhoto('Saisis le code d’accès du salon, ou touche « Passer ».'); $('#code-acces-photo').focus(); return; }
+    if (v2.analysee === v2.selfieN) { aller('client'); return; } // cette photo est déjà analysée
+    var jeton = ++v2.analyseJeton;
+    var n = v2.selfieN;
+    v2.analyse = true;
+    v2.messagePhoto = '';
+    RENDUS.photo();
+    genererTexte([v2.selfie], P.preDiagnostic(), { json: true }).then(function (reponse) {
+      var o = lireProfilIa(reponse.texte);
+      if (!o) throw erreurV2('REFUS');
+      return o;
+    }).then(function (o) {
+      if (jeton !== v2.analyseJeton || n !== v2.selfieN) return;
+      appliquerProfilIa(o);
+      memoriser();
+      v2.analyse = false;
+      v2.analysee = n;
+      v2.codeRefuse = false;
+      if (etat.ecran === 'photo') aller('client');
+    }, function (e) {
+      if (jeton !== v2.analyseJeton) return;
+      v2.analyse = false;
+      if (e && e.code === 'ACCES') v2.codeRefuse = true;
+      var texte = e && e.code ? e.message.replace(SUITE_ERREUR, SUITE_PHOTO) : ERREURS_V2.SERVEUR + SUITE_PHOTO;
+      if (e && e.code === 'REFUS') texte = 'L’analyse de la photo n’a rien donné.' + SUITE_PHOTO;
+      v2.messagePhoto = texte;
+      if (etat.ecran === 'photo') { RENDUS.photo(); montrerMessagePhoto(); }
+    });
+  }
+
+  $('#action-photo').addEventListener('click', continuerPhoto);
+
+  $('#changer-photo-client').addEventListener('click', function () { $('#fichier-selfie').click(); });
+
+  /* « Passer » : pas d'IA. Une analyse en cours est abandonnée. La photo, si elle existe, reste. */
+  $('#passer-photo').addEventListener('click', function () {
+    if (v2.analyse) { v2.analyse = false; v2.analyseJeton++; }
+    v2.messagePhoto = '';
+    aller('client');
+  });
+
+  $('#code-acces-photo').addEventListener('input', function (evenement) {
+    ecrire(CLES.acces, evenement.target.value.trim());
+    v2.codeRefuse = false;
+    if (v2.messagePhoto) { v2.messagePhoto = ''; RENDUS.photo(); }
   });
 
   /* ===================================================================
@@ -2527,6 +2693,9 @@
     genererTexte: genererTexte,
     v2: v2,
     v2Active: v2Active,
+    lireProfilIa: lireProfilIa,
+    appliquerProfilIa: appliquerProfilIa,
+    rendre: function () { if (RENDUS[etat.ecran]) RENDUS[etat.ecran](); },
     creation: creation,
     composer: composer,
     validerCaracteristiques: validerCaracteristiques,

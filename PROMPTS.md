@@ -252,3 +252,32 @@ COIFFAGE : produit + geste
 ENTRETIEN : fréquence de la coupe et de la couleur
 ⚠️ À VALIDER EN CONSULTATION : 3 points maximum, du plus important au moins important
 ```
+
+---
+
+## 0. Pré-diagnostic (photo du client, avant les questions)
+
+Ajouté le 19 novembre 2026 à la demande d'Antoine (parcours « Diagnostic d'abord », étape 1). Envoyé par l'appli au Worker (`/texte`, réponse JSON demandée), avec la photo du client, quand le Worker est réglé, le code saisi et l'accord coché. Jamais en V1 ni après « Passer ».
+
+La réponse remplit le profil du client (`etat.profil`) : `visage` (`long` devient `allonge`, la valeur de l'appli), `texture`, `front` (`fins` seulement en mode salon), `longueur`, `lunettes`, `peau`, `yeux`, `style`, `remarque`. Une valeur absente, `null` ou inconnue laisse le champ tel qu'il était.
+
+**[RÉFÉRENTIEL]** : emplacement réservé au référentiel de diagnostic de l'associé d'Antoine. Vide pour l'instant : tant qu'il est vide, sa ligne est retirée du prompt. Il sera ajouté ici, dans son propre bloc, puis recopié dans `prompts.js` (`TEXTES.referentiel`).
+
+Placé à la fin de ce fichier pour ne pas décaler la numérotation des autres blocs.
+
+```text
+You are an expert hairdresser. Analyze the attached photo of a client and describe only what you SEE.
+Ignore the background and other people. If hair is hidden (cap, hood, scarf), use null for texture, front and longueur.
+[RÉFÉRENTIEL]
+Reply with a single JSON object and nothing else, with exactly these keys:
+- "visage": face shape, one of "ovale", "rond", "carre", "long", "coeur"
+- "texture": hair texture, one of "lisses", "ondules", "boucles", "crepus"
+- "front": hairline and density, one of "normale", "golfes-legers", "golfes-marques", "clairsemes", "chauve", "fins"
+- "longueur": current hair length, one of "courte", "moyenne", "longue"
+- "lunettes": glasses worn on the photo, "oui" or "non"
+- "peau": skin tone, one of "claire", "mate", "foncee"
+- "yeux": eye color, "clairs" or "fonces"
+- "style": one short sentence in French describing the person's overall look (clothing, accessories, attitude)
+- "remarque": one short sentence in French for the hairdresser: what matters most when choosing a haircut for this person
+If a value cannot be seen on the photo, use null. Do not guess age, origin or anything not listed.
+```

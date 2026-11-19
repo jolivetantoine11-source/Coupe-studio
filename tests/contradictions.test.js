@@ -50,6 +50,7 @@ const occurrences = (texte, morceau) => texte.split(morceau).length - 1;
   await page.goto(ADRESSE);
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   await page.click('#passer-profil');
   await page.click('#ecran-choix a[href="#personnalise"]');
   await page.evaluate((t) => { window.CoupeStudio.etat.couleurLibre = t; }, COULEUR_LIBRE);

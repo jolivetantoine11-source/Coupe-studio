@@ -69,7 +69,9 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('plus de barre d’onglets', (await page.$$('.onglets, .onglet')).length, 0);
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
-  verifier('Accueil → Profil client', await ecran(page), 'client');
+  verifier('Accueil → Diagnostic · Photo', await ecran(page), 'photo');
+  await page.click('#passer-photo');
+  verifier('Photo → « Passer » → Profil client', await ecran(page), 'client');
   verifier('flèche retour visible, zone tactile 48 × 48', await page.evaluate(() => {
     const r = document.querySelector('#retour').getBoundingClientRect();
     return r.width >= 48 && r.height >= 48 && r.left >= 0 && r.top >= 0 && r.left < 24;
@@ -94,7 +96,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('réglages changés', await texte(page, '#resume-reglages'), resumeAttendu);
   const avant = await choix(page);
   const sessionAvant = await session(page);
-  verifier('une entrée d’historique par page (5 pages ouvertes)', await page.evaluate(() => window.history.state && window.history.state.rang), 4);
+  verifier('une entrée d’historique par page (6 pages ouvertes)', await page.evaluate(() => window.history.state && window.history.state.rang), 5);
 
   console.log('2. Trois retours en arrière, puis trois pas en avant');
   await page.goBack();
@@ -217,7 +219,7 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   verifier('« Annuler » garde tout', JSON.parse(await choix(page)).coupe, 'skin-fade');
   await page.click('#ecran-resultat [data-nouveau-client]');
   await page.click('#ecran-resultat [data-confirmer-nouveau]');
-  verifier('après confirmation : Profil client', await ecran(page), 'client');
+  verifier('après confirmation : Diagnostic · Photo', await ecran(page), 'photo');
   const vide = JSON.parse(await choix(page));
   verifier('tout est remis à zéro', JSON.stringify([vide.profil.texture, vide.profil.visage, vide.coupe, vide.reglages, vide.caracteristiques, vide.retouche.luminosite, vide.retoucheIa.choix]),
     JSON.stringify([null, null, null, null, [], 0, []]));
@@ -235,7 +237,8 @@ const glisser = (page, departX, arriveeX) => page.evaluate(([x0, x1]) => {
   await autre.click('#retour');
   await autre.click('#retour');
   await autre.click('#retour');
-  verifier('puis jusqu’à l’Accueil', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'accueil');
+  await autre.click('#retour');
+  verifier('puis jusqu’à l’Accueil, par Diagnostic · Photo', await autre.evaluate(() => window.CoupeStudio.etat.ecran), 'accueil');
 
   await navigateur.close();
   verifier('aucune erreur JavaScript', erreurs.join(' | '), '');

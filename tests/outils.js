@@ -60,6 +60,14 @@ const VARIANTES = {
     { nom: 'accueil-vide', graine: (g) => { g.local['coupe-studio:recettes'] = []; g.session = {}; } },
     { nom: 'accueil-confirmation', action: async (page) => { await page.click('#ecran-accueil [data-nouveau-client]'); } }
   ],
+  /* Diagnostic · Photo. Les variantes avec Worker utilisent une adresse factice : aucun envoi. */
+  photo: [
+    { nom: 'photo' },
+    { nom: 'photo-code', action: async (page) => { await photoV2(page, { code: false }); } },
+    { nom: 'photo-prise', action: async (page) => { await photoV2(page, { photo: true }); } },
+    { nom: 'photo-analyse', action: async (page) => { await photoV2(page, { photo: true, analyse: true }); } },
+    { nom: 'photo-erreur', action: async (page) => { await photoV2(page, { photo: true, erreur: true }); } }
+  ],
   client: [
     { nom: 'client' }
   ],
@@ -165,6 +173,29 @@ async function activerV2(page, avecResultats) {
     champ.value = 'salon-test';
     champ.dispatchEvent(new Event('input'));
   }, avecResultats);
+}
+
+/* Met l'écran « Diagnostic · Photo » dans l'état voulu : Worker factice, code (ou non), photo de synthèse,
+   analyse en cours, message d'erreur. */
+async function photoV2(page, o) {
+  await page.evaluate((opt) => {
+    window.CONFIG.worker = 'https://worker.invalid';
+    try { localStorage.setItem('coupe-studio:acces', JSON.stringify(opt.code === false ? '' : 'salon-test')); } catch (e) { /* bloqué */ }
+    const v2 = window.CoupeStudio.v2;
+    if (opt.photo) {
+      const c = document.createElement('canvas');
+      c.width = 600; c.height = 800;
+      const x = c.getContext('2d');
+      x.fillStyle = '#9aa7b1'; x.fillRect(0, 0, 600, 800);
+      x.fillStyle = '#4b5a66'; x.beginPath(); x.arc(300, 360, 180, 0, 7); x.fill();
+      x.fillRect(180, 560, 240, 240);
+      v2.selfie = c.toDataURL('image/jpeg', 0.9);
+      v2.consentement = true;
+    }
+    if (opt.analyse) v2.analyse = true;
+    if (opt.erreur) v2.messagePhoto = 'Google est saturé pour le moment. Attends une minute. Touche « Continuer » pour réessayer, ou « Passer ».';
+    window.CoupeStudio.rendre();
+  }, o);
 }
 
 const ECRANS = Object.keys(VARIANTES);

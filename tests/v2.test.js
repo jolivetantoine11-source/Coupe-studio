@@ -40,16 +40,19 @@ function tailleJpeg(base64) {
   const worker = (await import(pathToFileURL(path.join(RACINE, 'worker', 'src', 'index.js')).href)).default;
 
   /* ---- Google simulé : une image de taille différente à chaque appel, pour suivre l'enchaînement. ---- */
-  const google = { appels: [], mode: 'ok', images: [], texte: 'VERDICT : ✅ FAISABLE MAINTENANT\nRAISON : longueur suffisante.' };
+  const google = { appels: [], mode: 'ok', images: [], preDiagnostic: { visage: 'long', texture: 'boucles', front: 'golfes-marques', longueur: 'courte', lunettes: 'non', peau: 'mate', yeux: 'fonces', style: 'Sweat à capuche, allure décontractée.', remarque: 'Golfes marqués : éviter de dégager le front.' }, texte: 'VERDICT : ✅ FAISABLE MAINTENANT\nRAISON : longueur suffisante.' };
   const fetchReel = globalThis.fetch;
   globalThis.fetch = async (url, options) => {
     if (!String(url).startsWith('https://generativelanguage.googleapis.com/')) return fetchReel(url, options);
     const corps = JSON.parse(options.body);
-    const appel = { modele: corps.model, store: corps.store, cle: options.headers['x-goog-api-key'], prompt: corps.input[0].text, photos: corps.input.slice(1).map((p) => tailleJpeg(p.data)) };
+    const appel = { modele: corps.model, store: corps.store, format: corps.response_format, cle: options.headers['x-goog-api-key'], prompt: corps.input[0].text, photos: corps.input.slice(1).map((p) => tailleJpeg(p.data)) };
     google.appels.push(appel);
     const json = (statut, c) => new Response(JSON.stringify(c), { status: statut });
     if (google.mode === 'sature') return json(429, { error: { code: 'rate_limit_exceeded', message: 'x' } });
     if (google.mode === 'refus') return json(400, { error: { code: 'image_safety', message: 'x' } });
+    if (corps.model === 'modele-texte' && appel.prompt.startsWith('You are an expert hairdresser. Analyze')) {
+      return json(200, { status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'text', text: JSON.stringify(google.preDiagnostic) }] }] });
+    }
     if (corps.model === 'modele-texte') return json(200, { status: 'completed', steps: [{ type: 'thought', signature: 's' }, { type: 'model_output', content: [{ type: 'text', text: google.texte }] }] });
     const n = google.appels.filter((a) => a.modele === 'modele-image').length;
     return json(200, { status: 'completed', steps: [{ type: 'model_output', content: [{ type: 'image', mime_type: 'image/png', data: google.images[(n - 1) % google.images.length] }] }] });
@@ -116,10 +119,13 @@ function tailleJpeg(base64) {
   const prompts = () => A(() => { const p = {}; window.CoupeStudio.etapesResultat().forEach((e) => { p[e.id] = e.texte; }); return p; });
   const dernier = () => google.appels[google.appels.length - 1];
 
-  /* ============ 1. Avant le code d'accès ============ */
-  console.log('1. Worker réglé, pas encore de code : la carte apparaît, les étapes restent en V1');
+  /* ============ 1. Avant la photo ============ */
+  console.log('1. « Passer » la photo : à Résultat, le code puis « Ajouter la photo du client »');
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
+  verifier('« Commencer » ouvre Diagnostic · Photo', await A(() => window.CoupeStudio.etat.ecran), 'photo');
+  verifier('Worker réglé, pas de code : champ du code et case d’accord affichés', [await page.isVisible('#bloc-code-photo'), await page.isVisible('#accord-photo')], [true, true]);
+  await page.click('#passer-photo');
   await page.click('#passer-profil');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');
@@ -128,40 +134,58 @@ function tailleJpeg(base64) {
   await page.click('[data-caracteristique="platine"]');
   await page.click('#ecran-personnalise .btn');
   verifier('carte « Génération dans l’appli » visible', (await page.isVisible('#generation')) && (await page.textContent('#generation h2')) === 'Génération dans l’appli');
-  verifier('sans code : aide affichée, photos et accord cachés', [await page.isVisible('#generation-aide'), await page.isVisible('#generation-photos')], [true, false]);
+  verifier('sans code : aide affichée, photos cachées', [await page.isVisible('#generation-aide'), await page.isVisible('#generation-photos')], [true, false]);
   verifier('sans code : les étapes gardent « Copier » et « Ouvrir Gemini »', await boutons('diagnostic'), 'Copier + Ouvrir Gemini');
   verifier('5 étapes : Diagnostic, Image, Texture, Couleur, Fiche', await page.$$eval('#etapes [data-etape]', (c) => c.map((x) => x.getAttribute('data-etape')).join(' ')), 'diagnostic image texture couleur fiche');
-
-  /* ============ 2. Code, photo, accord ============ */
-  console.log('2. Code d’accès, photo du client, accord obligatoire');
   await page.fill('#code-acces', 'mauvais-code');
   verifier('code saisi : « Générer » à la place de « Copier / Ouvrir Gemini »', [await boutons('diagnostic'), await boutons('image'), await page.$$eval('#etapes .prompt', (p) => p.length)], ['Générer (bloqué)', 'Générer (bloqué)', 0]);
   verifier('sous-titre de la V2', await page.textContent('#sous-titre-resultat'), 'Ajoute la photo du client, puis génère chaque étape.');
-  verifier('consigne photo affichée près du bouton', await page.textContent('#consigne-photo-v2'), 'Tête droite, face à l’objectif. Si elle est tournée, Gemini la redresse.');
-  verifier('sans photo : « Ajoute la photo du client. »', await manque('diagnostic'), 'Ajoute la photo du client.');
+  verifier('plus de case d’accord sur Résultat', await page.$$eval('#ecran-resultat input[type="checkbox"]', (c) => c.length), 0);
+  verifier('sans photo : « Ajoute la photo du client. » et le bouton « Ajouter la photo du client »', [await manque('diagnostic'), await page.textContent('#choisir-selfie')], ['Ajoute la photo du client.', 'Ajouter la photo du client']);
+
+  /* ============ 2. Écran Photo : photo, accord, code refusé, pré-diagnostic ============ */
+  console.log('2. Diagnostic · Photo : photo, accord, code refusé, pré-diagnostic');
+  await page.click('#choisir-selfie');
+  verifier('« Ajouter la photo du client » ramène à Diagnostic · Photo', await A(() => window.CoupeStudio.etat.ecran), 'photo');
+  verifier('code déjà enregistré : le champ du code n’est plus demandé', await page.isVisible('#bloc-code-photo'), false);
+  verifier('consigne photo', await page.textContent('#consigne-photo-client'), 'Tête droite, face à l’objectif. Si elle est tournée, Gemini la redresse.');
+  verifier('sans photo, le bouton principal prend la photo', await page.textContent('#action-photo'), 'Prendre la photo');
   await page.setInputFiles('#fichier-selfie', { name: 'client.jpg', mimeType: 'image/jpeg', buffer: selfie });
   await page.waitForFunction(() => !!window.CoupeStudio.v2.selfie);
   verifier('photo réduite à 1024 px au plus grand côté, en JPEG', tailleJpeg((await A(() => window.CoupeStudio.v2.selfie)).split(',')[1]), '1024x683');
-  verifier('vignette affichée, bouton « Changer la photo du client »', [await page.isVisible('#vignette-selfie'), await page.textContent('#choisir-selfie')], [true, 'Changer la photo du client']);
-  verifier('texte de l’accord', await page.textContent('#texte-consentement'), CONSENTEMENT);
-  verifier('case non cochée par défaut', await page.isChecked('#consentement'), false);
-  verifier('sans accord : « Générer » bloqué, « Coche l’accord du client. »', [await boutons('diagnostic'), await manque('diagnostic')], ['Générer (bloqué)', 'Coche l’accord du client.']);
-  await page.click(etape('diagnostic') + ' [data-generer]', { force: true });
-  await A(() => window.CoupeStudio.generateImage && null);
-  verifier('sans accord : rien n’est envoyé', recues.length, 0);
+  verifier('aperçu, « Changer la photo », bouton « Continuer »', [await page.isVisible('#apercu-client'), await page.isVisible('#changer-photo-client'), await page.textContent('#action-photo')], [true, true, 'Continuer']);
+  verifier('texte de l’accord, non coché par défaut', [await page.textContent('#texte-consentement'), await page.isChecked('#consentement')], [CONSENTEMENT, false]);
+  await page.click('#action-photo');
+  verifier('sans accord : message, rien n’est envoyé', [await page.textContent('#message-photo'), recues.length], ['Coche l’accord du client, ou touche « Passer ».', 0]);
   await page.check('#consentement');
-  verifier('accord coché : Diagnostic et Image prêts', [await boutons('diagnostic'), await boutons('image')], ['Générer', 'Générer']);
+  await page.click('#action-photo');
+  await page.waitForFunction(() => !window.CoupeStudio.v2.analyse);
+  verifier('code refusé : message, le champ du code revient', [await page.textContent('#message-photo'), await page.isVisible('#bloc-code-photo')],
+    ['Code d’accès refusé. Vérifie le code du salon. Touche « Continuer » pour réessayer, ou « Passer ».', true]);
+  verifier('Google n’a pas été appelé', google.appels.length, 0);
+  await page.fill('#code-acces-photo', 'salon-test');
+  verifier('nouveau code : le message disparaît', await page.isVisible('#message-photo'), false);
+  await page.click('#action-photo');
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'client');
+  verifier('pré-diagnostic : /texte, avec la photo, réponse JSON demandée', [recues[recues.length - 1].chemin, dernier().photos, dernier().format], ['/texte', ['1024x683'], { type: 'text', mime_type: 'application/json' }]);
+  verifier('pré-diagnostic : prompt de PROMPTS.md, sans la ligne [RÉFÉRENTIEL]', dernier().prompt, await A(() => window.PROMPTS.preDiagnostic()));
+  verifier('le JSON remplit le profil (« long » → « allonge »)', await A(() => window.CoupeStudio.etat.profil),
+    { texture: 'boucles', visage: 'allonge', front: 'golfes-marques', longueur: 'courte', lunettes: 'non', peau: 'mate', yeux: 'fonces', style: 'Sweat à capuche, allure décontractée.', remarque: 'Golfes marqués : éviter de dégager le front.' });
+  verifier('le profil s’affiche dans les réponses', await page.$$eval('#questions [aria-pressed="true"]', (b) => b.map((x) => x.textContent).join(', ')), 'Bouclés, Allongé, Golfes marqués, Courte, Non');
+  verifier('les règles suivent le profil (densité faible : ligne Density)', await A(() => window.CoupeStudio.descAnglaise(window.CoupeStudio.creation()).includes('Density: use only the existing hair')));
+  await page.goBack();
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'photo');
+  await page.click('#action-photo');
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'client');
+  verifier('même photo : pas de 2e analyse', google.appels.length, 1);
+  await page.goBack();
+  await page.goBack();
+  await page.waitForFunction(() => window.CoupeStudio.etat.ecran === 'resultat');
+  verifier('retour à Résultat : la même photo, pas de 2e prise', [await page.isVisible('#vignette-selfie'), await page.textContent('#choisir-selfie')], [true, 'Changer la photo du client']);
+  verifier('le code corrigé sur l’écran Photo vaut aussi ici', await page.inputValue('#code-acces'), 'salon-test');
+  verifier('photo et accord donnés : Diagnostic et Image prêts', [await boutons('diagnostic'), await boutons('image')], ['Générer', 'Générer']);
   verifier('Texture attend l’image, Couleur attend la texture, Fiche attend la couleur', [await manque('texture'), await manque('couleur'), await manque('fiche')],
     ['Génère d’abord l’étape Image.', 'Génère d’abord l’étape Texture.', 'Génère d’abord l’étape Couleur.']);
-
-  /* ============ 3. Code refusé ============ */
-  console.log('3. Code refusé');
-  await generer('diagnostic');
-  verifier('message en français, avec la suite', await erreurDe('diagnostic'), 'Code d’accès refusé. Vérifie le code du salon.' + SUITE);
-  verifier('en erreur : le prompt et les boutons de la V1 reviennent', [await boutons('diagnostic'), await page.$$eval(etape('diagnostic') + ' .prompt', (p) => p.length)], ['Générer + Copier + Ouvrir Gemini', 1]);
-  verifier('Google n’a pas été appelé', google.appels.length, 0);
-  await page.fill('#code-acces', 'salon-test');
-  verifier('bon code saisi : l’erreur disparaît', await erreurDe('diagnostic'), '');
 
   /* ============ 4. Enchaînement ============ */
   console.log('4. Étapes enchaînées selon « joindre »');
@@ -184,7 +208,7 @@ function tailleJpeg(base64) {
   verifier('couleur : reçoit l’image de l’étape Texture (220 px), prompt Couleur exact', [dernier().photos, dernier().prompt === P.couleur], [['220x300'], true]);
   await generer('fiche');
   verifier('fiche : la photo du client puis la dernière image (Couleur, 230 px), prompt de la fiche', [dernier().modele, dernier().photos, dernier().prompt === P.fiche], ['modele-texte', ['1024x683', '230x300'], true]);
-  verifier('5 générations, 5 appels à Google', google.appels.length, 5);
+  verifier('pré-diagnostic + 5 générations : 6 appels à Google', google.appels.length, 6);
 
   /* ============ 5. Relancer, Enregistrer ============ */
   console.log('5. Relancer et Enregistrer');

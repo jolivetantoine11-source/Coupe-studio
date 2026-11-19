@@ -39,12 +39,12 @@ const ref = blocs('PROMPTS.md');
 const refFond = blocs('CLAUDE.md');
 
 console.log('1. Textes de prompts.js comparés à PROMPTS.md');
-if (ref.length !== 10) { console.log('  ÉCHEC   PROMPTS.md doit contenir 10 blocs, trouvé ' + ref.length); echecs++; }
-const NOMS = ['diagnostic', 'diagnosticSalon', 'image', 'barbeSeule', 'exception', 'reference', 'texture', 'couleur', 'ficheBarber', 'ficheSalon'];
+if (ref.length !== 11) { console.log('  ÉCHEC   PROMPTS.md doit contenir 11 blocs, trouvé ' + ref.length); echecs++; }
+const NOMS = ['diagnostic', 'diagnosticSalon', 'image', 'barbeSeule', 'exception', 'reference', 'texture', 'couleur', 'ficheBarber', 'ficheSalon', 'preDiagnostic'];
 NOMS.forEach((nom, i) => {
   verifier(nom, PROMPTS.textes[nom], ref[i]);
 });
-const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_TEXTURE, R_COULEUR, R_FICHE_B, R_FICHE_S] = ref;
+const [R_DIAG, R_DIAG_SALON, R_IMAGE, R_BARBE, R_EXCEPTION, R_REF, R_TEXTURE, R_COULEUR, R_FICHE_B, R_FICHE_S, R_PRE] = ref;
 verifier('étape Couleur : première ligne demandée par Antoine', R_COULEUR.split('\n')[0], 'Edit this photo: keep the haircut, length and shape exactly as they are. Color: [COULEUR], subtle and natural.');
 verifier('étape Texture : texte d’Antoine (série contrôle)', R_TEXTURE, [
   'Edit this photo: keep the haircut, length and shape exactly as they are. Texture: [TEXTURE].',
@@ -101,6 +101,12 @@ verifier('image + barbe seule', PROMPTS.image(DESC, true), R_IMAGE.split('[COUPE
 verifier('sans barbe ni texture : prompt image inchangé', PROMPTS.image(DESC, false, null), R_IMAGE.split('[COUPE]').join(DESC));
 verifier('barbe seule : pas de ligne d’exception', PROMPTS.image(DESC, true, 'barbe'), R_IMAGE.split('[COUPE]').join(DESC) + '\n' + R_BARBE);
 verifier('photo de référence', PROMPTS.reference(), R_REF);
+verifier('pré-diagnostic : 2e ligne demandée par Antoine', R_PRE.split('\n')[1], 'Ignore the background and other people. If hair is hidden (cap, hood, scarf), use null for texture, front and longueur.');
+verifier('pré-diagnostic : [RÉFÉRENTIEL] seul sur sa ligne, avant les clés', R_PRE.split('\n')[2] + ' / ' + R_PRE.split('\n')[3], '[RÉFÉRENTIEL] / Reply with a single JSON object and nothing else, with exactly these keys:');
+verifier('pré-diagnostic : référentiel vide, sa ligne est retirée', PROMPTS.preDiagnostic(), R_PRE.replace('[RÉFÉRENTIEL]\n', ''));
+PROMPTS.textes.referentiel = 'Référentiel de test.';
+verifier('pré-diagnostic : référentiel rempli, il prend la place du repère', PROMPTS.preDiagnostic(), R_PRE.replace('[RÉFÉRENTIEL]', 'Référentiel de test.'));
+PROMPTS.textes.referentiel = '';
 verifier('texture assemblée', PROMPTS.texture('defined curls'), R_TEXTURE.split('[TEXTURE]').join('defined curls'));
 verifier('couleur assemblée', PROMPTS.couleur('blonde highlights'), R_COULEUR.split('[COULEUR]').join('blonde highlights'));
 verifier('fiche barber', PROMPTS.fiche('barber'), R_FICHE_B);
@@ -108,7 +114,7 @@ verifier('fiche salon', PROMPTS.fiche('salon'), R_FICHE_S);
 verifier('retouche assemblée : prompt de fond + règle', PROMPTS.retouche(FOND), refFond[0].split('[FOND]').join(FOND) + '\n' + refFond[1]);
 
 console.log('4. Marqueurs');
-[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['exception', '[CE_CHANGEMENT]', 1], ['texture', '[TEXTURE]', 1], ['couleur', '[COULEUR]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
+[['diagnostic', '[COUPE]', 1], ['diagnosticSalon', '[COUPE]', 1], ['image', '[COUPE]', 1], ['exception', '[CHANGEMENT]', 1], ['exception', '[CE_CHANGEMENT]', 1], ['texture', '[TEXTURE]', 1], ['preDiagnostic', '[RÉFÉRENTIEL]', 1], ['couleur', '[COULEUR]', 1], ['fond', '[FOND]', 1], ['reference', '[COUPE]', 0],
   ['ficheBarber', '[COUPE]', 0], ['ficheSalon', '[COUPE]', 0]].forEach(([nom, marqueur, n]) => {
   const compte = PROMPTS.textes[nom].split(marqueur).length - 1;
   if (compte === n) console.log('  OK      ' + nom + ' contient ' + n + ' fois ' + marqueur);

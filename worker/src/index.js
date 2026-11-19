@@ -1,7 +1,7 @@
 /* Coupe Studio — Worker Cloudflare (V2, étape 1).
    Garde la clé Gemini côté serveur et relaie deux demandes de l'appli :
      POST /image  { photos: [base64 JPEG…], prompt }  →  { image: base64, mime, reste }
-     POST /texte  { photos: [base64 JPEG…], prompt }  →  { texte, reste }
+     POST /texte  { photos: [base64 JPEG…], prompt, json? }  →  { texte, reste }  (json: true = réponse JSON seule)
      Erreur : { erreur: CODE } avec CODE = ORIGINE, ACCES, QUOTA (+ limite), DEMANDE, REFUS, QUOTA_GOOGLE, DELAI, SERVEUR.
      GET  /etat                                        →  { ok, images, textes } (quota restant, pour vérifier l'installation)
 
@@ -111,7 +111,7 @@ async function lireDemande(requete) {
   if (!prompt || prompt.length > TAILLE_PROMPT_MAX) return null;
   const photos = Array.isArray(corps.photos) ? corps.photos : [];
   if (photos.length < 1 || photos.length > PHOTOS_MAX || !photos.every(base64Valide)) return null;
-  return { prompt, photos };
+  return { prompt, photos, json: corps.json === true };
 }
 
 /* Appelle Gemini. Renvoie { image, mime } ou { texte }, ou { erreur: code }. */
@@ -122,6 +122,8 @@ async function appelerGemini(env, type, demande) {
     store: false // Google ne garde pas l'échange
   };
   if (type === 'image') corps.response_format = { type: 'image', mime_type: 'image/jpeg' };
+  /* Texte en JSON (pré-diagnostic) : Google renvoie un JSON seul. */
+  else if (demande.json) corps.response_format = { type: 'text', mime_type: 'application/json' };
 
   const controle = new AbortController();
   const minuterie = setTimeout(() => controle.abort(), DELAI_MS);

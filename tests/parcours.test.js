@@ -68,6 +68,7 @@ const modesDe = (page, liste) => page.evaluate((l) => l.map((id) => window.Coupe
 /* Va de l'accueil au Catalogue coupe en passant le profil. */
 async function jusquAuCatalogue(page) {
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   await page.click('#passer-profil');
   await page.click('#ecran-choix a[href="#catalogue"]');
 }
@@ -94,7 +95,9 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-mode="barber"]');
   verifier('retoucher le mode actif : retour au thème neutre', await theme(page), 'neutre');
   await page.click('#action-accueil');
-  verifier('« Commencer » ouvre le Profil client', await ecran(page), 'client');
+  verifier('« Commencer » ouvre « Diagnostic · Photo »', await ecran(page), 'photo');
+  await page.click('#passer-photo');
+  verifier('« Passer » ouvre le profil (pont temporaire)', await ecran(page), 'client');
   await page.click('#passer-profil');
   verifier('« Passer » ouvre « Que veux-tu faire ? »', await ecran(page), 'choix');
   verifier('3 gros boutons', (await page.$$eval('#ecran-choix .carte-grand-titre', (t) => t.map((x) => x.textContent))).join(' | '), 'Catalogue coupe | Catalogue personnalisé | Catalogue fond');
@@ -111,6 +114,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   ({ contexte, page } = await nouvelle(navigateur));
   await page.click('[data-mode="barber"]');
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   verifier('5 questions', (await page.$$('#questions .groupe')).length, 5);
   verifier('« Cheveux fins » absent en barber', (await page.$$('[data-question="front"][data-valeur="fins"]')).length, 0);
   await page.click('[data-question="texture"][data-valeur="boucles"]');
@@ -441,6 +445,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   await page.click('[data-mode="salon"]');
   verifier('choisir Salon : thème salon', await theme(page), 'salon');
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   verifier('« Cheveux fins » proposé en salon', (await page.$$('[data-question="front"][data-valeur="fins"]')).length, 1);
   await page.click('[data-question="front"][data-valeur="fins"]');
   await page.click('[data-question="visage"][data-valeur="carre"]');
@@ -477,6 +482,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   console.log('H. Thème neutre sans coupe, et « Ajouter ma coupe »');
   ({ contexte, page } = await nouvelle(navigateur));
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   await page.click('#passer-profil');
   await page.click('#ecran-choix a[href="#personnalise"]');
   verifier('sans coupe choisie : pas de « Coupe de départ »', await page.isHidden('#bloc-base'));
@@ -530,6 +536,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   const requetes = [];
   page.on('request', (r) => requetes.push(r.url()));
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   await page.click('#passer-profil');
   await page.click('#ecran-choix a[href="#fond"]');
   verifier('deux familles, clairement séparées', (await page.$$eval('#ecran-fond .carte-grand-titre', (t) => t.map((x) => x.textContent))).join(' | '), 'Retouches sans IA | Retouches IA');
@@ -740,6 +747,7 @@ const tailleApercu = (page) => page.evaluate(() => { const c = document.querySel
   verifier('V2 inactive', await page.evaluate(() => window.CoupeStudio.v2Active()), false);
   await page.evaluate(() => { localStorage.setItem('coupe-studio:acces', JSON.stringify('un-code')); });
   await page.click('#action-accueil');
+  await page.click('#passer-photo');
   await page.click('#passer-profil');
   await page.click('#ecran-choix a[href="#catalogue"]');
   await page.click('#ecran-catalogue [data-coupe="skin-fade"]');

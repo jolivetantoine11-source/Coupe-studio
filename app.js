@@ -791,6 +791,9 @@
   }
 
   function afficher(ecran) {
+    /* En quittant l'écran Photo, le champ du code n'est plus « gardé ouvert » : au retour, il n'est
+       demandé que s'il manque ou vient d'être refusé (CLAUDE.md, 4.1b). */
+    if (etat.ecran === 'photo' && ecran !== 'photo') v2.codeAffiche = false;
     etat.ecran = ecran;
     if (RENDUS[ecran]) RENDUS[ecran]();
     ECRANS.forEach(function (e) {

@@ -2163,7 +2163,8 @@
   var v2 = {
     selfie: null, reference: null, consentement: false, resultats: {}, erreurs: {}, enCours: null, jeton: 0,
     /* Écran « Diagnostic · Photo » : n° de la photo, n° de la photo déjà analysée, analyse en cours, message. */
-    selfieN: 0, analysee: 0, analyse: false, analyseJeton: 0, messagePhoto: '', codeRefuse: false
+    selfieN: 0, analysee: 0, analyse: false, analyseJeton: 0, messagePhoto: '', codeRefuse: false,
+    codeAffiche: false // le champ du code, une fois affiché, reste là tant que le code n'est pas accepté
   };
 
   function viderV2() {
@@ -2554,8 +2555,13 @@
     return n;
   }
 
+  /* Le champ du code apparaît s'il n'y a pas de code ou s'il vient d'être refusé. Ensuite il reste
+     affiché pendant que le coiffeur tape ou corrige (même quand le code n'est plus vide), jusqu'à ce
+     que le Worker l'accepte. Sinon il disparaîtrait à la première lettre. */
   function demanderCodePhoto() {
-    return v2Reglee() && (!codeAcces() || v2.codeRefuse);
+    if (!v2Reglee()) return false;
+    if (!codeAcces() || v2.codeRefuse) v2.codeAffiche = true;
+    return v2.codeAffiche;
   }
 
   RENDUS.photo = function () {
@@ -2619,6 +2625,7 @@
       v2.analyse = false;
       v2.analysee = n;
       v2.codeRefuse = false;
+      v2.codeAffiche = false; // code accepté : on ne le redemande plus
       if (etat.ecran === 'photo') aller('client');
     }, function (e) {
       if (jeton !== v2.analyseJeton) return;

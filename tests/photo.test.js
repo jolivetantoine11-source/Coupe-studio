@@ -174,6 +174,32 @@ const PROFIL_VIDE = { texture: null, visage: null, front: null, longueur: null, 
   verifier('…et la réponse arrivée après est ignorée', (await profil(page)).visage, null);
   attente = 0;
 
+  /* ============ 4b. Code mal tapé, puis corrigé ============ */
+  console.log('4b. Code mal tapé : le champ reste là pour le corriger');
+  await contexte.close();
+  ({ contexte, page } = await ouvrir(true, ''));
+  await page.click('#action-accueil');
+  const champCode = () => page.isVisible('#code-acces-photo');
+  await page.type('#code-acces-photo', 'salon-tset');
+  await photo(page);
+  verifier('code tapé puis photo prise : le champ reste affiché', [await champCode(), await page.inputValue('#code-acces-photo')], [true, 'salon-tset']);
+  await page.check('#consentement');
+  verifier('accord coché : le champ reste affiché', await champCode(), true);
+  reponse = { statut: 401, corps: { erreur: 'ACCES' } };
+  await analyser(page);
+  verifier('code refusé : message et champ', [await message(page), await champCode()], ['Code d’accès refusé. Vérifie le code du salon.' + SUITE, true]);
+  await page.focus('#code-acces-photo');
+  await page.press('#code-acces-photo', 'End');
+  for (let i = 0; i < 4; i++) await page.press('#code-acces-photo', 'Backspace');
+  verifier('correction lettre par lettre : le champ reste affiché, le focus aussi', [await champCode(), await page.inputValue('#code-acces-photo'), await page.evaluate(() => document.activeElement.id)], [true, 'salon-', 'code-acces-photo']);
+  await page.type('#code-acces-photo', 'test');
+  verifier('code corrigé, gardé dans le téléphone', await A(page, () => JSON.parse(localStorage.getItem('coupe-studio:acces'))), 'salon-test');
+  reponse = { statut: 200, corps: { texte: JSON.stringify({ visage: 'rond' }) } };
+  await analyser(page);
+  verifier('code accepté : on avance, le profil est rempli', [await ecran(page), (await profil(page)).visage], ['client', 'rond']);
+  await page.goBack();
+  verifier('de retour sur l’écran : le code accepté n’est plus demandé', await champCode(), false);
+
   /* ============ 5. Nouveau client ============ */
   console.log('5. Nouveau client');
   await page.goto(ADRESSE);

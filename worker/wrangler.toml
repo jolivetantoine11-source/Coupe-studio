@@ -18,7 +18,7 @@ MODELE_IMAGE = "gemini-nano-banana-2.1"
 MODELE_TEXTE = "gemini-4-hydrogen"
 # Limites par code d'accès et par jour (heure de Paris).
 QUOTA_IMAGES = "30"
-QUOTA_TEXTES = "60"
+QUOTA_TEXTES = "120"
 
 # Compteur du quota : une empreinte du code, la date et un nombre. Rien d'autre.
 # Remplace l'id par celui que donne « npx wrangler kv namespace create QUOTAS ».

@@ -506,7 +506,7 @@ Décidé par Antoine (16 novembre, série contrôle) :
 Décidé par Antoine (16 novembre, V2 étape 1) :
 - Génération dans l'appli par un Worker Cloudflare ; le mode V1 ne change pas.
 - Modèle d'image : la version stable recommandée par Google, pas une preview (`gemini-nano-banana-2.1`).
-- Quota : 30 images et 60 textes par jour et par code, compté dans Cloudflare KV (empreinte du code, date, nombre ; effacé au bout de 2 jours).
+- Quota : 30 images et 60 textes par jour et par code, compté dans Cloudflare KV (empreinte du code, date, nombre ; effacé au bout de 2 jours). Textes portés à 120 le 19 novembre (pré-diagnostic et propositions en plus du diagnostic et de la fiche).
 - Étape par étape seulement, pas de « Tout générer ».
 - Case d'accord obligatoire avant la première génération. Facturation activée sur la clé.
 
@@ -628,7 +628,7 @@ Une seule caractéristique par groupe. En choisir une deuxième ouvre un message
 Génération dans l'appli via l'API Gemini, derrière un Worker Cloudflare qui garde la clé. Installation : `docs/V2-installation.md`.
 
 - **Worker** (`worker/src/index.js`) : `POST /image` `{ photos: [base64 JPEG…], prompt }` → `{ image, mime, reste }` ; `POST /texte` `{ photos (0 à 3), prompt, json?, recherche? }` → `{ texte, reste }` (`json` : réponse JSON seule ; `recherche` : recherche web de Gemini, outil `google_search`, refaite sans recherche si Google la refuse) ; `GET /etat` → quota restant. Erreurs : `{ erreur: CODE }` avec ORIGINE, ACCES, QUOTA (+ `limite`), DEMANDE, REFUS, QUOTA_GOOGLE, DELAI, SERVEUR.
-- **Sécurité** : secrets Wrangler `GEMINI_API_KEY` et `ACCES` (codes séparés par des virgules) ; CORS limité à `https://jolivetantoine11-source.github.io` ; en-tête `X-Acces` ; 30 images et 60 textes par jour et par code (heure de Paris).
+- **Sécurité** : secrets Wrangler `GEMINI_API_KEY` et `ACCES` (codes séparés par des virgules) ; CORS limité à `https://jolivetantoine11-source.github.io` ; en-tête `X-Acces` ; 30 images et 120 textes par jour et par code (heure de Paris).
 - **Rien de stocké** : ni photo, ni prompt, ni réponse ; le KV ne garde que des compteurs ; journaux coupés ; `store: false` chez Google.
 - **API Google** : « Interactions API » (`POST https://generativelanguage.googleapis.com/v1beta/interactions`, en-têtes `x-goog-api-key` et `Api-Revision: 2026-05-20`). Modèles dans `worker/wrangler.toml` : `gemini-nano-banana-2.1` (image, stable, recommandé) et `gemini-4-hydrogen` (texte). Doc lue le 16 novembre 2026 ; à relire avant de changer de modèle.
 - **Appli** : voir section 4.8.

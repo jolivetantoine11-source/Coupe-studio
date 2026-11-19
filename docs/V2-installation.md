@@ -86,7 +86,7 @@ npx wrangler secret put ACCES
 
 Tape un code par salon, séparés par des virgules. Exemple : `barber-lyon-7421,salon-croix-rousse-3305`. Choisis des codes longs, difficiles à deviner.
 
-Chaque code a droit à 30 images et 60 textes par jour.
+Chaque code a droit à 30 images et 120 textes par jour.
 
 ## 7. Donner l'adresse à l'appli
 
@@ -126,7 +126,7 @@ Remplace l'adresse et le code par les tiens :
 curl -H "Origin: https://jolivetantoine11-source.github.io" -H "X-Acces: barber-lyon-7421" https://coupe-studio.ton-compte.workers.dev/etat
 ```
 
-Réponse attendue : `{"ok":true,"images":30,"textes":60}`.
+Réponse attendue : `{"ok":true,"images":30,"textes":120}`.
 
 - `{"erreur":"ACCES"}` : le code n'est pas dans le secret ACCES.
 - `{"erreur":"ORIGINE"}` : l'en-tête Origin n'est pas celui du site.
@@ -181,7 +181,7 @@ Prix de Google au 16 novembre 2026. À revérifier sur https://ai.google.dev/gem
 - Une image : environ 0,03 $ (0,034 $ en taille 1K).
 - Un diagnostic ou une fiche : environ 0,01 à 0,02 $ (cela dépend de la longueur de la réflexion du modèle).
 - Un client complet (diagnostic, image, fiche) : environ 0,06 $. Avec texture et couleur : environ 0,13 $.
-- Au maximum par salon et par jour (30 images, 60 textes) : environ 2 $.
+- Au maximum par salon et par jour (30 images, 120 textes) : environ 3 $.
 - Propositions (recherche web de Gemini) : 5 000 recherches gratuites par mois, puis 14 $ les 1 000.
 - Cloudflare : l'offre gratuite suffit pour démarrer. De mémoire, elle s'arrête vers 1 000 générations par jour, tous salons confondus (limite d'écritures du compteur). Au-delà : offre à 5 $ par mois. À vérifier sur le site de Cloudflare.
 

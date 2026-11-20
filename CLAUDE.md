@@ -2,6 +2,8 @@
 
 À lire au début de chaque session, avant toute ligne de code, avec `DESIGN.md` et `PROMPTS.md`.
 
+**Règle de réponse (demande d'Antoine du 20 novembre)** : chaque réponse à Antoine se termine par le lien du site : https://jolivetantoine11-source.github.io/Coupe-studio/
+
 Mise à jour « 3 appels par client » (19 novembre) : les propositions de l'IA donnent aussi un verdict de faisabilité, qui préremplit l'étape Diagnostic de Résultat tant que la coupe ne change pas ; textes portés à 120 par jour et par code (sections 4.2b, 4.8, 12, 14 ; PROMPTS.md, 0b).
 
 Mise à jour « Diagnostic d'abord », étape 3 (19 novembre) : nouvel écran « Diagnostic · Propositions » (3 coupes de l'IA, du catalogue ou non, ou à défaut les conseils de l'appli ; choisir, valider, Variantes / Croquis / Essayer sur le client). Le parcours « Diagnostic d'abord » est complet (sections 4, 11, 12, 14 ; PROMPTS.md, 0b).
@@ -433,6 +435,7 @@ Ce prompt n'a toujours pas été testé : le signaler à Antoine. Les combinaiso
 10. **Test du retour arrière** : un test remplit le profil, choisit une coupe, change des réglages, revient 3 fois en arrière puis revient en avant, et vérifie que tous les choix sont toujours là.
 11. Ne jamais dire « c'est corrigé » ou « ça marche » sans la preuve (capture, test qui passe).
 12. Ne jamais modifier le texte d'un prompt de son propre chef. Proposer la modification à Antoine.
+13. Terminer chaque réponse à Antoine par le lien du site : https://jolivetantoine11-source.github.io/Coupe-studio/ (demande du 20 novembre).
 
 ## 10. Hors périmètre
 
